@@ -117,15 +117,18 @@ class AppTheme {
           }),
           foregroundColor: MaterialStateProperty.all(Colors.black87),
           padding: MaterialStateProperty.all(
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
+          // Add margin-like effect with larger shape inset
           shape: MaterialStateProperty.all(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
           ),
-          elevation: MaterialStateProperty.all(1),
-          shadowColor: MaterialStateProperty.all(Colors.black26),
+          elevation: MaterialStateProperty.all(2),
+          shadowColor: MaterialStateProperty.all(Colors.black38),
+          // Attempt to add spacing via minimumSize and tapTargetSize
+          minimumSize: MaterialStateProperty.all(const Size.fromHeight(48)),
         ),
       ),
       
