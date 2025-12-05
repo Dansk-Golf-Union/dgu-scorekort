@@ -97,7 +97,7 @@ class AppTheme {
       menuTheme: MenuThemeData(
         style: MenuStyle(
           backgroundColor: MaterialStateProperty.all(backgroundColor),
-          padding: MaterialStateProperty.all(const EdgeInsets.all(8)),
+          padding: MaterialStateProperty.all(const EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
           shape: MaterialStateProperty.all(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -124,7 +124,8 @@ class AppTheme {
               borderRadius: BorderRadius.circular(12),
             ),
           ),
-          elevation: MaterialStateProperty.all(0),
+          elevation: MaterialStateProperty.all(1),
+          shadowColor: MaterialStateProperty.all(Colors.black26),
         ),
       ),
       
