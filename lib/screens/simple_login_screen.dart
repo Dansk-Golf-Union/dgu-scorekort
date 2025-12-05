@@ -21,9 +21,10 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
     super.dispose();
   }
 
-  /// Validates Union ID format (e.g., 906-223)
+  /// Validates Union ID format (e.g., 906-223, 72-4197)
+  /// Format: 1-3 digits, dash, 1-6 digits
   bool _isValidUnionId(String input) {
-    final regex = RegExp(r'^\d{3,4}-\d{3,4}$');
+    final regex = RegExp(r'^\d{1,3}-\d{1,6}$');
     return regex.hasMatch(input.trim());
   }
 
