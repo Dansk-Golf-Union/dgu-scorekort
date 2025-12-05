@@ -7,7 +7,7 @@ const String AUTH_HEADER = "Basic aW5mb0Bpbmdlbml1bWdvbGYuZGs6Y1Rvd25Eb3hJb2NL";
 
 class DguService {
   static const String baseUrl =
-      "https://dgubasen.api.union.golfbox.io/info@ingeniumgolf.dk";
+      "https://corsproxy.io/?https://dgubasen.api.union.golfbox.io/info@ingeniumgolf.dk";
 
   /// Fetches all clubs from DGU
   ///
