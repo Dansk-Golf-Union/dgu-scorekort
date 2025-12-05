@@ -140,7 +140,7 @@ class _SetupRoundScreenState extends State<SetupRoundScreen> {
                               : null,
                           icon: const Icon(Icons.exposure),
                           label: const Text(
-                            'Tæller\n+/-',
+                            'Plus/Minus',
                             textAlign: TextAlign.center,
                             style: TextStyle(fontSize: 14),
                           ),
@@ -159,7 +159,7 @@ class _SetupRoundScreenState extends State<SetupRoundScreen> {
                               : null,
                           icon: const Icon(Icons.grid_3x3),
                           label: const Text(
-                            'Keypad\n1-9',
+                            'Hurtig',
                             textAlign: TextAlign.center,
                             style: TextStyle(fontSize: 14),
                           ),
@@ -239,7 +239,7 @@ class _SetupRoundScreenState extends State<SetupRoundScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Text(
+            Text(
                   title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
@@ -472,7 +472,7 @@ class _SetupRoundScreenState extends State<SetupRoundScreen> {
                   padding: EdgeInsets.all(16.0),
                   child: Text('Ingen spiller data'),
                 ),
-              ),
+            ),
           ],
         ),
       ),
