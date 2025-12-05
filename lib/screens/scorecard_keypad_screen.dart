@@ -613,7 +613,7 @@ class _ScoreSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceVariant,
         border: Border(
@@ -622,60 +622,70 @@ class _ScoreSummary extends StatelessWidget {
           ),
         ),
       ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _SummaryItem(
-                label: 'Huller',
-                value: '${scorecard.holesCompleted}/${scorecard.holeScores.length}',
-              ),
-              _SummaryItem(
-                label: 'Points',
-                value: '${scorecard.totalPoints}',
-                highlighted: true,
-              ),
-              _SummaryItem(
-                label: 'Slag',
-                value: '${scorecard.totalStrokes}',
-              ),
-            ],
-          ),
-          if (scorecard.holeScores.length == 18) ...[
-            const SizedBox(height: 4),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _SummaryItem(
-                  label: 'Front 9',
-                  value: '${scorecard.front9Points}p',
-                  small: true,
+                  label: 'Huller',
+                  value: '${scorecard.holesCompleted}/${scorecard.holeScores.length}',
                 ),
                 _SummaryItem(
-                  label: 'Back 9',
-                  value: '${scorecard.back9Points}p',
-                  small: true,
+                  label: 'Points',
+                  value: '${scorecard.totalPoints}',
+                  highlighted: true,
+                ),
+                _SummaryItem(
+                  label: 'Slag',
+                  value: '${scorecard.totalStrokes}',
                 ),
               ],
             ),
-          ],
-          if (scorecard.isComplete) ...[
-            const SizedBox(height: 8),
-            FilledButton(
-              onPressed: () {
-                context.read<ScorecardProvider>().finishRound();
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ScorecardResultsScreen(),
+            if (scorecard.holeScores.length == 18) ...[
+              const SizedBox(height: 2),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _SummaryItem(
+                    label: 'Front 9',
+                    value: '${scorecard.front9Points}p',
+                    small: true,
                   ),
-                );
-              },
-              child: const Text('Afslut Runde'),
-            ),
+                  _SummaryItem(
+                    label: 'Back 9',
+                    value: '${scorecard.back9Points}p',
+                    small: true,
+                  ),
+                ],
+              ),
+            ],
+            if (scorecard.isComplete) ...[
+              const SizedBox(height: 6),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () {
+                    context.read<ScorecardProvider>().finishRound();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ScorecardResultsScreen(),
+                      ),
+                    );
+                  },
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Afslut Runde'),
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
