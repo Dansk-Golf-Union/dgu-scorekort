@@ -2,7 +2,7 @@
 
 Flutter Web App til danske golfspillere til at rapportere scorekort.
 
-## Status: ✅ Version 1.1 - Med Login & Gender Filtering
+## Status: ✅ Version 1.2 - Med Markør Godkendelse & Underskrift
 
 **Live App:** [https://dansk-golf-union.github.io/dgu-scorekort/](https://dansk-golf-union.github.io/dgu-scorekort/)
 
@@ -11,9 +11,11 @@ Flutter Web App til danske golfspillere til at rapportere scorekort.
 DGU Scorekort er en moderne web-applikation bygget med Flutter, der gør det muligt for danske golfspillere at:
 - Vælge golfklub, bane og tee fra DGU Basen API
 - Beregne spillehandicap efter danske WHS regler
-- Indtaste scores på to måder (Tæller +/- eller Keypad)
+- Indtaste scores på to måder (Plus/Minus eller Hurtig keypad)
+- Få markør godkendelse med digital underskrift
 - Se detaljeret scorekort med Stableford points
 - Beregne handicap resultat (score differential)
+- Indsende scores til DGU (klar til API integration)
 
 ## ✨ Implementerede Features
 
@@ -51,6 +53,17 @@ DGU Scorekort er en moderne web-applikation bygget med Flutter, der gør det mul
 - ✅ Handicap resultat (score differential) med Net Double Bogey regel
 - ✅ WHS-korrekt afrunding af negative handicap resultater
 
+### ✍️ Markør Godkendelse & Submission
+- ✅ **Markør Approval Screen**: Indtast markørs DGU nummer
+- ✅ **Digital Signature Pad**: Påkrævet underskrift før godkendelse
+  - Touch-optimeret signature canvas
+  - Ryd og gentag funktionalitet
+  - Export til PNG og base64 encoding
+- ✅ **Signature Preview**: Vises på results screen
+- ✅ **Submission Flow**: "Indsend Score" knap med validation
+- ✅ **Status Tracking**: Marker approved, submitted status
+- ✅ Klar til integration med DGU ScorecardExchange API
+
 ## 🛠️ Teknisk Stack
 
 ### Framework & Libraries
@@ -62,6 +75,7 @@ DGU Scorekort er en moderne web-applikation bygget med Flutter, der gør det mul
 - **URL Launcher 6.2.2** - OAuth browser flow
 - **Crypto 3.0.3** - SHA256 for PKCE
 - **SharedPreferences 2.2.2** - Token storage
+- **Signature 5.5.0** - Digital signature pad
 
 ### Arkitektur
 - **State Management**: Provider pattern (AuthProvider, MatchSetupProvider, ScorecardProvider)
@@ -98,9 +112,10 @@ lib/
 └── screens/
     ├── login_screen.dart              # OAuth login screen
     ├── simple_login_screen.dart       # Union ID login (aktiv)
-    ├── scorecard_screen.dart          # Tæller +/- scorecard
-    ├── scorecard_keypad_screen.dart   # Keypad scorecard
-    └── scorecard_results_screen.dart  # Resultat visning
+    ├── scorecard_screen.dart          # Plus/Minus scorecard
+    ├── scorecard_keypad_screen.dart   # Hurtig keypad scorecard
+    ├── marker_approval_screen.dart    # Markør godkendelse med underskrift
+    └── scorecard_results_screen.dart  # Resultat visning & submission
 ```
 
 ## 🌐 API Integration
@@ -114,6 +129,7 @@ lib/
 - `GET /clubs/{clubId}/courses` - Baner for klub (Basic Auth)
 - `GET /clubs/golfer?unionid={unionId}` - Spiller info (Basic Auth)
 - `GET /clubs/golfer` - Spiller info fra OAuth token (Bearer)
+- `POST /ScorecardExchange` - Indsend scorekort (TODO: implementer)
 
 **Authentication:**
 - **Public endpoints**: Basic Auth via token fra GitHub Gist (sikkerhed)
@@ -248,7 +264,7 @@ flutter test
 
 ## 📋 Feature Status
 
-### ✅ Completed (v1.1)
+### ✅ Completed (v1.2)
 - [x] Union ID login (simple, aktiv)
 - [x] OAuth 2.0 PKCE login (komplet, deaktiveret)
 - [x] Hent spiller data fra GolfBox API
@@ -268,16 +284,24 @@ flutter test
 - [x] Dropdown card styling
 - [x] GitHub Pages deployment
 - [x] CORS proxy for production
+- [x] Markør godkendelse flow
+- [x] Digital signature pad (touch-optimeret)
+- [x] Signature preview på results screen
+- [x] Score submission flow med validation
+- [x] Submission status tracking
 
 ### 🔄 In Progress
 - [ ] OAuth redirect URI configuration (venter på setup)
+- [ ] POST til DGU ScorecardExchange API
 
 ### 📅 Future Enhancements
-- [ ] Gem scorekort lokalt (Local Storage/IndexedDB)
+- [ ] Aktivér DGU ScorecardExchange POST endpoint
+- [ ] Remote marker approval (QR code / link deling)
+- [ ] Gem scorekort lokalt (IndexedDB)
+- [ ] Gem signature i Firebase Storage
 - [ ] Historik over tidligere runder
 - [ ] Export til PDF/print
 - [ ] Multiple spillere (flightmode)
-- [ ] Integration med DGU for at sende scores
 - [ ] Statistik over tid (gennemsnit, trends)
 - [ ] Dark mode
 - [ ] Offline support med sync
@@ -301,6 +325,8 @@ Bruger **Provider** pattern med to hovedproviders:
 - Score input og validation
 - Stableford point beregning
 - Hole navigation (PageView synkronisering)
+- Marker approval tracking
+- Scorecard submission (ready for API)
 - Round completion
 
 ### Data Models
@@ -316,8 +342,10 @@ Bruger **Provider** pattern med to hovedproviders:
   - `courseRating` - Course Rating (divideret med 10000 fra API)
   - `slopeRating` - Slope Rating
 - `Hole` - Hul med nummer, par, index
-- `Player` - Spiller med navn og HCP (mock)
-- `Scorecard` - Aktiv runde med scores og beregninger
+- `Player` - Spiller med navn, HCP, gender, hjemmeklub
+- `Scorecard` - Aktiv runde med scores, marker info, signature og submission tracking
+  - `markerFullName`, `markerUnionId`, `markerSignature` (base64 PNG)
+  - `isSubmitted`, `submittedAt`, `isMarkerApproved`
 - `HoleScore` - Score for enkelt hul med points og netto
 
 ### Performance
@@ -339,13 +367,19 @@ Bruger **Provider** pattern med to hovedproviders:
   - OAuth 2.0 PKCE implementeret men deaktiveret
   - Skift til OAuth: Sæt `useSimpleLogin = false` i `main.dart`
   - Kræver OAuth redirect URI konfiguration i GolfBox
+- **Marker Approval**: Fysisk til stede (underskrift påkrævet)
+  - Remote approval (QR/link) kommer i v2
+- **Signature Storage**: Base64 PNG i memory
+  - Firebase Storage integration kommer senere
 - **No Persistence**: Scorekort gemmes ikke - forsvinder ved reload
 - **Token Security**: Basic Auth token hentes fra privat GitHub Gist
 - **CORS**: Løst via corsproxy.io for production
-- **Web Only**: Primært testet i Chrome web browser
+- **Web Only**: Primært testet i Chrome web browser, mobil-optimeret
 
 ### Current Limitations
+- **No Score Submission**: POST til DGU API ikke implementeret endnu (mock)
 - **No Score History**: Tidligere runder gemmes ikke
+- **No Remote Marker**: Markør skal være fysisk til stede
 - **No Error Recovery**: Begrænsede retry strategier
 - **Single Player**: Ingen flight/gruppe support endnu
 
@@ -363,15 +397,20 @@ Bruger **Provider** pattern med to hovedproviders:
 ## 🧪 Testing
 
 ### Manual Testing Checklist
+- [ ] Log ind med DGU nummer
 - [ ] Vælg klub → Skal vise baner
-- [ ] Vælg bane → Skal vise tees
+- [ ] Vælg bane → Skal vise tees (filtreret efter køn)
 - [ ] Vælg tee → Skal beregne spillehandicap
-- [ ] Start runde (Tæller) → Indtast scores → Se resultat
-- [ ] Start runde (Keypad) → Indtast scores → Se resultat
+- [ ] Start runde (Plus/Minus) → Indtast scores → Se resultat
+- [ ] Start runde (Hurtig) → Indtast scores → Se resultat
 - [ ] Test 9-hullers bane → Verificer handicap beregning
 - [ ] Test 18-hullers bane → Verificer Ud/Ind/Total
 - [ ] Verificer score markers (circles/boxes)
 - [ ] Verificer handicap resultat beregning
+- [ ] **Klik "Indsend Score"** → Marker approval screen
+- [ ] **Prøv at godkende uden underskrift** → Skal give fejl
+- [ ] **Underskriv og bekræft** → Skal vise signature preview
+- [ ] **Submit scorecard** → Skal vise "Score indsendt!"
 
 ### Automated Tests (Future)
 ```bash
