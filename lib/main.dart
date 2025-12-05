@@ -397,20 +397,7 @@ class _SetupRoundScreenState extends State<SetupRoundScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (provider.isLoadingPlayer)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: CircularProgressIndicator(),
-                ),
-              )
-            else if (provider.playerError != null)
-              _buildErrorWidget(
-                context,
-                provider.playerError!,
-                () => provider.loadCurrentPlayer(),
-              )
-            else if (provider.currentPlayer != null)
+            if (provider.currentPlayer != null)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
