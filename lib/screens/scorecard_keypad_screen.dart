@@ -153,32 +153,33 @@ class _HoleKeypadCard extends StatelessWidget {
           Card(
             elevation: 2,
             child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
                     children: [
                       Text(
                         'HUL ${hole.holeNumber}',
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Text(
-                        'Index: ${hole.index}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
+                      if (hole.strokesReceived > 0) ...[
+                        const SizedBox(width: 12),
+                        Chip(
+                          label: Text(
+                            '+${hole.strokesReceived}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
+                          ),
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          backgroundColor: Colors.orange[100],
                         ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
+                      ],
+                      const Spacer(),
                       Text(
                         'Par ${hole.par}',
                         style: TextStyle(
@@ -186,16 +187,15 @@ class _HoleKeypadCard extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      if (hole.strokesReceived > 0)
-                        Chip(
-                          label: Text(
-                            '+${hole.strokesReceived}',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
-                          ),
-                          visualDensity: VisualDensity.compact,
-                          backgroundColor: Colors.orange[100],
-                        ),
                     ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Index: ${hole.index}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[600],
+                    ),
                   ),
                 ],
               ),
@@ -518,7 +518,7 @@ class _KeypadButton extends StatelessWidget {
 
     return Expanded(
       child: AspectRatio(
-        aspectRatio: 1.4, // More compact for mobile
+        aspectRatio: 1.6, // Even more compact for mobile
         child: Material(
           color: backgroundColor,
           borderRadius: BorderRadius.circular(8),
@@ -531,7 +531,7 @@ class _KeypadButton extends StatelessWidget {
                 Text(
                   '$score',
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: textColor,
                   ),
@@ -540,7 +540,7 @@ class _KeypadButton extends StatelessWidget {
                   Text(
                     label!,
                     style: TextStyle(
-                      fontSize: 9,
+                      fontSize: 8,
                       color: textColor.withOpacity(0.8),
                       fontWeight: FontWeight.w500,
                     ),
