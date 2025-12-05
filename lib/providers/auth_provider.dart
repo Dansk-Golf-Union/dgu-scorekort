@@ -145,5 +145,33 @@ class AuthProvider with ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
   }
+
+  /// Login with Union ID (temporary solution without OAuth)
+  Future<void> loginWithUnionId(String unionId) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      // Fetch player information directly by Union ID
+      _currentPlayer = await _playerService.fetchPlayerByUnionId(unionId);
+      
+      // Set authenticated (no token needed for this flow)
+      _isAuthenticated = true;
+      _accessToken = 'simple_login_$unionId'; // Dummy token
+      _errorMessage = null;
+      
+      debugPrint('Simple login successful for Union ID: $unionId');
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isAuthenticated = false;
+      _currentPlayer = null;
+      debugPrint('Error during simple login: $e');
+      rethrow; // Re-throw to let UI handle it
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 }
 

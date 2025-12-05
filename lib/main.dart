@@ -8,7 +8,12 @@ import 'models/course_model.dart';
 import 'screens/scorecard_screen.dart';
 import 'screens/scorecard_keypad_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/simple_login_screen.dart';
 import 'theme/app_theme.dart';
+
+// TODO: Switch to OAuth when redirect URI is ready
+// Set to false to use OAuth login, true for simple Union ID login
+const bool useSimpleLogin = true;
 
 void main() {
   runApp(const MyApp());
@@ -41,7 +46,10 @@ class MyApp extends StatelessWidget {
 
             // Show login screen if not authenticated
             if (!authProvider.isAuthenticated) {
-              return const LoginScreen();
+              // Use simple Union ID login or OAuth login based on feature flag
+              return useSimpleLogin 
+                  ? const SimpleLoginScreen() 
+                  : const LoginScreen();
             }
 
             // Show setup screen if authenticated
