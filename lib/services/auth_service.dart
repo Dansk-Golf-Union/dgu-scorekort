@@ -28,7 +28,11 @@ class AuthService {
   }
 
   /// Builds the OAuth authorization URL with PKCE parameters
-  String getAuthorizationUrl(String codeChallenge) {
+  /// The code_verifier is encoded in the state parameter for web compatibility
+  String getAuthorizationUrl(String codeChallenge, String codeVerifier) {
+    // Encode code_verifier in state parameter (base64url for web compatibility)
+    final stateWithVerifier = base64Url.encode(utf8.encode(codeVerifier)).replaceAll('=', '');
+    
     final params = {
       'client_id': AuthConfig.clientId,
       'redirect_uri': AuthConfig.redirectUri,
@@ -37,6 +41,7 @@ class AuthService {
       'code_challenge': codeChallenge,
       'code_challenge_method': 'S256',
       'country_iso_code': 'dk',
+      'state': stateWithVerifier,
     };
 
     final queryString = params.entries
@@ -44,6 +49,21 @@ class AuthService {
         .join('&');
 
     return '${AuthConfig.authBaseUrl}/connect/authorize?$queryString';
+  }
+  
+  /// Extracts code_verifier from state parameter
+  String decodeVerifierFromState(String state) {
+    try {
+      // Add padding if needed for base64 decoding
+      var paddedState = state;
+      while (paddedState.length % 4 != 0) {
+        paddedState += '=';
+      }
+      final decoded = utf8.decode(base64Url.decode(paddedState));
+      return decoded;
+    } catch (e) {
+      throw Exception('Failed to decode state parameter: $e');
+    }
   }
 
   /// Exchanges authorization code for access token

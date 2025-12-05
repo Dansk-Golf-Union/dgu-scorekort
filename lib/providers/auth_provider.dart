@@ -54,22 +54,36 @@ class AuthProvider with ChangeNotifier {
     _codeVerifier = _authService.generateCodeVerifier();
     final codeChallenge = _authService.generateCodeChallenge(_codeVerifier!);
     
-    // Store verifier for later use in token exchange
+    // Store verifier for later use in token exchange (backup)
     _authService.storeCodeVerifier(_codeVerifier!);
     
-    // Return authorization URL
-    return _authService.getAuthorizationUrl(codeChallenge);
+    // Return authorization URL (verifier is encoded in state parameter)
+    return _authService.getAuthorizationUrl(codeChallenge, _codeVerifier!);
   }
 
   /// Handle OAuth callback after user returns from login
-  Future<void> handleCallback(String authCode) async {
+  Future<void> handleCallback(String authCode, String? state) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      // Retrieve stored code verifier
-      final verifier = await _authService.getStoredCodeVerifier();
+      // Try to get verifier from state parameter first (most reliable on web)
+      String? verifier;
+      if (state != null && state.isNotEmpty) {
+        try {
+          verifier = _authService.decodeVerifierFromState(state);
+          debugPrint('Code verifier retrieved from state parameter');
+        } catch (e) {
+          debugPrint('Failed to decode state: $e');
+        }
+      }
+      
+      // Fallback to stored verifier if state decode failed
+      if (verifier == null) {
+        verifier = await _authService.getStoredCodeVerifier();
+      }
+      
       if (verifier == null) {
         throw Exception('Code verifier not found. Please try logging in again.');
       }

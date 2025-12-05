@@ -28,8 +28,9 @@ class _LoginScreenState extends State<LoginScreen> {
     final uri = Uri.base;
     if (uri.queryParameters.containsKey('code')) {
       final code = uri.queryParameters['code']!;
+      final state = uri.queryParameters['state']; // Get state parameter
       final authProvider = context.read<AuthProvider>();
-      await authProvider.handleCallback(code);
+      await authProvider.handleCallback(code, state);
       
       // Navigate to setup screen on success
       if (authProvider.isAuthenticated && mounted) {
