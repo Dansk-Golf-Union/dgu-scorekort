@@ -42,12 +42,12 @@ class AuthService {
         .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
         .join('&');
 
-    return '${AuthConfig.authBaseUrl}/authorize?$queryString';
+    return '${AuthConfig.authBaseUrl}/connect/authorize?$queryString';
   }
 
   /// Exchanges authorization code for access token
   Future<String> exchangeCodeForToken(String code, String codeVerifier) async {
-    final url = Uri.parse('${AuthConfig.authBaseUrl}/token');
+    final url = Uri.parse('${AuthConfig.authBaseUrl}/connect/token');
     
     try {
       final response = await http.post(
