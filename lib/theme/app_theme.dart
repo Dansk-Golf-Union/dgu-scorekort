@@ -97,12 +97,34 @@ class AppTheme {
       menuTheme: MenuThemeData(
         style: MenuStyle(
           backgroundColor: MaterialStateProperty.all(backgroundColor),
-          padding: MaterialStateProperty.all(const EdgeInsets.symmetric(vertical: 8)),
+          padding: MaterialStateProperty.all(const EdgeInsets.all(8)),
           shape: MaterialStateProperty.all(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
           ),
+        ),
+      ),
+      
+      // Menu button theme for individual dropdown items
+      menuButtonTheme: MenuButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.hovered)) {
+              return Colors.grey.shade100;
+            }
+            return Colors.white;
+          }),
+          foregroundColor: MaterialStateProperty.all(Colors.black87),
+          padding: MaterialStateProperty.all(
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+          shape: MaterialStateProperty.all(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          elevation: MaterialStateProperty.all(0),
         ),
       ),
       
