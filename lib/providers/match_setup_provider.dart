@@ -3,12 +3,10 @@ import '../models/club_model.dart';
 import '../models/course_model.dart';
 import '../models/player_model.dart';
 import '../services/dgu_service.dart';
-import '../services/player_service.dart';
 import '../utils/handicap_calculator.dart';
 
 class MatchSetupProvider with ChangeNotifier {
   final DguService _dguService = DguService();
-  final PlayerService _playerService = PlayerService();
 
   // Player
   Player? _currentPlayer;
@@ -66,26 +64,6 @@ class MatchSetupProvider with ChangeNotifier {
     _playerError = null;
     _updatePlayingHandicap();
     notifyListeners();
-  }
-
-  /// Load current player on app start (legacy method for mock data)
-  Future<void> loadCurrentPlayer() async {
-    _isLoadingPlayer = true;
-    _playerError = null;
-    notifyListeners();
-
-    try {
-      _currentPlayer = await _playerService.getCurrentPlayer();
-      _playerError = null;
-      // Recalculate playing handicap if tee is already selected
-      _updatePlayingHandicap();
-    } catch (e) {
-      _playerError = e.toString();
-      _currentPlayer = null;
-    } finally {
-      _isLoadingPlayer = false;
-      notifyListeners();
-    }
   }
 
   /// Load all clubs on app start
