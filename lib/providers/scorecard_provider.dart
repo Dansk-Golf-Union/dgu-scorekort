@@ -166,6 +166,67 @@ class ScorecardProvider with ChangeNotifier {
     _currentHoleIndex = 0;
     notifyListeners();
   }
+
+  /// Set marker information
+  void setMarkerInfo({
+    required String fullName,
+    required String unionId,
+    String? lifetimeId,
+    String? homeClubName,
+    required String signature,
+  }) {
+    if (_currentScorecard == null) return;
+
+    _currentScorecard = _currentScorecard!.copyWith(
+      markerFullName: fullName,
+      markerUnionId: unionId,
+      markerLifetimeId: lifetimeId,
+      markerHomeClubName: homeClubName,
+      markerSignature: signature,
+      markerApprovedAt: DateTime.now(),
+    );
+
+    notifyListeners();
+  }
+
+  /// Clear marker information
+  void clearMarkerInfo() {
+    if (_currentScorecard == null) return;
+
+    _currentScorecard = _currentScorecard!.copyWith(
+      markerFullName: null,
+      markerUnionId: null,
+      markerLifetimeId: null,
+      markerHomeClubName: null,
+      markerSignature: null,
+      markerApprovedAt: null,
+    );
+
+    notifyListeners();
+  }
+
+  /// Submit scorecard to DGU API
+  /// Returns true if submission was successful
+  Future<bool> submitScorecard() async {
+    if (_currentScorecard == null) {
+      throw Exception('No scorecard to submit');
+    }
+
+    if (!_currentScorecard!.canSubmit) {
+      throw Exception('Scorecard cannot be submitted - marker not approved or already submitted');
+    }
+
+    // TODO: Implement POST to DGU ScorecardExchange API
+    // For now, just mark as submitted
+    _currentScorecard = _currentScorecard!.copyWith(
+      isSubmitted: true,
+      submittedAt: DateTime.now(),
+      submissionResponse: 'Success (mock)', // Placeholder
+    );
+
+    notifyListeners();
+    return true;
+  }
 }
 
 

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:convert';
 import '../providers/scorecard_provider.dart';
 import '../models/scorecard_model.dart';
+import '../theme/app_theme.dart';
 import 'package:intl/intl.dart';
+import 'marker_approval_screen.dart';
 
 // Score marker types for visual indication
 enum ScoreMarker {
@@ -15,6 +18,58 @@ enum ScoreMarker {
 
 class ScorecardResultsScreen extends StatelessWidget {
   const ScorecardResultsScreen({super.key});
+
+  Future<void> _handleSubmitScore(BuildContext context, ScorecardProvider provider) async {
+    // Check 1: Is marker approved?
+    if (!provider.scorecard!.isMarkerApproved) {
+      // Show marker approval screen first
+      final approved = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MarkerApprovalScreen(
+            scorecard: provider.scorecard!,
+            onMarkerApproved: (name, unionId, lifetimeId, homeClubName, signature) {
+              provider.setMarkerInfo(
+                fullName: name,
+                unionId: unionId,
+                lifetimeId: lifetimeId,
+                homeClubName: homeClubName,
+                signature: signature,
+              );
+            },
+          ),
+        ),
+      );
+
+      // If marker was NOT approved, stop here
+      if (approved != true) return;
+    }
+
+    // Check 2: Submit scorecard
+    try {
+      final success = await provider.submitScorecard();
+
+      if (success && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Score indsendt til DGU'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Fejl: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,17 +116,136 @@ class ScorecardResultsScreen extends StatelessWidget {
                     _BottomInfo(scorecard: scorecard),
                     const SizedBox(height: 24),
 
+                    // Marker status (if approved)
+                    if (scorecard.isMarkerApproved) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.green.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.check_circle, color: Colors.green.shade700),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Markør godkendt: ${scorecard.markerFullName}',
+                                    style: TextStyle(
+                                      color: Colors.green.shade900,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  if (scorecard.markerSignature != null) ...[
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      height: 60,
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(color: Colors.grey.shade300),
+                                      ),
+                                      child: Image.memory(
+                                        base64Decode(scorecard.markerSignature!),
+                                        fit: BoxFit.contain,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Warning if not approved
+                    if (!scorecard.isMarkerApproved && !scorecard.isSubmitted) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning_amber, color: Colors.orange.shade700),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Score skal godkendes af markør før indsendelse',
+                                style: TextStyle(
+                                  color: Colors.orange.shade900,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Submission status or button
+                    if (scorecard.isSubmitted)
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(Icons.cloud_done, size: 48, color: Colors.blue.shade700),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Score indsendt!',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              DateFormat('dd.MM.yyyy HH:mm').format(scorecard.submittedAt!),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      FilledButton.icon(
+                        onPressed: () => _handleSubmitScore(context, provider),
+                        icon: const Icon(Icons.send),
+                        label: const Text('Indsend Score'),
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 48),
+                          backgroundColor: AppTheme.dguGreen,
+                        ),
+                      ),
+
+                    const SizedBox(height: 12),
+
                     // Back button
-                    FilledButton.icon(
+                    OutlinedButton.icon(
                       onPressed: () {
-                        Navigator.pop(context);
-                        Navigator.pop(context);
+                        Navigator.of(context).popUntil((route) => route.isFirst);
                       },
                       icon: const Icon(Icons.home),
                       label: const Text('Tilbage til Start'),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: const Color(0xFF1B5E20),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 48),
+                        foregroundColor: AppTheme.dguGreen,
                       ),
                     ),
                   ],
@@ -476,8 +650,8 @@ class _BottomInfo extends StatelessWidget {
           children: [
             _BottomInfoRow('HCP resultat', handicapResultStr),
             _BottomInfoRow('Spiller', scorecard.player.name),
-            _BottomInfoRow('Markør', '-'),
-            _BottomInfoRow('Score status', 'Ikke-tællende'),
+            _BottomInfoRow('Markør', scorecard.markerFullName ?? '__________'),
+            _BottomInfoRow('Score status', scorecard.isSubmitted ? 'Indsendt' : 'Ikke-tællende'),
             _BottomInfoRow('PCC', '0'),
           ],
         ),

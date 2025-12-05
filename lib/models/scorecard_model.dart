@@ -65,6 +65,19 @@ class Scorecard {
   final List<HoleScore> holeScores;
   final DateTime startTime;
   DateTime? endTime;
+  
+  // Marker information
+  String? markerFullName;
+  String? markerUnionId;
+  String? markerLifetimeId;
+  String? markerHomeClubName;
+  DateTime? markerApprovedAt;
+  String? markerSignature; // base64 encoded PNG
+  
+  // Submission tracking
+  bool isSubmitted;
+  DateTime? submittedAt;
+  String? submissionResponse;
 
   Scorecard({
     required this.course,
@@ -74,6 +87,15 @@ class Scorecard {
     required this.holeScores,
     required this.startTime,
     this.endTime,
+    this.markerFullName,
+    this.markerUnionId,
+    this.markerLifetimeId,
+    this.markerHomeClubName,
+    this.markerApprovedAt,
+    this.markerSignature,
+    this.isSubmitted = false,
+    this.submittedAt,
+    this.submissionResponse,
   });
 
   /// Total strokes played (brutto)
@@ -103,6 +125,18 @@ class Scorecard {
   /// Check if round is complete
   bool get isComplete {
     return holesCompleted == holeScores.length;
+  }
+  
+  /// Check if marker is approved
+  bool get isMarkerApproved {
+    return markerFullName != null && 
+           markerUnionId != null && 
+           markerSignature != null;
+  }
+  
+  /// Check if scorecard can be submitted
+  bool get canSubmit {
+    return isMarkerApproved && !isSubmitted;
   }
 
   /// Get front 9 score (holes 1-9)
@@ -197,6 +231,15 @@ class Scorecard {
   Scorecard copyWith({
     List<HoleScore>? holeScores,
     DateTime? endTime,
+    String? markerFullName,
+    String? markerUnionId,
+    String? markerLifetimeId,
+    String? markerHomeClubName,
+    DateTime? markerApprovedAt,
+    String? markerSignature,
+    bool? isSubmitted,
+    DateTime? submittedAt,
+    String? submissionResponse,
   }) {
     return Scorecard(
       course: course,
@@ -206,6 +249,15 @@ class Scorecard {
       holeScores: holeScores ?? this.holeScores,
       startTime: startTime,
       endTime: endTime ?? this.endTime,
+      markerFullName: markerFullName ?? this.markerFullName,
+      markerUnionId: markerUnionId ?? this.markerUnionId,
+      markerLifetimeId: markerLifetimeId ?? this.markerLifetimeId,
+      markerHomeClubName: markerHomeClubName ?? this.markerHomeClubName,
+      markerApprovedAt: markerApprovedAt ?? this.markerApprovedAt,
+      markerSignature: markerSignature ?? this.markerSignature,
+      isSubmitted: isSubmitted ?? this.isSubmitted,
+      submittedAt: submittedAt ?? this.submittedAt,
+      submissionResponse: submissionResponse ?? this.submissionResponse,
     );
   }
 }
