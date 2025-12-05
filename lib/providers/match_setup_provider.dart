@@ -60,7 +60,15 @@ class MatchSetupProvider with ChangeNotifier {
 
   List<Tee> get availableTees => _selectedCourse?.tees ?? [];
 
-  /// Load current player on app start
+  /// Set player from OAuth login
+  void setPlayer(Player player) {
+    _currentPlayer = player;
+    _playerError = null;
+    _updatePlayingHandicap();
+    notifyListeners();
+  }
+
+  /// Load current player on app start (legacy method for mock data)
   Future<void> loadCurrentPlayer() async {
     _isLoadingPlayer = true;
     _playerError = null;

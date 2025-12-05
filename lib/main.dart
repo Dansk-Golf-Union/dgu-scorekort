@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/match_setup_provider.dart';
 import 'providers/scorecard_provider.dart';
+import 'providers/auth_provider.dart';
 import 'models/club_model.dart';
 import 'models/course_model.dart';
 import 'screens/scorecard_screen.dart';
 import 'screens/scorecard_keypad_screen.dart';
+import 'screens/login_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -19,13 +21,33 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()..initialize()),
         ChangeNotifierProvider(create: (_) => MatchSetupProvider()),
         ChangeNotifierProvider(create: (_) => ScorecardProvider()),
       ],
       child: MaterialApp(
         title: 'DGU Scorekort',
         theme: AppTheme.lightTheme,
-        home: const SetupRoundScreen(),
+        home: Consumer<AuthProvider>(
+          builder: (context, authProvider, _) {
+            // Show loading while initializing
+            if (authProvider.isLoading) {
+              return const Scaffold(
+                body: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+
+            // Show login screen if not authenticated
+            if (!authProvider.isAuthenticated) {
+              return const LoginScreen();
+            }
+
+            // Show setup screen if authenticated
+            return const SetupRoundScreen();
+          },
+        ),
         debugShowCheckedModeBanner: false,
       ),
     );
@@ -43,20 +65,39 @@ class _SetupRoundScreenState extends State<SetupRoundScreen> {
   @override
   void initState() {
     super.initState();
-    // Load player and clubs when screen initializes
+    // Load clubs when screen initializes
+    // Player info comes from AuthProvider now
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<MatchSetupProvider>();
-      provider.loadCurrentPlayer();
-      provider.loadClubs();
+      final matchProvider = context.read<MatchSetupProvider>();
+      final authProvider = context.read<AuthProvider>();
+      
+      // Set the authenticated player in match provider
+      if (authProvider.currentPlayer != null) {
+        matchProvider.setPlayer(authProvider.currentPlayer!);
+      }
+      
+      // Load clubs
+      matchProvider.loadClubs();
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('DGU Scorekort'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Log ud',
+            onPressed: () async {
+              await authProvider.logout();
+            },
+          ),
+        ],
       ),
       body: Consumer<MatchSetupProvider>(
         builder: (context, provider, child) {
