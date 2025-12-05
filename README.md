@@ -2,7 +2,9 @@
 
 Flutter Web App til danske golfspillere til at rapportere scorekort.
 
-## Status: ✅ Version 1.0 - Funktionel MVP
+## Status: ✅ Version 1.1 - Med Login & Gender Filtering
+
+**Live App:** [https://dansk-golf-union.github.io/dgu-scorekort/](https://dansk-golf-union.github.io/dgu-scorekort/)
 
 ## Overview
 
@@ -15,13 +17,23 @@ DGU Scorekort er en moderne web-applikation bygget med Flutter, der gør det mul
 
 ## ✨ Implementerede Features
 
+### 🔐 Authentication & Player
+- ✅ **Union ID Login**: Simpel login med DGU nummer (aktiv)
+- ✅ **OAuth 2.0 PKCE**: Komplet implementation (deaktiveret, klar til brug)
+- ✅ Hent spiller data fra GolfBox API
+- ✅ Automatisk parsing af navn, handicap, hjemmeklub
+- ✅ Gender-based tee filtering (kun relevante tees vises)
+- ✅ Persistent login med localStorage
+- ✅ Logout funktionalitet
+
 ### 🏌️ Setup & Handicap
 - ✅ Vælg mellem alle 190+ danske golfklubber
 - ✅ Filtrer og vælg aktive baner
-- ✅ Vælg tee med automatisk hente af Course Rating og Slope
+- ✅ Vælg tee (filtreret efter køn) med Course Rating og Slope
 - ✅ Beregning af spillehandicap (dansk WHS formel)
 - ✅ Understøtter både 9 og 18 hullers baner
 - ✅ WHS-korrekt afrunding for 9-hullers handicap
+- ✅ Moderne dropdown design med card styling
 
 ### ⛳ Scorekort Input
 - ✅ To input metoder:
@@ -47,55 +59,88 @@ DGU Scorekort er en moderne web-applikation bygget med Flutter, der gør det mul
 - **HTTP 1.2.0** - API kommunikation
 - **Google Fonts 6.1.0** - Typography (Roboto)
 - **Intl 0.19.0** - Date formatting
+- **URL Launcher 6.2.2** - OAuth browser flow
+- **Crypto 3.0.3** - SHA256 for PKCE
+- **SharedPreferences 2.2.2** - Token storage
 
 ### Arkitektur
-- **State Management**: Provider pattern
-- **Design System**: Material 3 med DGU farver
-- **API**: DGU Basen REST API med Basic Auth
-- **Platform**: Web (Chrome primary target)
+- **State Management**: Provider pattern (AuthProvider, MatchSetupProvider, ScorecardProvider)
+- **Design System**: Material 3 med DGU farver og custom theming
+- **API**: DGU Basen REST API med Basic Auth (public) og Bearer tokens (OAuth)
+- **CORS**: Handled via corsproxy.io for production
+- **Platform**: Web (Chrome primary target, deployed to GitHub Pages)
 
 ## 📁 Projekt Struktur
 
 ```
 lib/
 ├── main.dart                          # Entry point & SetupRoundScreen
+├── config/
+│   └── auth_config.dart               # OAuth & API konfiguration
 ├── theme/
 │   └── app_theme.dart                 # DGU farver og Material 3 theme
 ├── models/
 │   ├── club_model.dart                # Club, GolfCourse, Tee, Hole
-│   ├── player_model.dart              # Player (mock data)
+│   ├── player_model.dart              # Player (med OAuth fields & gender)
 │   └── scorecard_model.dart           # Scorecard, HoleScore
 ├── providers/
+│   ├── auth_provider.dart             # Authentication state (OAuth & Simple)
 │   ├── match_setup_provider.dart      # Club/Course/Tee selection state
 │   └── scorecard_provider.dart        # Scorecard state & score input
 ├── services/
-│   ├── dgu_service.dart               # DGU Basen API client
-│   └── player_service.dart            # Mock player service
+│   ├── auth_service.dart              # OAuth 2.0 PKCE service
+│   ├── dgu_service.dart               # DGU Basen API client (public endpoints)
+│   └── player_service.dart            # Player API service (OAuth & Union ID)
 ├── utils/
 │   ├── handicap_calculator.dart       # WHS handicap beregninger
 │   ├── stroke_allocator.dart          # Stroke allocation algoritme
 │   └── score_helper.dart              # Golf term labels
 └── screens/
+    ├── login_screen.dart              # OAuth login screen
+    ├── simple_login_screen.dart       # Union ID login (aktiv)
     ├── scorecard_screen.dart          # Tæller +/- scorecard
     ├── scorecard_keypad_screen.dart   # Keypad scorecard
     └── scorecard_results_screen.dart  # Resultat visning
 ```
 
-## 🌐 DGU Basen API
+## 🌐 API Integration
 
-### Endpoints Brugt
-- `GET /api/ClubData/GetClubs` - Henter alle danske golfklubber
-- `GET /api/CourseData/GetCoursesByClubId/{clubId}` - Henter baner for klub
+### GolfBox DGU Basen API
 
-### Authentication
-- Basic Auth (Base64 encoded credentials)
-- Custom headers: `Accept: application/json`
+**Base URL:** `https://dgubasen.api.union.golfbox.io/info@ingeniumgolf.dk`
 
-### Data Filtering
-- Filtrerer kun aktive baner (`IsActive: true`)
-- Filtrerer baner med activation date ≤ nu
-- Grupperer efter `TemplateID` og viser nyeste version
-- Sorterer alfabetisk
+**Endpoints:**
+- `GET /clubs` - Alle danske golfklubber (Basic Auth)
+- `GET /clubs/{clubId}/courses` - Baner for klub (Basic Auth)
+- `GET /clubs/golfer?unionid={unionId}` - Spiller info (Basic Auth)
+- `GET /clubs/golfer` - Spiller info fra OAuth token (Bearer)
+
+**Authentication:**
+- **Public endpoints**: Basic Auth via token fra GitHub Gist (sikkerhed)
+- **Player endpoints**: Bearer token fra OAuth eller Basic Auth
+- **CORS**: Handled via `https://corsproxy.io/?` proxy for production
+
+**Data Filtering:**
+- Kun aktive baner (`IsActive: true`)
+- Activation date ≤ nu
+- Nyeste version per `TemplateID`
+- Alfabetisk sortering
+
+### GolfBox OAuth 2.0
+
+**Auth Server:** `https://auth.golfbox.io/connect/`
+
+**Endpoints:**
+- `/connect/authorize` - OAuth authorization
+- `/connect/token` - Token exchange
+
+**Configuration:**
+- Client ID: `DGU_TEST_DK`
+- Grant Type: Authorization Code with PKCE (S256)
+- Scopes: `get_player.information none union`
+- No Client Secret (Public Client)
+
+**Status:** Implementeret men deaktiveret (redirect URI issues)
 
 ## 🧮 Handicap Beregninger
 
@@ -170,17 +215,17 @@ Strokes fordeles baseret på hole index og playing handicap:
 
 ```bash
 # Clone repository
-git clone [repo-url]
+git clone https://github.com/Dansk-Golf-Union/dgu-scorekort.git
 cd dgu_scorekort
 
 # Hent dependencies
 flutter pub get
 
-# Kør i Chrome
+# Kør lokalt i Chrome
 flutter run -d chrome --web-browser-flag "--disable-web-security"
 ```
 
-**Note**: `--disable-web-security` flag er nødvendigt for CORS når API kaldes direkte fra browser.
+**Note**: `--disable-web-security` flag kun nødvendigt lokalt. Production bruger CORS proxy.
 
 ### Development
 
@@ -203,22 +248,29 @@ flutter test
 
 ## 📋 Feature Status
 
-### ✅ Completed (MVP)
+### ✅ Completed (v1.1)
+- [x] Union ID login (simple, aktiv)
+- [x] OAuth 2.0 PKCE login (komplet, deaktiveret)
+- [x] Hent spiller data fra GolfBox API
+- [x] Gender-based tee filtering
 - [x] DGU API integration (clubs, courses, tees)
 - [x] Course filtering (active, latest version)
 - [x] Playing handicap beregning (9 & 18 huller)
 - [x] 9-hole WHS rounding fix
 - [x] Stroke allocation algoritme
 - [x] Tæller +/- scorecard
-- [x] Keypad scorecard med golf terms
+- [x] Keypad scorecard med golf terms (mobil-optimeret)
 - [x] Stableford point calculation
-- [x] Resultat screen i DGU stil
+- [x] Resultat screen i DGU stil (1:1 match)
 - [x] Score markers (circles/boxes for birdie/bogey)
 - [x] Handicap resultat med Net Double Bogey
 - [x] Material 3 theme med DGU farver
+- [x] Dropdown card styling
+- [x] GitHub Pages deployment
+- [x] CORS proxy for production
 
 ### 🔄 In Progress
-- [ ] Ingen - MVP er færdig
+- [ ] OAuth redirect URI configuration (venter på setup)
 
 ### 📅 Future Enhancements
 - [ ] Gem scorekort lokalt (Local Storage/IndexedDB)
@@ -282,23 +334,31 @@ Bruger **Provider** pattern med to hovedproviders:
 
 ## ⚠️ Known Issues & Considerations
 
-### Current Limitations
-- **Mock Player Data**: Bruger hardcoded spiller (Nick Hüttel, HCP 14.5)
+### Current Implementation
+- **Login Method**: Union ID login (midlertidig løsning)
+  - OAuth 2.0 PKCE implementeret men deaktiveret
+  - Skift til OAuth: Sæt `useSimpleLogin = false` i `main.dart`
+  - Kræver OAuth redirect URI konfiguration i GolfBox
 - **No Persistence**: Scorekort gemmes ikke - forsvinder ved reload
-- **Web Only**: Kun testet i Chrome web browser
-- **No Authentication**: Ingen bruger login endnu
-- **CORS**: Kræver `--disable-web-security` flag for API calls
-- **No Error Recovery**: Begrænsede retry og error handling strategier
+- **Token Security**: Basic Auth token hentes fra privat GitHub Gist
+- **CORS**: Løst via corsproxy.io for production
+- **Web Only**: Primært testet i Chrome web browser
+
+### Current Limitations
+- **No Score History**: Tidligere runder gemmes ikke
+- **No Error Recovery**: Begrænsede retry strategier
+- **Single Player**: Ingen flight/gruppe support endnu
 
 ### Future Considerations
-- Implementer rigtig player management
-- Tilføj persistent storage (SharedPreferences/IndexedDB)
-- Fix CORS issue med proxy eller backend
+- Aktivér OAuth login når redirect URI er konfigureret
+- Tilføj persistent storage for scorekort (IndexedDB)
+- Backend for token proxy (i stedet for Gist)
 - Implementer proper error handling og retry logic
 - Tilføj loading states og skeleton screens
 - Implementer proper logging og analytics
 - Tilføj unit tests og widget tests
 - Performance monitoring og optimization
+- Multi-player support (flights)
 
 ## 🧪 Testing
 
