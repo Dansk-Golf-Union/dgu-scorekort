@@ -41579,7 +41579,7 @@ return A.cS(A.c([p,A.ba(r.d,q,q,q,s,q,q)],t.p),B.x,B.z,B.A)}}
 A.a_g.prototype={
 yp(){var s=0,r=A.S(t.Nk),q,p=2,o=[],n,m,l,k,j,i,h,g,f
 var $async$yp=A.T(function(a,b){if(a===1){o.push(b)
-s=p}for(;;)switch(s){case 0:g=A.fK("https://dgubasen.api.union.golfbox.io/info@ingeniumgolf.dk/clubs",0,null)
+s=p}for(;;)switch(s){case 0:g=A.fK("https://corsproxy.io/?https://dgubasen.api.union.golfbox.io/info@ingeniumgolf.dk/clubs",0,null)
 p=4
 j=t.N
 s=7
@@ -41612,7 +41612,7 @@ return A.R($async$yp,r)},
 yq(a){return this.aj2(a)},
 aj2(b5){var s=0,r=A.S(t.Fk),q,p=2,o=[],n,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,b0,b1,b2,b3,b4
 var $async$yq=A.T(function(b6,b7){if(b6===1){o.push(b7)
-s=p}for(;;)switch(s){case 0:b3=A.fK("https://dgubasen.api.union.golfbox.io/info@ingeniumgolf.dk/clubs/"+b5+"/courses?active=1&sort=ActivationDate:1&sortTee=TotalLength:1&changedsince=20250301T000000",0,null)
+s=p}for(;;)switch(s){case 0:b3=A.fK("https://corsproxy.io/?https://dgubasen.api.union.golfbox.io/info@ingeniumgolf.dk/clubs/"+b5+"/courses?active=1&sort=ActivationDate:1&sortTee=TotalLength:1&changedsince=20250301T000000",0,null)
 p=4
 a=t.N
 s=7
