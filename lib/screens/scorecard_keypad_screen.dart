@@ -145,7 +145,7 @@ class _HoleKeypadCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -153,7 +153,7 @@ class _HoleKeypadCard extends StatelessWidget {
           Card(
             elevation: 2,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -162,15 +162,17 @@ class _HoleKeypadCard extends StatelessWidget {
                     children: [
                       Text(
                         'HUL ${hole.holeNumber}',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       Text(
                         'Index: ${hole.index}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                            ),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
                       ),
                     ],
                   ),
@@ -179,15 +181,16 @@ class _HoleKeypadCard extends StatelessWidget {
                     children: [
                       Text(
                         'Par ${hole.par}',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       if (hole.strokesReceived > 0)
                         Chip(
                           label: Text(
                             '+${hole.strokesReceived}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
                           ),
                           visualDensity: VisualDensity.compact,
                           backgroundColor: Colors.orange[100],
@@ -198,11 +201,11 @@ class _HoleKeypadCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
           // Current score display
           _ScoreDisplay(hole: hole),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
           // Keypad
           _ScoreKeypad(
@@ -228,17 +231,18 @@ class _ScoreDisplay extends StatelessWidget {
       return Card(
         color: Colors.grey[200],
         child: Padding(
-          padding: const EdgeInsets.all(12.0),
+          padding: const EdgeInsets.all(8.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.touch_app, size: 24, color: Colors.grey[600]),
+              Icon(Icons.touch_app, size: 20, color: Colors.grey[600]),
               const SizedBox(width: 8),
               Text(
                 'Vælg score',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.grey[600],
-                    ),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
               ),
             ],
           ),
@@ -254,34 +258,37 @@ class _ScoreDisplay extends StatelessWidget {
       color: _getCardColor(colorCategory),
       elevation: 4,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(12.0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
               '${hole.strokes}',
-              style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+              style: TextStyle(
+                fontSize: 36,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
             if (golfTerm.isNotEmpty) ...[
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Text(
                 '★ $golfTerm ★',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Text(
               '${hole.stablefordPoints}p',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: TextStyle(
+                fontSize: 20,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
@@ -355,7 +362,7 @@ class _ScoreKeypadState extends State<_ScoreKeypad> {
                   isSelected: currentScore == baseScore,
                   onTap: () => onChanged(baseScore),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 4),
                 _KeypadButton(
                   score: baseScore + 1,
                   label: labels[baseScore + 1],
@@ -363,7 +370,7 @@ class _ScoreKeypadState extends State<_ScoreKeypad> {
                   isSelected: currentScore == baseScore + 1,
                   onTap: () => onChanged(baseScore + 1),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 4),
                 _KeypadButton(
                   score: baseScore + 2,
                   label: labels[baseScore + 2],
@@ -373,7 +380,7 @@ class _ScoreKeypadState extends State<_ScoreKeypad> {
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             // Row 2: base+3, base+4, base+5
             Row(
               children: [
@@ -384,7 +391,7 @@ class _ScoreKeypadState extends State<_ScoreKeypad> {
                   isSelected: currentScore == baseScore + 3,
                   onTap: () => onChanged(baseScore + 3),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 4),
                 _KeypadButton(
                   score: baseScore + 4,
                   label: labels[baseScore + 4],
@@ -392,7 +399,7 @@ class _ScoreKeypadState extends State<_ScoreKeypad> {
                   isSelected: currentScore == baseScore + 4,
                   onTap: () => onChanged(baseScore + 4),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 4),
                 _KeypadButton(
                   score: baseScore + 5,
                   label: labels[baseScore + 5],
@@ -402,7 +409,7 @@ class _ScoreKeypadState extends State<_ScoreKeypad> {
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             // Row 3: base+6, base+7, base+8
             Row(
               children: [
@@ -413,7 +420,7 @@ class _ScoreKeypadState extends State<_ScoreKeypad> {
                   isSelected: currentScore == baseScore + 6,
                   onTap: () => onChanged(baseScore + 6),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 4),
                 _KeypadButton(
                   score: baseScore + 7,
                   label: labels[baseScore + 7],
@@ -421,7 +428,7 @@ class _ScoreKeypadState extends State<_ScoreKeypad> {
                   isSelected: currentScore == baseScore + 7,
                   onTap: () => onChanged(baseScore + 7),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 4),
                 _KeypadButton(
                   score: baseScore + 8,
                   label: labels[baseScore + 8],
@@ -431,10 +438,10 @@ class _ScoreKeypadState extends State<_ScoreKeypad> {
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             // Row 4: Toggle button
             SizedBox(
-              height: 40,
+              height: 36,
               child: Material(
                 color: _showHighScores ? Colors.orange.shade300 : Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(8),
@@ -511,7 +518,7 @@ class _KeypadButton extends StatelessWidget {
 
     return Expanded(
       child: AspectRatio(
-        aspectRatio: 1.2, // Slightly wider than tall for compactness
+        aspectRatio: 1.4, // More compact for mobile
         child: Material(
           color: backgroundColor,
           borderRadius: BorderRadius.circular(8),
@@ -524,7 +531,7 @@ class _KeypadButton extends StatelessWidget {
                 Text(
                   '$score',
                   style: TextStyle(
-                    fontSize: 28,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: textColor,
                   ),
@@ -533,7 +540,7 @@ class _KeypadButton extends StatelessWidget {
                   Text(
                     label!,
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 9,
                       color: textColor.withOpacity(0.8),
                       fontWeight: FontWeight.w500,
                     ),
@@ -565,7 +572,7 @@ class _NavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
@@ -601,7 +608,7 @@ class _ScoreSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceVariant,
         border: Border(
@@ -631,7 +638,7 @@ class _ScoreSummary extends StatelessWidget {
             ],
           ),
           if (scorecard.holeScores.length == 18) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
@@ -648,8 +655,8 @@ class _ScoreSummary extends StatelessWidget {
               ],
             ),
           ],
-          const SizedBox(height: 8),
-          if (scorecard.isComplete)
+          if (scorecard.isComplete) ...[
+            const SizedBox(height: 8),
             FilledButton(
               onPressed: () {
                 context.read<ScorecardProvider>().finishRound();
@@ -662,6 +669,7 @@ class _ScoreSummary extends StatelessWidget {
               },
               child: const Text('Afslut Runde'),
             ),
+          ],
         ],
       ),
     );
@@ -687,16 +695,15 @@ class _SummaryItem extends StatelessWidget {
       children: [
         Text(
           label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Colors.grey[600],
-              ),
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.grey[600],
+          ),
         ),
         Text(
           value,
-          style: (small
-                  ? Theme.of(context).textTheme.titleMedium
-                  : Theme.of(context).textTheme.titleLarge)
-              ?.copyWith(
+          style: TextStyle(
+            fontSize: small ? 16 : 18,
             fontWeight: FontWeight.bold,
             color: highlighted ? Theme.of(context).colorScheme.primary : null,
           ),
