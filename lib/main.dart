@@ -369,11 +369,10 @@ class _SetupRoundScreenState extends State<SetupRoundScreen> {
       expandedInsets: EdgeInsets.zero,
       hintText: 'Vælg tee...',
       dropdownMenuEntries: provider.availableTees.map((tee) {
-        final genderIcon = tee.gender == 0 ? '♂' : '♀';
         return DropdownMenuEntry<Tee>(
           value: tee,
           label:
-              '$genderIcon ${tee.name} - CR: ${tee.courseRating.toStringAsFixed(1)}, Slope: ${tee.slopeRating}',
+              '${tee.name} - CR: ${tee.courseRating.toStringAsFixed(1)}, Slope: ${tee.slopeRating}',
         );
       }).toList(),
       onSelected: (Tee? tee) {
