@@ -114,7 +114,8 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
                   controller: _unionIdController,
                   decoration: InputDecoration(
                     labelText: 'DGU Nummer',
-                    hintText: '906-223',
+                    hintText: 'F.eks. 123-4567',
+                    helperText: 'Format: XXX-XXXXXX',
                     prefixIcon: const Icon(Icons.person),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
