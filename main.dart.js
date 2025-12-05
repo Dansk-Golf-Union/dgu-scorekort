@@ -42240,7 +42240,7 @@ A.YY.prototype={
 XZ(){var s,r=$.aFi(),q=J.yU(64,t.N)
 for(s=0;s<64;++s)q[s]="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"[r.aok(66)]
 return B.b.uQ(q)},
-Y2(a){var s=t.N,r=A.al(["client_id","DGU_TEST_DK","redirect_uri",u.I,"response_type","code","scope","get_player.information none union","code_challenge",a,"code_challenge_method","S256","country_iso_code","dk"],s,s),q=A.k(r).i("dE<1,2>")
+Y2(a){var s=t.N,r=A.al(["client_id","DGU_TEST_DK","redirect_uri",u.I,"response_type","code","scope","get_player.information none union","code_challenge",a,"code_challenge_method","S256"],s,s),q=A.k(r).i("dE<1,2>")
 return"https://auth.golfbox.io/connect/authorize?"+A.p8(new A.dE(r,q),new A.YZ(),q.i("v.E"),s).bz(0,"&")},
 z9(a,b){return this.akO(a,b)},
 akO(a,b){var s=0,r=A.N(t.N),q,p=2,o=[],n,m,l,k,j,i,h,g
