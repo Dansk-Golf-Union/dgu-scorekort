@@ -36,6 +36,7 @@ class AuthService {
       'scope': AuthConfig.scope,
       'code_challenge': codeChallenge,
       'code_challenge_method': 'S256',
+      'country_iso_code': 'dk',
     };
 
     final queryString = params.entries
