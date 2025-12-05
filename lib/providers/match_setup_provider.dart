@@ -56,7 +56,25 @@ class MatchSetupProvider with ChangeNotifier {
       _selectedCourse != null &&
       _selectedTee != null;
 
-  List<Tee> get availableTees => _selectedCourse?.tees ?? [];
+  /// Get available tees filtered by player gender
+  /// If no player or course, return all tees
+  /// If no matching tees, return all tees (edge case)
+  List<Tee> get availableTees {
+    if (_selectedCourse == null) return [];
+    
+    final allTees = _selectedCourse!.tees;
+    
+    // If no player, show all tees
+    if (_currentPlayer == null) return allTees;
+    
+    // Filter tees by player gender
+    final matchingTees = allTees
+        .where((tee) => tee.gender == _currentPlayer!.gender)
+        .toList();
+    
+    // If no matching tees, return all (edge case - let user choose)
+    return matchingTees.isNotEmpty ? matchingTees : allTees;
+  }
 
   /// Set player from OAuth login
   void setPlayer(Player player) {
