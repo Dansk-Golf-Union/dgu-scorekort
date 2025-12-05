@@ -153,49 +153,54 @@ class _HoleKeypadCard extends StatelessWidget {
           Card(
             elevation: 2,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  // Left side: HUL 1  Index: 5
                   Row(
                     children: [
                       Text(
                         'HUL ${hole.holeNumber}',
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Index: ${hole.index}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                  // Right side: +1  Par 4
+                  Row(
+                    children: [
                       if (hole.strokesReceived > 0) ...[
-                        const SizedBox(width: 12),
                         Chip(
                           label: Text(
                             '+${hole.strokesReceived}',
                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
                           ),
                           visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           backgroundColor: Colors.orange[100],
                         ),
+                        const SizedBox(width: 8),
                       ],
-                      const Spacer(),
                       Text(
                         'Par ${hole.par}',
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Index: ${hole.index}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey[600],
-                    ),
                   ),
                 ],
               ),
