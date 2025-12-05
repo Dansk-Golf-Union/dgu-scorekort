@@ -41830,7 +41830,7 @@ rA(){var s=0,r=A.O(t.H),q,p=2,o=[],n=this,m,l,k,j,i,h,g
 var $async$rA=A.P(function(a,b){if(a===1){o.push(b)
 s=p}for(;;)switch(s){case 0:n.au(new A.ap2(n))
 m=B.c.hd(n.d.a.a)
-j=A.bW("^\\d{3,4}-\\d{3,4}$",!0,!1)
+j=A.bW("^\\d{1,3}-\\d{1,6}$",!0,!1)
 i=B.c.hd(m)
 if(!j.b.test(i)){n.au(new A.ap3(n))
 s=1
