@@ -40762,10 +40762,10 @@ r=r!=null?l.By(a,r,new A.aom(b)):l.a2g(a,b)}r=l.BA(r,a,2,"V\xe6lg Bane")
 q=l.BA(b.as==null?l.KB("V\xe6lg f\xf8rst en bane"):l.a2t(a,b),a,3,"V\xe6lg Tee")
 p=l.a2r(a,b)
 o=b.gRN()?new A.aon(l,a,b):m
-o=A.h1(A.IN(B.FG,B.Ud,o,A.IO(B.aW,B.fG,m,B.js,m,m,m)),1)
+o=A.h1(A.IN(B.FG,B.Uf,o,A.IO(B.aW,B.fG,m,B.js,m,m,m)),1)
 l=b.gRN()?new A.aoo(l,a,b):m
 n=t.p
-return A.cF(A.dX(A.Mx(A.cS(A.c([s,B.f8,r,B.f8,q,B.f8,p,B.OT,A.cN(A.c([o,B.lg,A.h1(A.IN(B.FH,B.Ui,l,A.IO(B.aW,B.fG,m,B.js,m,m,m)),1)],n),B.x,B.z,B.A,0)],n),B.cG,B.z,B.A),m,m,B.a8),B.u,B.fv,m,m,m,B.aY,m),m,m)},
+return A.cF(A.dX(A.Mx(A.cS(A.c([s,B.f8,r,B.f8,q,B.f8,p,B.OT,A.cN(A.c([o,B.lg,A.h1(A.IN(B.FH,B.Ud,l,A.IO(B.aW,B.fG,m,B.js,m,m,m)),1)],n),B.x,B.z,B.A,0)],n),B.cG,B.z,B.A),m,m,B.a8),B.u,B.fv,m,m,m,B.aY,m),m,m)},
 $S:574}
 A.aol.prototype={
 $0(){return this.a.uk()},
@@ -41319,7 +41319,7 @@ I(a){return A.ZA(new A.abf(),t.ql)}}
 A.abf.prototype={
 $3(a,b,c){var s=null,r=b.a
 if(r==null)return A.tF(A.qL(s,s,s,s,B.Uc),s,B.Cl)
-return A.tF(A.qL(s,B.aW,!0,B.k,B.Uk),B.bY,A.cF(A.dX(A.Mx(A.cS(A.c([new A.QP(r,s),B.f8,new A.TT(r,s),B.li,new A.OC(r,s),B.li,A.IN(B.FO,B.Ug,new A.abe(a),A.IO(B.aW,s,s,B.js,s,s,s))],t.p),B.cG,B.z,B.A),s,B.aY,B.a8),B.u,B.fv,s,s,s,s,s),s,s))},
+return A.tF(A.qL(s,B.aW,!0,B.k,B.Uk),B.bY,A.cF(A.dX(A.Mx(A.cS(A.c([new A.QP(r,s),B.f8,new A.TT(r,s),B.li,new A.OC(r,s),B.li,A.IN(B.FO,B.Uh,new A.abe(a),A.IO(B.aW,s,s,B.js,s,s,s))],t.p),B.cG,B.z,B.A),s,B.aY,B.a8),B.u,B.fv,s,s,s,s,s),s,s))},
 $S:97}
 A.abe.prototype={
 $0(){var s=this.a
@@ -87911,8 +87911,8 @@ B.Lh=new A.bc(B.aY,B.Cp,null)
 B.iY=new A.fX(B.a_,null,null,B.Lh,null)
 B.U8=new A.dc("Ingen scorekort data",null,null,null,null,null,null,null,null)
 B.Cl=new A.fX(B.a_,null,null,B.U8,null)
-B.Uh=new A.dc("Ingen spiller data",null,null,null,null,null,null,null,null)
-B.Li=new A.bc(B.aY,B.Uh,null)
+B.Ui=new A.dc("Ingen spiller data",null,null,null,null,null,null,null,null)
+B.Li=new A.bc(B.aY,B.Ui,null)
 B.Cm=new A.fX(B.a_,null,null,B.Li,null)
 B.U9=new A.dc("Ingen aktiv runde",null,null,null,null,null,null,null,null)
 B.mo=new A.fX(B.a_,null,null,B.U9,null)
@@ -89649,8 +89649,8 @@ B.Xr=new A.KB(0,"start")
 B.Le=new A.KB(1,"end")
 B.ux=new A.KC(0,"nearestOverlay")
 B.Lf=new A.KC(1,"rootOverlay")
-B.Uf=new A.dc("Ingen baner fundet for denne klub",null,null,null,null,null,null,null,null)
-B.Lg=new A.bc(B.aY,B.Uf,null)
+B.Ug=new A.dc("Ingen baner fundet for denne klub",null,null,null,null,null,null,null,null)
+B.Lg=new A.bc(B.aY,B.Ug,null)
 B.Ue=new A.dc("Ingen tees fundet for denne bane",null,null,null,null,null,null,null,null)
 B.Lj=new A.bc(B.aY,B.Ue,null)
 B.Lk=new A.zp(null)
@@ -90354,12 +90354,12 @@ B.Ua=new A.dc("DGU Scorekort",null,null,null,null,null,null,null,null)
 B.Ub=new A.dc("Pr\xf8v igen",null,null,null,null,null,null,null,null)
 B.Uc=new A.dc("Resultat",null,null,null,null,null,null,null,null)
 B.zz=new A.k(!0,null,null,null,null,null,14,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
-B.Ud=new A.dc("T\xe6ller\n+/-",null,B.zz,B.be,null,null,null,null,null)
+B.Ud=new A.dc("Hurtig",null,B.zz,B.be,null,null,null,null,null)
+B.Uf=new A.dc("Plus/Minus",null,B.zz,B.be,null,null,null,null,null)
 B.zD=new A.dc("Scorekort",null,null,null,null,null,null,null,null)
 B.zE=new A.dc("Afslut Runde",null,null,null,null,null,null,null,null)
-B.Ug=new A.dc("Tilbage til Start",null,null,null,null,null,null,null,null)
+B.Uh=new A.dc("Tilbage til Start",null,null,null,null,null,null,null,null)
 B.zF=new A.dc("N\xe6ste",null,null,null,null,null,null,null,null)
-B.Ui=new A.dc("Keypad\n1-9",null,B.zz,B.be,null,null,null,null,null)
 B.Uj=new A.dc("Handicap Beregning",null,B.zC,null,null,null,null,null,null)
 B.Uk=new A.dc("Runde Afsluttet",null,null,null,null,null,null,null,null)
 B.zG=new A.dc("Forrige",null,null,null,null,null,null,null,null)
