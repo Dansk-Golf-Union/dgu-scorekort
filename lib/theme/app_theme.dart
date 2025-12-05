@@ -97,7 +97,7 @@ class AppTheme {
       menuTheme: MenuThemeData(
         style: MenuStyle(
           backgroundColor: MaterialStateProperty.all(backgroundColor),
-          padding: MaterialStateProperty.all(const EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
+          padding: MaterialStateProperty.all(const EdgeInsets.all(8)),
           shape: MaterialStateProperty.all(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -119,10 +119,14 @@ class AppTheme {
           padding: MaterialStateProperty.all(
             const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
-          // Add margin-like effect with larger shape inset
+          // Add visual separation with border
           shape: MaterialStateProperty.all(
             RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8),
+              side: BorderSide(
+                color: backgroundColor, // Light gray divider
+                width: 2,
+              ),
             ),
           ),
           elevation: MaterialStateProperty.all(2),
