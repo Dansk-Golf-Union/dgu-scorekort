@@ -93,6 +93,34 @@ class ScorecardProvider with ChangeNotifier {
     final updatedHoleScores = List<HoleScore>.from(_currentScorecard!.holeScores);
     updatedHoleScores[holeIndex] = updatedHoleScores[holeIndex].copyWith(
       strokes: strokes,
+      isPickedUp: false, // Reset picked up status when manually setting score
+    );
+
+    _currentScorecard = _currentScorecard!.copyWith(
+      holeScores: updatedHoleScores,
+    );
+
+    notifyListeners();
+  }
+
+  /// Pick up ball on a specific hole (set to netto double bogey)
+  void pickUpHole(int holeNumber) {
+    if (_currentScorecard == null) return;
+
+    final holeIndex = _currentScorecard!.holeScores
+        .indexWhere((h) => h.holeNumber == holeNumber);
+
+    if (holeIndex == -1) return;
+
+    final hole = _currentScorecard!.holeScores[holeIndex];
+    
+    // Calculate netto double bogey: par + strokes received + 2
+    final nettoDoubleBogey = hole.par + hole.strokesReceived + 2;
+
+    final updatedHoleScores = List<HoleScore>.from(_currentScorecard!.holeScores);
+    updatedHoleScores[holeIndex] = updatedHoleScores[holeIndex].copyWith(
+      strokes: nettoDoubleBogey,
+      isPickedUp: true,
     );
 
     _currentScorecard = _currentScorecard!.copyWith(

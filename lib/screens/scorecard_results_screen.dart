@@ -401,8 +401,8 @@ class _ScorecardTable extends StatelessWidget {
         _DataCell(hole.par.toString()),
         _DataCell(_getSPHDisplay(hole.strokesReceived)),
         _MarkedScoreCell(
-          score: hole.strokes?.toString() ?? '-',
-          marker: _getScoreMarker(hole),
+          score: hole.isPickedUp ? '—' : (hole.strokes?.toString() ?? '-'),
+          marker: hole.isPickedUp ? ScoreMarker.none : _getScoreMarker(hole),
         ),
         _DataCell(hole.stablefordPoints.toString()),
         _DataCell(hole.strokes?.toString() ?? '-'),

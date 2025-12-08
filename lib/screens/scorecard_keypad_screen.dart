@@ -218,6 +218,18 @@ class _HoleKeypadCard extends StatelessWidget {
             par: hole.par,
             nettoPar: hole.par + hole.strokesReceived,
             onChanged: onScoreChanged,
+            onPickUp: () {
+              final provider = Provider.of<ScorecardProvider>(context, listen: false);
+              provider.pickUpHole(hole.holeNumber);
+              // Auto-advance to next hole after a short delay
+              if (provider.canGoNext) {
+                Future.delayed(const Duration(milliseconds: 400), () {
+                  if (context.mounted) {
+                    provider.nextHole();
+                  }
+                });
+              }
+            },
           ),
         ],
       ),
@@ -256,11 +268,11 @@ class _ScoreDisplay extends StatelessWidget {
     }
 
     final nettoPar = hole.par + hole.strokesReceived;
-    final golfTerm = ScoreHelper.getGolfTerm(hole.strokes!, nettoPar);
+    final golfTerm = hole.isPickedUp ? 'Samlet op' : ScoreHelper.getGolfTerm(hole.strokes!, nettoPar);
     final colorCategory = ScoreHelper.getScoreColor(hole.strokes!, nettoPar);
 
     return Card(
-      color: _getCardColor(colorCategory),
+      color: hole.isPickedUp ? Colors.grey[600] : _getCardColor(colorCategory),
       elevation: 4,
       child: Padding(
         padding: const EdgeInsets.all(12.0),
@@ -268,7 +280,7 @@ class _ScoreDisplay extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              '${hole.strokes}',
+              hole.isPickedUp ? '—' : '${hole.strokes}',
               style: TextStyle(
                 fontSize: 36,
                 fontWeight: FontWeight.bold,
@@ -278,7 +290,7 @@ class _ScoreDisplay extends StatelessWidget {
             if (golfTerm.isNotEmpty) ...[
               const SizedBox(width: 12),
               Text(
-                '★ $golfTerm ★',
+                hole.isPickedUp ? golfTerm : '★ $golfTerm ★',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.white,
@@ -322,12 +334,14 @@ class _ScoreKeypad extends StatefulWidget {
   final int par; // Actual par for the hole
   final int nettoPar; // Par + strokes received (used as default)
   final Function(int) onChanged;
+  final VoidCallback onPickUp;
 
   const _ScoreKeypad({
     required this.currentScore,
     required this.par,
     required this.nettoPar,
     required this.onChanged,
+    required this.onPickUp,
   });
 
   @override
@@ -444,42 +458,85 @@ class _ScoreKeypadState extends State<_ScoreKeypad> {
               ],
             ),
             const SizedBox(height: 4),
-            // Row 4: Toggle button
-            SizedBox(
-              height: 36,
-              child: Material(
-                color: _showHighScores ? Colors.orange.shade300 : Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(8),
-                child: InkWell(
-                  onTap: () {
-                    setState(() {
-                      _showHighScores = !_showHighScores;
-                    });
-                  },
-                  borderRadius: BorderRadius.circular(8),
-                  child: Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          _showHighScores ? Icons.arrow_back : Icons.more_horiz,
-                          size: 20,
-                          color: Colors.black87,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _showHighScores ? '1-9' : '10-18',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
+            // Row 4: Toggle button and Pick up button
+            Row(
+              children: [
+                // Left: Toggle 10-18 button
+                Expanded(
+                  child: SizedBox(
+                    height: 36,
+                    child: Material(
+                      color: _showHighScores ? Colors.orange.shade300 : Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(8),
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            _showHighScores = !_showHighScores;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                _showHighScores ? Icons.arrow_back : Icons.more_horiz,
+                                size: 20,
+                                color: Colors.black87,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _showHighScores ? '1-9' : '10-18',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 4),
+                // Right: Pick up button
+                Expanded(
+                  child: SizedBox(
+                    height: 36,
+                    child: Material(
+                      color: Colors.red.shade300,
+                      borderRadius: BorderRadius.circular(8),
+                      child: InkWell(
+                        onTap: widget.onPickUp,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.cancel_outlined,
+                                size: 20,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Saml op',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

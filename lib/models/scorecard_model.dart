@@ -9,6 +9,7 @@ class HoleScore {
   final int strokesReceived; // Tildelte slag
   int? strokes; // Faktiske slag (null = ikke spillet endnu)
   int? putts;
+  bool isPickedUp; // Om bolden blev samlet op (netto dobbelt bogey)
 
   HoleScore({
     required this.holeNumber,
@@ -17,6 +18,7 @@ class HoleScore {
     required this.strokesReceived,
     this.strokes,
     this.putts,
+    this.isPickedUp = false,
   });
 
   /// Calculate Stableford points for this hole
@@ -45,6 +47,7 @@ class HoleScore {
   HoleScore copyWith({
     int? strokes,
     int? putts,
+    bool? isPickedUp,
   }) {
     return HoleScore(
       holeNumber: holeNumber,
@@ -53,6 +56,7 @@ class HoleScore {
       strokesReceived: strokesReceived,
       strokes: strokes ?? this.strokes,
       putts: putts ?? this.putts,
+      isPickedUp: isPickedUp ?? this.isPickedUp,
     );
   }
 }
