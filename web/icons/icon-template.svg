@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- DGU Green Circle Background -->
+  <circle cx="256" cy="256" r="256" fill="#1B5E20"/>
+  
+  <!-- Golf Flag (White) -->
+  <!-- Flag pole -->
+  <rect x="240" y="128" width="16" height="256" fill="#FFFFFF" rx="2"/>
+  
+  <!-- Flag -->
+  <path d="M 256 128 L 256 224 L 368 192 L 256 160 Z" fill="#FFFFFF"/>
+  
+  <!-- Golf ball at base -->
+  <circle cx="248" cy="368" r="24" fill="#FFFFFF"/>
+  <!-- Golf ball dimples -->
+  <circle cx="240" cy="362" r="3" fill="#1B5E20" opacity="0.3"/>
+  <circle cx="248" cy="360" r="3" fill="#1B5E20" opacity="0.3"/>
+  <circle cx="256" cy="362" r="3" fill="#1B5E20" opacity="0.3"/>
+  <circle cx="244" cy="370" r="3" fill="#1B5E20" opacity="0.3"/>
+  <circle cx="252" cy="372" r="3" fill="#1B5E20" opacity="0.3"/>
+</svg>
+

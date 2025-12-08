@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Full background for maskable icon -->
+  <rect width="512" height="512" fill="#1B5E20"/>
+  
+  <!-- Inner circle (80% safe zone - centered) -->
+  <!-- Golf Flag (White) - scaled down to fit safe zone -->
+  <!-- Flag pole -->
+  <rect x="248" y="160" width="12" height="192" fill="#FFFFFF" rx="2"/>
+  
+  <!-- Flag -->
+  <path d="M 260 160 L 260 240 L 352 208 L 260 176 Z" fill="#FFFFFF"/>
+  
+  <!-- Golf ball at base -->
+  <circle cx="254" cy="336" r="18" fill="#FFFFFF"/>
+  <!-- Golf ball dimples -->
+  <circle cx="248" cy="332" r="2" fill="#1B5E20" opacity="0.3"/>
+  <circle cx="254" cy="330" r="2" fill="#1B5E20" opacity="0.3"/>
+  <circle cx="260" cy="332" r="2" fill="#1B5E20" opacity="0.3"/>
+  <circle cx="251" cy="338" r="2" fill="#1B5E20" opacity="0.3"/>
+  <circle cx="257" cy="340" r="2" fill="#1B5E20" opacity="0.3"/>
+</svg>
+
