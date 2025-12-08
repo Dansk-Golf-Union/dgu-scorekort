@@ -107,9 +107,9 @@ class GolfCourse {
     return 0;
   }
 
-  // Find the longest men's tee (Gender 0)
+  // Find the longest men's tee (Gender 1)
   Tee? get longestMenTee {
-    final menTees = tees.where((tee) => tee.gender == 0).toList();
+    final menTees = tees.where((tee) => tee.gender == 1).toList();
     if (menTees.isEmpty) return null;
     
     menTees.sort((a, b) => b.totalLength.compareTo(a.totalLength));
@@ -120,7 +120,7 @@ class GolfCourse {
 class Tee {
   final String id;
   final String name;
-  final int gender; // 0 = Herre, 1 = Dame
+  final int gender; // 0 = Dame, 1 = Herre
   final double courseRating; // Parsed from string and divided by 10000
   final int slopeRating;
   final int totalLength;
@@ -165,7 +165,7 @@ class Tee {
     );
   }
 
-  String get genderLabel => gender == 0 ? 'Herre' : 'Dame';
+  String get genderLabel => gender == 1 ? 'Herre' : 'Dame';
 }
 
 class Hole {

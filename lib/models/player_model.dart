@@ -11,7 +11,7 @@ class Player {
   final String? homeClubName;
   final String? homeClubId;
   final String? lifetimeId;
-  final int gender; // 0 = Male, 1 = Female
+  final int gender; // 0 = Female, 1 = Male
 
   Player({
     required this.name,
@@ -24,7 +24,7 @@ class Player {
     this.homeClubName,
     this.homeClubId,
     this.lifetimeId,
-    this.gender = 0, // Default to male
+    this.gender = 1, // Default to male
   });
 
   /// Factory for legacy mock data format
@@ -44,9 +44,9 @@ class Player {
     final handicapInt = int.tryParse(handicapStr) ?? 0;
     final hcp = handicapInt / 10000.0;
     
-    // Parse gender: "Male" → 0, "Female" → 1
+    // Parse gender: "Male" → 1, "Female" → 0
     final genderStr = json['Gender'] as String? ?? 'Male';
-    final gender = genderStr.toLowerCase() == 'female' ? 1 : 0;
+    final gender = genderStr.toLowerCase() == 'male' ? 1 : 0;
     
     // Get first membership (home club)
     final memberships = json['Memberships'] as List<dynamic>? ?? [];
