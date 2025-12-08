@@ -355,6 +355,15 @@ class _MarkerApprovalScreenState extends State<MarkerApprovalScreen> {
                                 color: Colors.grey.shade600,
                               ),
                             ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Vend skærmen for større felt',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
                             const SizedBox(height: 24),
                             
                             // Confirm button
