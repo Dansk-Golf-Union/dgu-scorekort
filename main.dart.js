@@ -14966,7 +14966,7 @@ if(e2==null)s=B.AK
 else s=e2
 if(e3==null)r=B.AL
 else r=e3
-if(b4==null)q=b8===1?B.mr:B.ms
+if(b4==null)q=b8===1?B.Sh:B.mr
 else q=b4
 if(a3==null)p=!0
 else p=a3
@@ -44919,7 +44919,7 @@ l=A.cQ(A.c3(A.b([A.i1(B.la,B.hr,n,n),B.fJ,A.e6(A.b7("Din mark\xf8r skal godkende
 k=A.bJ(12)
 s=A.bJ(12)
 r=A.bJ(12)
-r=A.aSz(o.d,A.Mm(n,new A.dU(4,k,B.n),n,n,n,n,n,n,!0,new A.dU(4,s,new A.aG(B.cD,1,B.v,-1)),n,new A.dU(4,A.bJ(12),B.Cq),n,n,n,B.j,!0,n,n,n,n,new A.dU(4,r,new A.aG(B.ae,2,B.v,-1)),n,n,n,n,"Format: XXX-XXXXXX",n,n,n,n,"F.eks. 123-4567",n,n,n,n,n,n,n,n,"Mark\xf8rens DGU Nummer",!0,!0,n,B.Hv,n,n,n,n,n,n,n,n,n,n,n,n),B.mr,new A.app())
+r=A.aSz(o.d,A.Mm(n,new A.dU(4,k,B.n),n,n,n,n,n,n,!0,new A.dU(4,s,new A.aG(B.cD,1,B.v,-1)),n,new A.dU(4,A.bJ(12),B.Cq),n,n,n,B.j,!0,n,n,n,n,new A.dU(4,r,new A.aG(B.ae,2,B.v,-1)),n,n,n,n,"Format: XXX-XXXXXX",n,n,n,n,"F.eks. 123-4567",n,n,n,n,n,n,n,n,"Mark\xf8rens DGU Nummer",!0,!0,n,B.Hv,n,n,n,n,n,n,n,n,n,n,n,n),B.ms,new A.app())
 k=o.x
 s=k?n:o.ga9o()
 q=k?B.Rm:B.HD
@@ -45022,7 +45022,7 @@ o=o==null?n:B.e.k(o)
 if(o==null)o="-"
 return new A.dY(new A.ca(l,n,n,n,n,n,B.a7),A.b([new A.hb(m,!1,n),new A.hb(s,!1,n),new A.hb(r,!1,n),q,new A.hb(p,!1,n),new A.hb(o,!1,n)],t.p))},
 a6C(a,b,c){var s=this,r=null,q=s.e[b],p=s.d[b],o=A.b([$.aJd(),new A.MF(2,r)],t.VS)
-return new A.b1(B.dQ,A.c3(A.b([A.e6(A.aj5(r,B.d9,!1,r,!0,B.T,r,A.aB7(),q,r,r,r,r,r,2,A.Mm(r,new A.dU(4,A.bJ(4),B.h4),r,B.dR,r,r,r,r,!0,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,"-",r,r,r,r,r,!0,r,r,r,!0,!0,r,r,r,r,r,r,r,r,r,r,r,r,r,r),B.at,!0,r,!0,r,!1,p,B.cO,r,r,o,r,r,B.Si,r,r,r,1,r,r,!1,"\u2022",r,new A.asS(s,c,a,b),r,r,r,!1,r,r,!1,r,!0,r,B.d2,r,r,r,r,r,r,r,r,r,r,r,B.eq,!0,B.aE,r,B.j7,r,r,r,r),1),A.u6(!1,r,!0,new A.b1(B.dQ,A.i1(B.pg,B.oe,r,20),r),r,!0,r,r,r,r,r,r,r,new A.asT(s,c,a,b),r,r,r,r,r,r)],t.p),B.w,B.y,B.z,0),r)},
+return new A.b1(B.dQ,A.c3(A.b([A.e6(A.aj5(r,B.d9,!1,r,!0,B.T,r,A.aB7(),q,r,r,r,r,r,2,A.Mm(r,new A.dU(4,A.bJ(4),B.h4),r,B.dR,r,r,r,r,!0,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,"-",r,r,r,r,r,!0,r,r,r,!0,!0,r,r,r,r,r,r,r,r,r,r,r,r,r,r),B.at,!0,r,!0,r,!1,p,B.cO,r,r,o,r,r,B.Sj,r,r,r,1,r,r,!1,"\u2022",r,new A.asS(s,c,a,b),r,r,r,!1,r,r,!1,r,!0,r,B.d2,r,r,r,r,r,r,r,r,r,r,r,B.eq,!0,B.aE,r,B.j7,r,r,r,r),1),A.u6(!1,r,!0,new A.b1(B.dQ,A.i1(B.pg,B.oe,r,20),r),r,!0,r,r,r,r,r,r,r,new A.asT(s,c,a,b),r,r,r,r,r,r)],t.p),B.w,B.y,B.z,0),r)},
 G7(a,b){var s=null,r=B.b.fN(b,0,new A.asY()),q=B.b.fN(b,0,new A.asZ()),p=B.b.fN(b,0,new A.at_()),o=a==="Total"?B.dM:B.b3,n=B.e.k(r),m=q>0,l=m?B.e.k(q):"-",k=B.e.k(p)
 m=m?B.e.k(q):"-"
 return new A.dY(new A.ca(o,s,s,s,s,s,B.a7),A.b([new A.hb(a,!0,s),new A.hb(n,!0,s),new A.hb("",!1,s),new A.hb(l,!0,s),new A.hb(k,!0,s),new A.hb(m,!0,s)],t.p))},
@@ -45521,7 +45521,7 @@ break
 case 6:case 1:return A.L(q,r)
 case 2:return A.K(o.at(-1),r)}})
 return A.M($async$tP,r)},
-J(a){var s=this,r=null,q=A.cQ(B.Hr,B.q,r,new A.ca(B.ae,r,r,r,r,r,B.cW),120,r,r,120),p=A.cQ(A.aj5(r,B.d9,!1,r,!0,B.T,r,A.aB7(),s.d,r,r,r,r,r,2,A.Mm(r,new A.dU(4,A.bJ(12),B.h4),r,r,r,r,r,r,!0,r,r,r,r,r,r,B.j,!0,r,r,r,r,r,r,r,r,r,"Format: XXX-XXXXXX",r,r,r,r,"F.eks. 123-4567",r,r,r,r,r,r,r,r,"DGU Nummer",!0,!0,r,B.HC,r,r,r,r,r,r,r,r,r,r,r,r),B.at,!0,r,!0,!s.e,!1,r,B.cO,r,r,r,r,r,B.mr,r,r,r,1,r,r,!1,"\u2022",r,r,r,new A.atW(s),r,!1,r,r,!1,r,!0,r,B.d2,r,r,r,r,r,r,r,r,r,r,r,r,!0,B.aL,r,B.j7,r,B.mq,r,r),B.q,B.jP,r,r,r,r,r),o=s.e?r:s.gabQ(),n=A.l8(B.ae,B.iu,r,r,r,r,r,r),m=t.p
+J(a){var s=this,r=null,q=A.cQ(B.Hr,B.q,r,new A.ca(B.ae,r,r,r,r,r,B.cW),120,r,r,120),p=A.cQ(A.aj5(r,B.d9,!1,r,!0,B.T,r,A.aB7(),s.d,r,r,r,r,r,2,A.Mm(r,new A.dU(4,A.bJ(12),B.h4),r,r,r,r,r,r,!0,r,r,r,r,r,r,B.j,!0,r,r,r,r,r,r,r,r,r,"Format: XXX-XXXXXX",r,r,r,r,"F.eks. 123-4567",r,r,r,r,r,r,r,r,"DGU Nummer",!0,!0,r,B.HC,r,r,r,r,r,r,r,r,r,r,r,r),B.at,!0,r,!0,!s.e,!1,r,B.cO,r,r,r,r,r,B.ms,r,r,r,1,r,r,!1,"\u2022",r,r,r,new A.atW(s),r,!1,r,r,!1,r,!0,r,B.d2,r,r,r,r,r,r,r,r,r,r,r,r,!0,B.aL,r,B.j7,r,B.mq,r,r),B.q,B.jP,r,r,r,r,r),o=s.e?r:s.gabQ(),n=A.l8(B.ae,B.iu,r,r,r,r,r,r),m=t.p
 n=A.b([q,B.AG,B.X9,B.eo,B.X8,B.AH,p,B.cN,A.cQ(A.a4Y(!1,s.e?B.Rn:B.X3,B.q,r,r,r,r,r,o,r,n),B.q,B.jP,r,56,r,r,1/0)],m)
 q=s.f
 if(q!=null){p=A.bJ(8)
@@ -72277,8 +72277,8 @@ $S:0}
 A.DO.prototype={}
 A.V6.prototype={
 O7(a){var s,r=a.lm()
-if($.c9().a!==$.axN()){s=B.Sh.lm()
-s.m(0,"isMultiline",a.b.j(0,B.ms))
+if($.c9().a!==$.axN()){s=B.Si.lm()
+s.m(0,"isMultiline",a.b.j(0,B.mr))
 r.m(0,"inputType",s)}return r},
 a0w(a){var s,r=$.c9().c
 r===$&&A.a()
@@ -75419,7 +75419,7 @@ m=q.ax
 l=q.ay
 k=q.aA
 q=q.p4
-if(q==null)q=p.j(0,B.ms)?B.B2:B.mq
+if(q==null)q=p.j(0,B.mr)?B.B2:B.mq
 j=g.a
 i=j.dy
 h=j.ba
@@ -75569,7 +75569,7 @@ r=r==null?b8:r.gce()
 if(r==null)r=B.ah
 break $label0$0}b9.a=null
 $label1$1:{q=b7.a.p3
-if(B.Sj.j(0,q)){b9.a=B.PY
+if(B.ms.j(0,q)){b9.a=B.PY
 break $label1$1}if(B.Sl.j(0,q)){b9.a=B.PX
 break $label1$1}if(B.Sk.j(0,q)){b9.a=B.PZ
 break $label1$1}b9.a=B.A4}p=b7.gi1()
@@ -99953,11 +99953,11 @@ B.Sd=new A.fF(6,"next")
 B.Se=new A.fF(7,"previous")
 B.Sf=new A.fF(8,"continueAction")
 B.Sg=new A.fF(9,"join")
-B.mr=new A.kl(0,null,null)
-B.Sh=new A.kl(10,null,null)
-B.ms=new A.kl(1,null,null)
-B.Si=new A.kl(2,!1,!1)
-B.Sj=new A.kl(3,null,null)
+B.Sh=new A.kl(0,null,null)
+B.Si=new A.kl(10,null,null)
+B.mr=new A.kl(1,null,null)
+B.Sj=new A.kl(2,!1,!1)
+B.ms=new A.kl(3,null,null)
 B.Sk=new A.kl(5,null,null)
 B.Sl=new A.kl(6,null,null)
 B.A=new A.Qf(1,"even")
