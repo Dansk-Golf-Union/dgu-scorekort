@@ -181,7 +181,7 @@ class _ScorecardBulkScreenState extends State<ScorecardBulkScreen> {
         _DataCell(_getSPHDisplay(hole.strokesReceived)),
         _buildEditableCell(hole, index, provider),
         _DataCell(hole.stablefordPoints.toString()),
-        _DataCell(hole.strokes?.toString() ?? '-'),
+        _DataCell(hole.isPickedUp ? '—' : (hole.strokes?.toString() ?? '-')),
       ],
     );
   }
@@ -216,19 +216,37 @@ class _ScorecardBulkScreenState extends State<ScorecardBulkScreen> {
               onChanged: (value) {
                 if (value.isNotEmpty) {
                   final strokes = int.tryParse(value);
-                  if (strokes != null && strokes >= 1 && strokes <= 15) {
-                    provider.setScore(hole.holeNumber, strokes);
-                    
-                    // Auto-advance to next field
-                    if (index < _focusNodes.length - 1) {
-                      Future.delayed(const Duration(milliseconds: 100), () {
-                        if (mounted) {
-                          _focusNodes[index + 1].requestFocus();
-                        }
-                      });
-                    } else {
-                      // Last field - unfocus keyboard
-                      FocusScope.of(context).unfocus();
+                  if (strokes != null) {
+                    if (strokes == 0) {
+                      // 0 means pick up
+                      provider.pickUpHole(hole.holeNumber);
+                      _controllers[index].text = '';
+                      
+                      // Auto-advance to next field
+                      if (index < _focusNodes.length - 1) {
+                        Future.delayed(const Duration(milliseconds: 100), () {
+                          if (mounted) {
+                            _focusNodes[index + 1].requestFocus();
+                          }
+                        });
+                      } else {
+                        // Last field - unfocus keyboard
+                        FocusScope.of(context).unfocus();
+                      }
+                    } else if (strokes >= 1 && strokes <= 15) {
+                      provider.setScore(hole.holeNumber, strokes);
+                      
+                      // Auto-advance to next field
+                      if (index < _focusNodes.length - 1) {
+                        Future.delayed(const Duration(milliseconds: 100), () {
+                          if (mounted) {
+                            _focusNodes[index + 1].requestFocus();
+                          }
+                        });
+                      } else {
+                        // Last field - unfocus keyboard
+                        FocusScope.of(context).unfocus();
+                      }
                     }
                   }
                 }
