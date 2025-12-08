@@ -5,8 +5,8 @@ import 'providers/scorecard_provider.dart';
 import 'providers/auth_provider.dart';
 import 'models/club_model.dart';
 import 'models/course_model.dart';
-import 'screens/scorecard_screen.dart';
 import 'screens/scorecard_keypad_screen.dart';
+import 'screens/scorecard_bulk_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/simple_login_screen.dart';
 import 'theme/app_theme.dart';
@@ -185,11 +185,11 @@ class _SetupRoundScreenState extends State<SetupRoundScreen> {
                       Expanded(
                         child: FilledButton.icon(
                           onPressed: provider.canStartRound
-                              ? () => _startRound(context, provider, useKeypad: false)
+                              ? () => _startRound(context, provider, useBulk: true)
                               : null,
-                          icon: const Icon(Icons.exposure),
+                          icon: const Icon(Icons.table_chart),
                           label: const Text(
-                            'Plus/Minus',
+                            'Indberet',
                             textAlign: TextAlign.center,
                             style: TextStyle(fontSize: 14),
                           ),
@@ -204,11 +204,11 @@ class _SetupRoundScreenState extends State<SetupRoundScreen> {
                       Expanded(
                         child: FilledButton.icon(
                           onPressed: provider.canStartRound
-                              ? () => _startRound(context, provider, useKeypad: true)
+                              ? () => _startRound(context, provider, useBulk: false)
                               : null,
                           icon: const Icon(Icons.grid_3x3),
                           label: const Text(
-                            'Hurtig',
+                            'Hul-for-hul',
                             textAlign: TextAlign.center,
                             style: TextStyle(fontSize: 14),
                           ),
@@ -231,7 +231,7 @@ class _SetupRoundScreenState extends State<SetupRoundScreen> {
     );
   }
 
-  void _startRound(BuildContext context, MatchSetupProvider provider, {required bool useKeypad}) {
+  void _startRound(BuildContext context, MatchSetupProvider provider, {required bool useBulk}) {
     final scorecardProvider = context.read<ScorecardProvider>();
     scorecardProvider.startRound(
       provider.selectedCourse!,
@@ -243,9 +243,9 @@ class _SetupRoundScreenState extends State<SetupRoundScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => useKeypad
-            ? const ScorecardKeypadScreen()
-            : const ScorecardScreen(),
+        builder: (context) => useBulk
+            ? const ScorecardBulkScreen()
+            : const ScorecardKeypadScreen(),
       ),
     );
   }
