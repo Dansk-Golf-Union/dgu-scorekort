@@ -8036,7 +8036,7 @@ aEO(a){var s,r,q,p,o,n,m,l,k,j,i,h,g=null,f="LifeTimeID",e=A.c8(a.h(0,"Handicap"
 if(d==null)d=0
 s=A.c8(a.h(0,"Gender"))
 if(s==null)s="Male"
-r=s.toLowerCase()==="female"?1:0
+r=s.toLowerCase()==="male"?1:0
 q=t.kc.a(a.h(0,"Memberships"))
 if(q==null)q=[]
 p=J.b8(q)
@@ -44461,7 +44461,7 @@ A.a6j.prototype={
 $1(a){return A.aDC(a)},
 $S:119}
 A.a6l.prototype={
-$1(a){return a.c===0},
+$1(a){return a.c===1},
 $S:120}
 A.a6m.prototype={
 $2(a,b){return B.e.b9(b.f,a.f)},
