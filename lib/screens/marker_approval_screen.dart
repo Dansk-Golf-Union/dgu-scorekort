@@ -181,7 +181,7 @@ class _MarkerApprovalScreenState extends State<MarkerApprovalScreen> {
                         borderSide: const BorderSide(color: Colors.red),
                       ),
                     ),
-                    keyboardType: TextInputType.phone,
+                    keyboardType: TextInputType.text,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Indtast markørens DGU nummer';

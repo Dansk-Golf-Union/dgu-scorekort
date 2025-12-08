@@ -123,7 +123,7 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
                     filled: true,
                     fillColor: Colors.white,
                   ),
-                  keyboardType: TextInputType.phone,
+                  keyboardType: TextInputType.text,
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) => _handleLogin(),
                   enabled: !_isLoggingIn,
