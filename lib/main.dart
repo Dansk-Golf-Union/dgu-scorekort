@@ -306,6 +306,7 @@ class _SetupRoundScreenState extends State<SetupRoundScreen> {
 
   Widget _buildClubDropdown(BuildContext context, MatchSetupProvider provider) {
     return DropdownMenu<Club>(
+      key: ValueKey(provider.selectedClub?.id ?? 'no-club'),
       initialSelection: provider.selectedClub,
       expandedInsets: EdgeInsets.zero,
       hintText: 'Søg eller vælg klub...',
@@ -334,6 +335,7 @@ class _SetupRoundScreenState extends State<SetupRoundScreen> {
     }
 
     return DropdownMenu<GolfCourse>(
+      key: ValueKey(provider.selectedCourse?.name ?? 'no-course'),
       initialSelection: provider.selectedCourse,
       expandedInsets: EdgeInsets.zero,
       hintText: 'Vælg bane...',
@@ -365,6 +367,7 @@ class _SetupRoundScreenState extends State<SetupRoundScreen> {
     }
 
     return DropdownMenu<Tee>(
+      key: ValueKey(provider.selectedTee?.name ?? 'no-tee'),
       initialSelection: provider.selectedTee,
       expandedInsets: EdgeInsets.zero,
       hintText: 'Vælg tee...',
