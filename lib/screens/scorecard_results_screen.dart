@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
 import '../providers/scorecard_provider.dart';
+import '../providers/match_setup_provider.dart';
 import '../models/scorecard_model.dart';
 import '../theme/app_theme.dart';
 import 'package:intl/intl.dart';
@@ -239,6 +240,11 @@ class ScorecardResultsScreen extends StatelessWidget {
                     // Back button
                     OutlinedButton.icon(
                       onPressed: () {
+                        // Reset all selections and scorecard data
+                        context.read<MatchSetupProvider>().reset();
+                        context.read<ScorecardProvider>().clearScorecard();
+                        
+                        // Navigate back to start
                         Navigator.of(context).popUntil((route) => route.isFirst);
                       },
                       icon: const Icon(Icons.home),
