@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'config/firebase_options.dart';
 import 'providers/match_setup_provider.dart';
 import 'providers/scorecard_provider.dart';
 import 'providers/auth_provider.dart';
@@ -15,7 +17,15 @@ import 'theme/app_theme.dart';
 // Set to false to use OAuth login, true for simple Union ID login
 const bool useSimpleLogin = true;
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
+  print('Firebase initialized successfully');
+  
   runApp(const MyApp());
 }
 
