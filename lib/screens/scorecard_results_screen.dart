@@ -393,8 +393,8 @@ class ScorecardResultsScreen extends StatelessWidget {
                     else
                       FilledButton.icon(
                         onPressed: () => _handleSubmitScore(context, provider),
-                        icon: const Icon(Icons.send),
-                        label: const Text('Indsend Score'),
+                        icon: const Icon(Icons.edit),
+                        label: const Text('Få Markør Underskrift Her'),
                         style: FilledButton.styleFrom(
                           minimumSize: const Size(double.infinity, 48),
                           backgroundColor: AppTheme.dguGreen,
