@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
 import '../providers/scorecard_provider.dart';
@@ -7,6 +8,8 @@ import '../models/scorecard_model.dart';
 import '../theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'marker_approval_screen.dart';
+import '../services/scorecard_storage_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // Score marker types for visual indication
 enum ScoreMarker {
@@ -19,6 +22,155 @@ enum ScoreMarker {
 
 class ScorecardResultsScreen extends StatelessWidget {
   const ScorecardResultsScreen({super.key});
+
+  /// Test Firebase integration - saves scorecard and retrieves it
+  Future<void> _testFirebaseIntegration(BuildContext context, Scorecard scorecard) async {
+    final storage = ScorecardStorageService();
+    
+    try {
+      // Show loading
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🔥 Testing Firebase - Gemmer scorekort...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      
+      // Save scorecard
+      final documentId = await storage.saveScorecardForApproval(
+        scorecard: scorecard,
+        markerId: '999-9999', // Test marker ID
+        markerName: 'Test Markør',
+      );
+      
+      // Wait a bit
+      await Future.delayed(const Duration(seconds: 1));
+      
+      // Retrieve scorecard
+      final retrievedData = await storage.getScorecardById(documentId);
+      
+      if (context.mounted) {
+        if (retrievedData != null) {
+          // Success!
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              backgroundColor: Colors.white,
+              title: const Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green, size: 28),
+                  SizedBox(width: 8),
+                  Text('Firebase Test Succes! ✅'),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Scorekortet blev gemt og hentet fra Firebase!'),
+                  const SizedBox(height: 16),
+                  Text('Document ID: $documentId',
+                    style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('Spiller: ${retrievedData['playerName']}'),
+                  Text('Status: ${retrievedData['status']}'),
+                  Text('Total Points: ${retrievedData['totalPoints']}'),
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  const Text('Markør Godkendelses-link:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  const SizedBox(height: 12),
+                  // Production URL
+                  _buildUrlButton(
+                    context,
+                    'https://dgu-scorekort.web.app/marker-approval/$documentId',
+                    'Åbn i ny tab (Production)',
+                    Icons.open_in_new,
+                  ),
+                  const SizedBox(height: 8),
+                  // Local test URL
+                  _buildUrlButton(
+                    context,
+                    'http://localhost:51248/#/marker-approval/$documentId',
+                    'Test lokalt',
+                    Icons.computer,
+                  ),
+                ],
+              ),
+              actions: [
+                FilledButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        } else {
+          throw Exception('Kunne ikke hente scorekort fra Firebase');
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Firebase test fejl: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
+  static Widget _buildUrlButton(BuildContext context, String url, String label, IconData icon) {
+    return OutlinedButton.icon(
+      onPressed: () async {
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(
+            uri,
+            mode: LaunchMode.externalApplication, // Opens in new tab/browser
+          );
+        } else {
+          // Fallback: copy to clipboard
+          await Clipboard.setData(ClipboardData(text: url));
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('URL kopieret til clipboard: $url'),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        }
+      },
+      icon: Icon(icon, size: 16),
+      label: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 2),
+          Text(
+            url,
+            style: const TextStyle(fontSize: 9, fontFamily: 'monospace'),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.blue,
+        side: const BorderSide(color: Colors.blue),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        alignment: Alignment.centerLeft,
+      ),
+    );
+  }
 
   Future<void> _handleSubmitScore(BuildContext context, ScorecardProvider provider) async {
     // Check 1: Is marker approved?
@@ -234,6 +386,20 @@ class ScorecardResultsScreen extends StatelessWidget {
                           backgroundColor: AppTheme.dguGreen,
                         ),
                       ),
+
+                    const SizedBox(height: 12),
+
+                    // Firebase test button (for development)
+                    OutlinedButton.icon(
+                      onPressed: () => _testFirebaseIntegration(context, scorecard),
+                      icon: const Icon(Icons.science),
+                      label: const Text('🔥 Test Firebase Integration'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 48),
+                        foregroundColor: Colors.orange,
+                        side: const BorderSide(color: Colors.orange),
+                      ),
+                    ),
 
                     const SizedBox(height: 12),
 
