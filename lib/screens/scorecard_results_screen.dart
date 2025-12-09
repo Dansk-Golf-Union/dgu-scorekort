@@ -6,9 +6,11 @@ import 'dart:html' as html;
 import '../providers/scorecard_provider.dart';
 import '../providers/match_setup_provider.dart';
 import '../models/scorecard_model.dart';
+import '../models/player_model.dart';
 import '../theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'marker_approval_screen.dart';
+import 'marker_assignment_dialog.dart';
 import '../services/scorecard_storage_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -24,8 +26,18 @@ enum ScoreMarker {
 class ScorecardResultsScreen extends StatelessWidget {
   const ScorecardResultsScreen({super.key});
 
-  /// Test Firebase integration - saves scorecard and retrieves it
-  Future<void> _testFirebaseIntegration(BuildContext context, Scorecard scorecard) async {
+  /// Send scorecard to marker via Firebase
+  Future<void> _sendToMarker(BuildContext context, Scorecard scorecard) async {
+    // Step 1: Show marker assignment dialog
+    final Player? marker = await showDialog<Player>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const MarkerAssignmentDialog(),
+    );
+    
+    // User cancelled
+    if (marker == null) return;
+    
     final storage = ScorecardStorageService();
     
     try {
@@ -33,17 +45,17 @@ class ScorecardResultsScreen extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('🔥 Testing Firebase - Gemmer scorekort...'),
+            content: Text('💾 Gemmer scorekort til Firebase...'),
             duration: Duration(seconds: 2),
           ),
         );
       }
       
-      // Save scorecard
+      // Save scorecard with real marker info
       final documentId = await storage.saveScorecardForApproval(
         scorecard: scorecard,
-        markerId: '999-9999', // Test marker ID
-        markerName: 'Test Markør',
+        markerId: marker.unionId ?? marker.memberNo,
+        markerName: marker.name,
       );
       
       // Wait a bit
@@ -70,13 +82,14 @@ class ScorecardResultsScreen extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Scorekortet blev gemt og hentet fra Firebase!'),
+                  const Text('Scorekortet er gemt og klar til godkendelse!'),
                   const SizedBox(height: 16),
                   Text('Document ID: $documentId',
                     style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
                   ),
                   const SizedBox(height: 8),
                   Text('Spiller: ${retrievedData['playerName']}'),
+                  Text('Markør: ${retrievedData['markerName']} (${retrievedData['markerId']})'),
                   Text('Status: ${retrievedData['status']}'),
                   Text('Total Points: ${retrievedData['totalPoints']}'),
                   const SizedBox(height: 16),
@@ -390,15 +403,14 @@ class ScorecardResultsScreen extends StatelessWidget {
 
                     const SizedBox(height: 12),
 
-                    // Firebase test button (for development)
-                    OutlinedButton.icon(
-                      onPressed: () => _testFirebaseIntegration(context, scorecard),
-                      icon: const Icon(Icons.science),
-                      label: const Text('🔥 Test Firebase Integration'),
-                      style: OutlinedButton.styleFrom(
+                    // Send to marker via Firebase
+                    FilledButton.icon(
+                      onPressed: () => _sendToMarker(context, scorecard),
+                      icon: const Icon(Icons.send),
+                      label: const Text('Send til Markør'),
+                      style: FilledButton.styleFrom(
                         minimumSize: const Size(double.infinity, 48),
-                        foregroundColor: Colors.orange,
-                        side: const BorderSide(color: Colors.orange),
+                        backgroundColor: Colors.blue,
                       ),
                     ),
 

@@ -48,11 +48,21 @@ class Player {
     final genderStr = json['Gender'] as String? ?? 'Male';
     final gender = genderStr.toLowerCase() == 'male' ? 1 : 0;
     
-    // Get first membership (home club)
+    // Get home club membership (where IsHomeClub == true)
     final memberships = json['Memberships'] as List<dynamic>? ?? [];
-    final homeClubMembership = memberships.isNotEmpty 
-        ? memberships.first as Map<String, dynamic>
-        : null;
+    Map<String, dynamic>? homeClubMembership;
+    
+    // Find the membership where IsHomeClub is true
+    try {
+      homeClubMembership = memberships.firstWhere(
+        (m) => m['IsHomeClub'] == true,
+      ) as Map<String, dynamic>?;
+    } catch (e) {
+      // If no home club found, fall back to first membership
+      homeClubMembership = memberships.isNotEmpty 
+          ? memberships.first as Map<String, dynamic>
+          : null;
+    }
     
     final unionId = homeClubMembership?['UnionID'] as String?;
     final homeClub = homeClubMembership?['HomeClub'] as Map<String, dynamic>?;

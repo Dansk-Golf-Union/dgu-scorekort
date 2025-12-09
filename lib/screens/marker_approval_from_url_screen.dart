@@ -33,10 +33,19 @@ class _MarkerApprovalFromUrlScreenState
   }
 
   Future<void> _loadScorecard() async {
+    print('🔍 Loading scorecard with ID: ${widget.documentId}');
+    
     try {
       final data = await _storage.getScorecardById(widget.documentId);
+      
+      print('📦 Got data from Firestore: ${data != null ? 'YES' : 'NO'}');
+      if (data != null) {
+        print('📊 Data keys: ${data.keys}');
+        print('📊 Status: ${data['status']}');
+      }
 
       if (data == null) {
+        print('❌ No data found');
         setState(() {
           _errorMessage = 'Scorekort ikke fundet';
           _isLoading = false;
@@ -44,22 +53,16 @@ class _MarkerApprovalFromUrlScreenState
         return;
       }
 
-      // Check if already approved/rejected
-      if (data['status'] != 'pending') {
-        setState(() {
-          _errorMessage =
-              'Dette scorekort er allerede ${data['status'] == 'approved' ? 'godkendt' : 'afvist'}';
-          _scorecardData = data;
-          _isLoading = false;
-        });
-        return;
-      }
+      // Load data regardless of status - we'll show appropriate UI
+      print('📋 Scorecard status: ${data['status']}');
 
+      print('✅ Scorecard loaded successfully');
       setState(() {
         _scorecardData = data;
         _isLoading = false;
       });
     } catch (e) {
+      print('❌ Error loading scorecard: $e');
       setState(() {
         _errorMessage = 'Fejl ved indlæsning: $e';
         _isLoading = false;
@@ -176,6 +179,8 @@ class _MarkerApprovalFromUrlScreenState
   }
 
   Widget _buildBody() {
+    print('🎨 Building body - isLoading: $_isLoading, hasError: ${_errorMessage != null}, hasData: ${_scorecardData != null}');
+    
     if (_isLoading) {
       return const Center(
         child: Column(
@@ -189,7 +194,8 @@ class _MarkerApprovalFromUrlScreenState
       );
     }
 
-    if (_errorMessage != null && _scorecardData == null) {
+    // Show error only if we don't have data at all
+    if (_scorecardData == null) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -199,7 +205,7 @@ class _MarkerApprovalFromUrlScreenState
               const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 16),
               Text(
-                _errorMessage!,
+                _errorMessage ?? 'Scorekort ikke fundet',
                 style: const TextStyle(fontSize: 18),
                 textAlign: TextAlign.center,
               ),
@@ -209,6 +215,7 @@ class _MarkerApprovalFromUrlScreenState
       );
     }
 
+    print('📱 Rendering scorecard UI');
     return Center(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 800),
@@ -218,6 +225,8 @@ class _MarkerApprovalFromUrlScreenState
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _buildHeader(),
+              const SizedBox(height: 16),
+              _buildMarkerInfo(),
               const SizedBox(height: 16),
               _buildPlayerInfo(),
               const SizedBox(height: 16),
@@ -323,6 +332,60 @@ class _MarkerApprovalFromUrlScreenState
     );
   }
 
+  Widget _buildMarkerInfo() {
+    return Card(
+      elevation: 2,
+      color: Colors.blue.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.assignment_ind, color: Colors.blue.shade700),
+                const SizedBox(width: 8),
+                const Text(
+                  'Tildelt Markør',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(),
+            _buildInfoRow('Navn', _scorecardData!['markerName']),
+            _buildInfoRow('DGU Nummer', _scorecardData!['markerId']),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Du er tildelt som markør for dette scorekort',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildCourseInfo() {
     final playedDate = (_scorecardData!['playedDate'] as dynamic).toDate();
 
@@ -350,7 +413,7 @@ class _MarkerApprovalFromUrlScreenState
             _buildInfoRow('Slope Rating', _scorecardData!['slopeRating'].toString()),
             _buildInfoRow(
               'Spillet',
-              DateFormat('dd. MMMM yyyy', 'da_DK').format(playedDate),
+              DateFormat('dd.MM.yyyy').format(playedDate),
             ),
           ],
         ),
