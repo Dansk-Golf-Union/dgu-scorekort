@@ -112,10 +112,11 @@ class Scorecard {
   });
 
   /// Total strokes played (brutto)
-  int get totalStrokes {
-    return holeScores
-        .where((h) => h.strokes != null)
-        .fold<int>(0, (sum, h) => sum + h.strokes!);
+  /// Returns null if any hole is picked up or not played (only shows when ALL holes have actual strokes)
+  int? get totalStrokes {
+    // Can only calculate total if ALL holes have actual strokes (no picked up, no null)
+    if (holeScores.any((h) => h.strokes == null)) return null;
+    return holeScores.fold<int>(0, (sum, h) => sum + h.strokes!);
   }
 
   /// Total Stableford points
@@ -130,9 +131,9 @@ class Scorecard {
         .fold<int>(0, (sum, h) => sum + h.netScore!);
   }
 
-  /// Number of holes completed
+  /// Number of holes completed (either played or picked up)
   int get holesCompleted {
-    return holeScores.where((h) => h.strokes != null).length;
+    return holeScores.where((h) => h.strokes != null || h.isPickedUp).length;
   }
 
   /// Check if round is complete

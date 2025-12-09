@@ -36,17 +36,13 @@ class _ScorecardScreenState extends State<ScorecardScreen> {
         if (scorecard == null) {
           return Scaffold(
             backgroundColor: const Color(0xFFF5F5F5),
-            appBar: AppBar(
-              title: const Text('Scorekort'),
-            ),
-            body: const Center(
-              child: Text('Ingen aktiv runde'),
-            ),
+            appBar: AppBar(title: const Text('Scorekort')),
+            body: const Center(child: Text('Ingen aktiv runde')),
           );
         }
 
         // Sync PageController with provider state
-        if (_pageController.hasClients && 
+        if (_pageController.hasClients &&
             _pageController.page?.round() != provider.currentHoleIndex) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (_pageController.hasClients) {
@@ -72,8 +68,8 @@ class _ScorecardScreenState extends State<ScorecardScreen> {
                   child: Text(
                     'Total: ${scorecard.totalPoints}p',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -129,10 +125,7 @@ class _HoleCard extends StatelessWidget {
   final HoleScore hole;
   final Function(int) onScoreChanged;
 
-  const _HoleCard({
-    required this.hole,
-    required this.onScoreChanged,
-  });
+  const _HoleCard({required this.hole, required this.onScoreChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -154,15 +147,14 @@ class _HoleCard extends StatelessWidget {
                     children: [
                       Text(
                         'HUL ${hole.holeNumber}',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       Text(
                         'Index: ${hole.index}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                            ),
+                          color: Colors.grey[600],
+                        ),
                       ),
                     ],
                   ),
@@ -172,8 +164,8 @@ class _HoleCard extends StatelessWidget {
                       Text(
                         'Par ${hole.par}',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       if (hole.strokesReceived > 0)
                         Chip(
@@ -191,10 +183,7 @@ class _HoleCard extends StatelessWidget {
               const Divider(height: 32),
 
               // Score input
-              Text(
-                'Score',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+              Text('Score', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 16),
               _ScoreInput(
                 currentScore: hole.strokes,
@@ -216,7 +205,8 @@ class _HoleCard extends StatelessWidget {
                     children: [
                       Text(
                         '${hole.stablefordPoints} points',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
@@ -288,9 +278,7 @@ class _ScoreInput extends StatelessWidget {
       children: [
         // Decrease button
         IconButton.filled(
-          onPressed: score > 1
-              ? () => onChanged(score - 1)
-              : null,
+          onPressed: score > 1 ? () => onChanged(score - 1) : null,
           icon: const Icon(Icons.remove),
           iconSize: 32,
         ),
@@ -314,9 +302,9 @@ class _ScoreInput extends StatelessWidget {
               child: Text(
                 '$score',
                 style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
             ),
           ),
@@ -325,9 +313,7 @@ class _ScoreInput extends StatelessWidget {
 
         // Increase button
         IconButton.filled(
-          onPressed: score < 15
-              ? () => onChanged(score + 1)
-              : null,
+          onPressed: score < 15 ? () => onChanged(score + 1) : null,
           icon: const Icon(Icons.add),
           iconSize: 32,
         ),
@@ -392,9 +378,7 @@ class _ScoreSummary extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceVariant,
         border: Border(
-          top: BorderSide(
-            color: Theme.of(context).colorScheme.outline,
-          ),
+          top: BorderSide(color: Theme.of(context).colorScheme.outline),
         ),
       ),
       child: SafeArea(
@@ -407,7 +391,8 @@ class _ScoreSummary extends StatelessWidget {
               children: [
                 _SummaryItem(
                   label: 'Huller',
-                  value: '${scorecard.holesCompleted}/${scorecard.holeScores.length}',
+                  value:
+                      '${scorecard.holesCompleted}/${scorecard.holeScores.length}',
                 ),
                 _SummaryItem(
                   label: 'Points',
@@ -416,7 +401,9 @@ class _ScoreSummary extends StatelessWidget {
                 ),
                 _SummaryItem(
                   label: 'Slag',
-                  value: '${scorecard.totalStrokes}',
+                  value: scorecard.totalStrokes != null
+                      ? '${scorecard.totalStrokes}'
+                      : '-',
                 ),
               ],
             ),
@@ -485,22 +472,24 @@ class _SummaryItem extends StatelessWidget {
       children: [
         Text(
           label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Colors.grey[600],
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: Colors.grey[600]),
         ),
         Text(
           value,
-          style: (small
-                  ? Theme.of(context).textTheme.titleMedium
-                  : Theme.of(context).textTheme.titleLarge)
-              ?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: highlighted ? Theme.of(context).colorScheme.primary : null,
-          ),
+          style:
+              (small
+                      ? Theme.of(context).textTheme.titleMedium
+                      : Theme.of(context).textTheme.titleLarge)
+                  ?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: highlighted
+                        ? Theme.of(context).colorScheme.primary
+                        : null,
+                  ),
         ),
       ],
     );
   }
 }
-

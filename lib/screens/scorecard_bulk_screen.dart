@@ -403,7 +403,7 @@ class _ScoreSummary extends StatelessWidget {
                 ),
                 _SummaryItem(
                   label: 'Slag',
-                  value: '${scorecard.totalStrokes}',
+                  value: scorecard.totalStrokes != null ? '${scorecard.totalStrokes}' : '-',
                 ),
               ],
             ),
