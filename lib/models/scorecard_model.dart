@@ -43,12 +43,21 @@ class HoleScore {
     return net - par;
   }
 
+  /// Get adjusted score for this hole with net double bogey cap
+  /// Used for handicap calculation and display
+  int get adjustedScore {
+    final netDoubleBogey = par + strokesReceived + 2;
+    if (strokes == null) {
+      return netDoubleBogey;
+    } else if (strokes! > netDoubleBogey) {
+      return netDoubleBogey;
+    } else {
+      return strokes!;
+    }
+  }
+
   /// Copy with updated values
-  HoleScore copyWith({
-    int? strokes,
-    int? putts,
-    bool? isPickedUp,
-  }) {
+  HoleScore copyWith({int? strokes, int? putts, bool? isPickedUp}) {
     return HoleScore(
       holeNumber: holeNumber,
       par: par,
@@ -69,7 +78,7 @@ class Scorecard {
   final List<HoleScore> holeScores;
   final DateTime startTime;
   DateTime? endTime;
-  
+
   // Marker information
   String? markerFullName;
   String? markerUnionId;
@@ -77,7 +86,7 @@ class Scorecard {
   String? markerHomeClubName;
   DateTime? markerApprovedAt;
   String? markerSignature; // base64 encoded PNG
-  
+
   // Submission tracking
   bool isSubmitted;
   DateTime? submittedAt;
@@ -130,14 +139,14 @@ class Scorecard {
   bool get isComplete {
     return holesCompleted == holeScores.length;
   }
-  
+
   /// Check if marker is approved
   bool get isMarkerApproved {
-    return markerFullName != null && 
-           markerUnionId != null && 
-           markerSignature != null;
+    return markerFullName != null &&
+        markerUnionId != null &&
+        markerSignature != null;
   }
-  
+
   /// Check if scorecard can be submitted
   bool get canSubmit {
     return isMarkerApproved && !isSubmitted;
@@ -161,14 +170,14 @@ class Scorecard {
   /// Used for handicap calculation according to WHS rules
   int get adjustedGrossScore {
     int total = 0;
-    
+
     for (var hole in holeScores) {
       // Net double bogey for this hole = par + strokes received + 2
       final netDoubleBogey = hole.par + hole.strokesReceived + 2;
-      
+
       // Determine adjusted score for this hole
       int adjustedScore;
-      
+
       if (hole.strokes == null) {
         // No score recorded: use net double bogey
         adjustedScore = netDoubleBogey;
@@ -179,10 +188,10 @@ class Scorecard {
         // Score within limit: use actual score
         adjustedScore = hole.strokes!;
       }
-      
+
       total += adjustedScore;
     }
-    
+
     return total;
   }
 
@@ -191,20 +200,20 @@ class Scorecard {
   double? get handicapResult {
     // Require complete round
     if (!isComplete) return null;
-    
+
     // Need slope and course rating from tee
     final slope = tee.slopeRating;
     final courseRating = tee.courseRating;
-    
+
     // Slope rating of 0 is invalid, treat as null
     if (slope == 0 || courseRating == 0) return null;
-    
+
     final pcc = 0.0; // PCC adjustment (default 0, ranges -1.0 to +3.0)
     final adjustedScore = adjustedGrossScore.toDouble();
     final isNineHole = holeScores.length == 9;
-    
+
     double result;
-    
+
     if (isNineHole) {
       // 9-hole formula
       result = (113 / slope) * (adjustedScore - courseRating - (0.5 * pcc));
@@ -212,7 +221,7 @@ class Scorecard {
       // 18-hole formula
       result = (113 / slope) * (adjustedScore - courseRating - pcc);
     }
-    
+
     // Round according to WHS rules
     return _roundHandicapResult(result);
   }
@@ -265,4 +274,3 @@ class Scorecard {
     );
   }
 }
-

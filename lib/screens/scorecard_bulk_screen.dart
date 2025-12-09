@@ -181,7 +181,7 @@ class _ScorecardBulkScreenState extends State<ScorecardBulkScreen> {
         _DataCell(_getSPHDisplay(hole.strokesReceived)),
         _buildEditableCell(hole, index, provider),
         _DataCell(hole.stablefordPoints.toString()),
-        _DataCell(hole.isPickedUp ? '—' : (hole.strokes?.toString() ?? '-')),
+        _DataCell(hole.adjustedScore.toString()),
       ],
     );
   }
@@ -286,8 +286,18 @@ class _ScorecardBulkScreenState extends State<ScorecardBulkScreen> {
 
   TableRow _buildSummaryRow(String label, List<HoleScore> holes) {
     final totalPar = holes.fold<int>(0, (sum, h) => sum + h.par);
-    final totalStrokes = holes.fold<int>(0, (sum, h) => sum + (h.strokes ?? 0));
     final totalPoints = holes.fold<int>(0, (sum, h) => sum + h.stablefordPoints);
+    
+    // Check if any hole has null strokes (dash in Slag column)
+    final hasAnyDash = holes.any((h) => h.strokes == null);
+    
+    // Calculate actual strokes total (only if no dashes)
+    final totalStrokes = hasAnyDash 
+        ? '' 
+        : holes.fold<int>(0, (sum, h) => sum + (h.strokes ?? 0)).toString();
+    
+    // Calculate adjusted score total (always shown)
+    final totalAdjustedScore = holes.fold<int>(0, (sum, h) => sum + h.adjustedScore);
 
     final isTotal = label == 'Total';
 
@@ -299,9 +309,9 @@ class _ScorecardBulkScreenState extends State<ScorecardBulkScreen> {
         _DataCell(label, bold: true),
         _DataCell(totalPar.toString(), bold: true),
         _DataCell(''), // SPH empty for summary
-        _DataCell(totalStrokes > 0 ? totalStrokes.toString() : '-', bold: true),
+        _DataCell(totalStrokes, bold: true),
         _DataCell(totalPoints.toString(), bold: true),
-        _DataCell(totalStrokes > 0 ? totalStrokes.toString() : '-', bold: true),
+        _DataCell(totalAdjustedScore.toString(), bold: true),
       ],
     );
   }
