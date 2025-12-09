@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
+import 'dart:html' as html;
 import '../providers/scorecard_provider.dart';
 import '../providers/match_setup_provider.dart';
 import '../models/scorecard_model.dart';
@@ -88,16 +89,16 @@ class ScorecardResultsScreen extends StatelessWidget {
                   // Production URL
                   _buildUrlButton(
                     context,
-                    'https://dgu-scorekort.web.app/marker-approval/$documentId',
+                    'https://dgu-scorekort.web.app/#/marker-approval/$documentId',
                     'Åbn i ny tab (Production)',
                     Icons.open_in_new,
                   ),
                   const SizedBox(height: 8),
-                  // Local test URL
+                  // Local test URL - use current host and port
                   _buildUrlButton(
                     context,
-                    'http://localhost:51248/#/marker-approval/$documentId',
-                    'Test lokalt',
+                    '${html.window.location.origin}/#/marker-approval/$documentId',
+                    'Test lokalt (${html.window.location.host})',
                     Icons.computer,
                   ),
                 ],

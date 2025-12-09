@@ -42,65 +42,74 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => MatchSetupProvider()),
         ChangeNotifierProvider(create: (_) => ScorecardProvider()),
       ],
-      child: Builder(
-        builder: (context) {
-          // Setup router with auth state
-          final router = GoRouter(
-            initialLocation: '/',
-            debugLogDiagnostics: true,
-            redirect: (context, state) {
-              final authProvider = context.read<AuthProvider>();
-              final isMarkerApproval = state.matchedLocation.startsWith('/marker-approval');
-              
-              // Allow marker approval pages without auth
-              if (isMarkerApproval) {
-                return null;
-              }
-              
-              // For all other routes, require auth
-              if (authProvider.isLoading) {
-                return null; // Stay on current route while loading
-              }
-              
-              if (!authProvider.isAuthenticated && state.matchedLocation != '/login') {
-                return '/login';
-              }
-              
-              if (authProvider.isAuthenticated && state.matchedLocation == '/login') {
-                return '/';
-              }
-              
-              return null;
-            },
-            routes: [
-              GoRoute(
-                path: '/',
-                builder: (context, state) => const SetupRoundScreen(),
-              ),
-              GoRoute(
-                path: '/login',
-                builder: (context, state) => useSimpleLogin 
-                    ? const SimpleLoginScreen() 
-                    : const LoginScreen(),
-              ),
-              GoRoute(
-                path: '/marker-approval/:documentId',
-                builder: (context, state) {
-                  final documentId = state.pathParameters['documentId']!;
-                  return MarkerApprovalFromUrlScreen(documentId: documentId);
-                },
-              ),
-            ],
-          );
-          
-          return MaterialApp.router(
-            title: 'DGU Scorekort',
-            theme: AppTheme.lightTheme,
-            routerConfig: router,
-            debugShowCheckedModeBanner: false,
-          );
-        },
-      ),
+      child: const _AppRouter(),
+    );
+  }
+}
+
+class _AppRouter extends StatelessWidget {
+  const _AppRouter();
+
+  @override
+  Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+    
+    // Setup router with auth state
+    final router = GoRouter(
+      initialLocation: '/',
+      debugLogDiagnostics: true,
+      refreshListenable: authProvider, // Listen to auth changes!
+      redirect: (context, state) {
+        final isMarkerApproval = state.matchedLocation.startsWith('/marker-approval');
+        
+        // Allow marker approval pages without auth
+        if (isMarkerApproval) {
+          return null;
+        }
+        
+        // Show loading screen while initializing
+        if (authProvider.isLoading) {
+          return null; // Stay on current route while loading
+        }
+        
+        // Redirect to login if not authenticated
+        if (!authProvider.isAuthenticated && state.matchedLocation != '/login') {
+          return '/login';
+        }
+        
+        // Redirect to home if authenticated and on login page
+        if (authProvider.isAuthenticated && state.matchedLocation == '/login') {
+          return '/';
+        }
+        
+        return null;
+      },
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const SetupRoundScreen(),
+        ),
+        GoRoute(
+          path: '/login',
+          builder: (context, state) => useSimpleLogin 
+              ? const SimpleLoginScreen() 
+              : const LoginScreen(),
+        ),
+        GoRoute(
+          path: '/marker-approval/:documentId',
+          builder: (context, state) {
+            final documentId = state.pathParameters['documentId']!;
+            return MarkerApprovalFromUrlScreen(documentId: documentId);
+          },
+        ),
+      ],
+    );
+    
+    return MaterialApp.router(
+      title: 'DGU Scorekort',
+      theme: AppTheme.lightTheme,
+      routerConfig: router,
+      debugShowCheckedModeBanner: false,
     );
   }
 }
