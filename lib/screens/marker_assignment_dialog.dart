@@ -66,13 +66,14 @@ class _MarkerAssignmentDialogState extends State<MarkerAssignmentDialog> {
       ),
       child: Container(
         constraints: const BoxConstraints(maxWidth: 500),
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
               // Header
               Row(
                 children: [
@@ -130,6 +131,7 @@ class _MarkerAssignmentDialogState extends State<MarkerAssignmentDialog> {
                 ),
                 keyboardType: TextInputType.text,
                 autofocus: true,
+                scrollPadding: const EdgeInsets.only(bottom: 100),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Indtast markørens DGU nummer';
@@ -271,6 +273,7 @@ class _MarkerAssignmentDialogState extends State<MarkerAssignmentDialog> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

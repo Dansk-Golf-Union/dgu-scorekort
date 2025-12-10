@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'dart:html' as html;
 import '../services/scorecard_storage_service.dart';
 import '../theme/app_theme.dart';
 
@@ -580,6 +581,20 @@ class _MarkerApprovalFromUrlScreenState
                   style: const TextStyle(color: Colors.grey),
                 ),
               ],
+              const SizedBox(height: 20),
+              OutlinedButton.icon(
+                onPressed: () {
+                  // Try to close the browser tab/window
+                  html.window.close();
+                },
+                icon: const Icon(Icons.close),
+                label: const Text('Luk Scorekort'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 48),
+                  foregroundColor: Colors.grey.shade700,
+                  side: BorderSide(color: Colors.grey.shade400),
+                ),
+              ),
             ],
           ),
         ),
