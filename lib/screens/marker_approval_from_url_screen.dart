@@ -115,14 +115,18 @@ class _MarkerApprovalFromUrlScreenState
     }
   }
 
-  Future<void> _rejectScorecard() async {
-    if (_scorecardData == null) return;
-
-    // Show dialog to get rejection reason
-    final reason = await showDialog<String>(
+  Future<String?> _showRejectDialog() async {
+    return await showDialog<String>(
       context: context,
       builder: (context) => _RejectDialog(),
     );
+  }
+
+  Future<void> _rejectScorecard() async {
+    if (_scorecardData == null) return;
+
+    // Show dialog/bottom sheet to get rejection reason
+    final reason = await _showRejectDialog();
 
     if (reason == null || reason.isEmpty) return;
 
@@ -699,7 +703,7 @@ class _RejectDialogState extends State<_RejectDialog> {
               border: OutlineInputBorder(),
             ),
             maxLines: 3,
-            autofocus: true,
+            autofocus: false,
           ),
         ],
       ),

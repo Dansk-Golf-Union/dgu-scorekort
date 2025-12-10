@@ -2,9 +2,10 @@
 
 Flutter Web App til danske golfspillere til at rapportere scorekort.
 
-## Status: ✅ Version 1.2 - Med Markør Godkendelse & Underskrift
+## Status: ✅ Version 1.3 - Med Firebase Backend & Remote Markør Godkendelse
 
-**Live App:** [https://dansk-golf-union.github.io/dgu-scorekort/](https://dansk-golf-union.github.io/dgu-scorekort/)
+**Live App (Firebase):** [https://dgu-scorekort.web.app](https://dgu-scorekort.web.app)  
+**Live App (GitHub):** [https://dansk-golf-union.github.io/dgu-scorekort/](https://dansk-golf-union.github.io/dgu-scorekort/)
 
 ## Overview
 
@@ -12,12 +13,37 @@ DGU Scorekort er en moderne web-applikation bygget med Flutter, der gør det mul
 - Vælge golfklub, bane og tee fra DGU Basen API
 - Beregne spillehandicap efter danske WHS regler
 - Indtaste scores på to måder (Plus/Minus eller Hurtig keypad)
-- Få markør godkendelse med digital underskrift
+- **Få remote markør godkendelse via URL** (nyt i v1.3!)
 - Se detaljeret scorekort med Stableford points
 - Beregne handicap resultat (score differential)
+- Gemme scorekort i Firebase Firestore
 - Indsende scores til DGU (klar til API integration)
 
-## ✨ Implementerede Features
+## ✨ Nye Features i v1.3
+
+### 🔥 Firebase Backend
+- ✅ **Firebase Core & Firestore** integration
+- ✅ **Cloud Database**: Scorekort gemmes i Firestore
+- ✅ **Real-time Updates**: Marker approval opdaterer live
+- ✅ **Persistent Storage**: Scorekort overlever page reload
+
+### 🌐 Remote Markør Godkendelse
+- ✅ **Marker Assignment**: Vælg markør ved DGU nummer før gemning
+- ✅ **Eksterne URLs**: Generer unik godkendelses-URL
+- ✅ **Email/SMS Ready**: Send URL til markør (via mail indtil videre)
+- ✅ **Standalone Approval Screen**: Markør kan godkende uden at logge ind
+- ✅ **Read-only Scorecard View**: Markør ser komplet scorekort
+- ✅ **Approve/Reject**: Markør kan godkende eller afvise med begrundelse
+- ✅ **Status Tracking**: Pending → Approved → Submitted flow
+- ✅ **"Luk Scorekort" knap**: Nem exit efter godkendelse
+
+### 🚀 Deployment & Routing
+- ✅ **Firebase Hosting**: Deployed til dgu-scorekort.web.app
+- ✅ **go_router**: Deep linking til marker approval URLs
+- ✅ **Dual Deployment**: Både Firebase og GitHub Pages
+- ✅ **Hash Routing**: Korrekt Flutter web routing
+
+## 🔥 Implementerede Features
 
 ### 🔐 Authentication & Player
 - ✅ **Union ID Login**: Simpel login med DGU nummer (aktiv)
@@ -54,43 +80,72 @@ DGU Scorekort er en moderne web-applikation bygget med Flutter, der gør det mul
 - ✅ WHS-korrekt afrunding af negative handicap resultater
 
 ### ✍️ Markør Godkendelse & Submission
-- ✅ **Markør Approval Screen**: Indtast markørs DGU nummer
-- ✅ **Digital Signature Pad**: Påkrævet underskrift før godkendelse
-  - Touch-optimeret signature canvas
-  - Ryd og gentag funktionalitet
-  - Export til PNG og base64 encoding
+
+#### Lokal Markør (Original Flow)
+- ✅ **In-Person Approval**: "Få Markør Underskrift Her"
+- ✅ **Digital Signature Pad**: Touch-optimeret signature canvas
 - ✅ **Signature Preview**: Vises på results screen
-- ✅ **Submission Flow**: "Indsend Score" knap med validation
-- ✅ **Status Tracking**: Marker approved, submitted status
-- ✅ Klar til integration med DGU ScorecardExchange API
+- ✅ **Direct Submission**: Indsend direkte efter underskrift
+
+#### Remote Markør (Ny Firebase Flow)
+- ✅ **"Send til Markør" knap**: Starter remote approval
+- ✅ **Marker Selection Dialog**: Indtast markørs DGU nummer
+- ✅ **Fetch Marker Info**: Slå markør op i DGU database
+- ✅ **Save to Firestore**: Gem scorekort med "pending" status
+- ✅ **Generate URLs**: Både localhost og production URLs
+- ✅ **Clickable Links**: Åbn i ny tab direkte fra app
+- ✅ **Marker Approval Screen**: Standalone screen med:
+  - Assigned marker info (navn, DGU nummer)
+  - Komplet read-only scorekort
+  - Spiller information
+  - Bane/tee detaljer
+  - Approve/Reject knapper
+- ✅ **Status Updates**: Real-time opdatering af scorecard status
+- ✅ **"Luk Scorekort" knap**: Luk browser tab efter godkendelse
+- ✅ **Rejection Reason**: Valgfri begrundelse ved afvisning
+
+### 🗄️ Firebase & Database
+- ✅ **Firebase Core**: Initialiseret med web config
+- ✅ **Cloud Firestore**: Database til scorekort
+- ✅ **Firestore Security Rules**: Åben læsning for marker approval
+- ✅ **ScorecardStorageService**: Centraliseret data layer
+- ✅ **Document References**: Unikke IDs til hver scorecard
+- ✅ **Status Tracking**: pending → approved/rejected → submitted
+- ✅ **Timestamp Fields**: createdAt, updatedAt tracking
 
 ## 🛠️ Teknisk Stack
 
 ### Framework & Libraries
 - **Flutter 3.38.4** (Dart SDK)
 - **Provider 6.1.1** - State management
+- **Firebase Core 3.8.1** - Firebase initialization *(nyt)*
+- **Cloud Firestore 5.5.1** - NoSQL database *(nyt)*
+- **go_router 14.8.1** - Deep linking & routing *(nyt)*
 - **HTTP 1.2.0** - API kommunikation
+- **URL Launcher 6.2.2** - Åbn eksterne URLs
 - **Google Fonts 6.1.0** - Typography (Roboto)
 - **Intl 0.19.0** - Date formatting
-- **URL Launcher 6.2.2** - OAuth browser flow
 - **Crypto 3.0.3** - SHA256 for PKCE
 - **SharedPreferences 2.2.2** - Token storage
 - **Signature 5.5.0** - Digital signature pad
 
 ### Arkitektur
 - **State Management**: Provider pattern (AuthProvider, MatchSetupProvider, ScorecardProvider)
+- **Backend**: Firebase (Firestore Database + Hosting)
+- **Routing**: go_router med deep linking til marker approval
 - **Design System**: Material 3 med DGU farver og custom theming
 - **API**: DGU Basen REST API med Basic Auth (public) og Bearer tokens (OAuth)
 - **CORS**: Handled via corsproxy.io for production
-- **Platform**: Web (Chrome primary target, deployed to GitHub Pages)
+- **Platform**: Web (Chrome primary target, deployed til Firebase Hosting og GitHub Pages)
 
 ## 📁 Projekt Struktur
 
 ```
 lib/
-├── main.dart                          # Entry point & SetupRoundScreen
+├── main.dart                          # Entry point, Firebase init & routing
 ├── config/
-│   └── auth_config.dart               # OAuth & API konfiguration
+│   ├── auth_config.dart               # OAuth & API konfiguration
+│   └── firebase_options.dart          # Firebase config (nyt)
 ├── theme/
 │   └── app_theme.dart                 # DGU farver og Material 3 theme
 ├── models/
@@ -104,7 +159,8 @@ lib/
 ├── services/
 │   ├── auth_service.dart              # OAuth 2.0 PKCE service
 │   ├── dgu_service.dart               # DGU Basen API client (public endpoints)
-│   └── player_service.dart            # Player API service (OAuth & Union ID)
+│   ├── player_service.dart            # Player API service (OAuth & Union ID)
+│   └── scorecard_storage_service.dart # Firestore operations (nyt)
 ├── utils/
 │   ├── handicap_calculator.dart       # WHS handicap beregninger
 │   ├── stroke_allocator.dart          # Stroke allocation algoritme
@@ -114,9 +170,122 @@ lib/
     ├── simple_login_screen.dart       # Union ID login (aktiv)
     ├── scorecard_screen.dart          # Plus/Minus scorecard
     ├── scorecard_keypad_screen.dart   # Hurtig keypad scorecard
-    ├── marker_approval_screen.dart    # Markør godkendelse med underskrift
+    ├── marker_approval_screen.dart    # In-person markør godkendelse
+    ├── marker_assignment_dialog.dart  # Remote marker selection (nyt)
+    ├── marker_approval_from_url_screen.dart # Remote approval screen (nyt)
     └── scorecard_results_screen.dart  # Resultat visning & submission
 ```
+
+## 🔥 Firebase Setup
+
+### Firebase Project
+**Project ID**: `dgu-scorekort`  
+**Hosting URL**: `https://dgu-scorekort.web.app`
+
+### Firestore Collection: `scorecards`
+
+**Document Structure:**
+```json
+{
+  "playerId": "177-2813",
+  "playerName": "Nick Hüttel",
+  "clubName": "Outrup Golfklub",
+  "courseName": "Aarhus Golf Club 18H Ny",
+  "teeColor": "Gul",
+  "playingHandicap": 12,
+  "totalPoints": 39,
+  "handicapResult": 13.0,
+  "playedDate": "10.12.2025",
+  "holes": [...],
+  "assignedMarker": {
+    "markerId": "72-4197",
+    "markerName": "Jonas Meyer",
+    "markerClub": "Dragør Golfklub"
+  },
+  "status": "pending|approved|rejected|submitted",
+  "rejectionReason": "...",
+  "createdAt": Timestamp,
+  "updatedAt": Timestamp
+}
+```
+
+### Firestore Security Rules
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /scorecards/{documentId} {
+      // Anyone can read (for marker approval)
+      allow read: if true;
+      
+      // Anyone can write (for now - should be authenticated later)
+      allow write: if true;
+    }
+  }
+}
+```
+
+### Firebase Hosting Config (`firebase.json`)
+```json
+{
+  "hosting": {
+    "public": "build/web",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
+```
+
+## 🌐 Marker Approval Flow
+
+### 1. Player Creates Scorecard
+1. Spiller afslutter runde
+2. Klikker "Send til Markør"
+3. Indtaster markørs DGU nummer
+4. System henter markør info fra DGU API
+5. Bekræfter markør valg
+
+### 2. Save to Firebase
+1. Scorecard gemmes i Firestore med status "pending"
+2. Unikt document ID genereres
+3. Markør info inkluderes i document
+
+### 3. Generate Approval URLs
+**Localhost:**
+```
+http://localhost:PORT/#/marker-approval/DOCUMENT_ID
+```
+
+**Production:**
+```
+https://dgu-scorekort.web.app/#/marker-approval/DOCUMENT_ID
+```
+
+### 4. Marker Opens URL
+1. Markør modtager URL (via mail/SMS)
+2. Åbner URL i browser (ingen login påkrævet)
+3. Ser komplet scorecard i read-only mode
+4. Ser egen info som assigned marker
+
+### 5. Marker Approves/Rejects
+**Approve:**
+- Klikker "✅ Godkend Scorekort"
+- Status opdateres til "approved"
+- Klikker "Luk Scorekort" for at lukke tab
+
+**Reject:**
+- Klikker "❌ Afvis Scorekort"
+- Indtaster begrundelse
+- Status opdateres til "rejected"
+- Klikker "Luk Scorekort" for at lukke tab
+
+### 6. Player Receives Confirmation
+*(Kommer i fremtidig version - push notification eller email)*
 
 ## 🌐 API Integration
 
@@ -226,6 +395,7 @@ Strokes fordeles baseret på hole index og playing handicap:
 ### Prerequisites
 - Flutter SDK 3.38.4 eller nyere
 - Chrome browser (til web development)
+- Firebase CLI (til deployment)
 
 ### Installation
 
@@ -262,9 +432,33 @@ flutter analyze lib/
 flutter test
 ```
 
+### Deployment
+
+#### Deploy til Firebase Hosting
+```bash
+# Build production version
+flutter build web --release
+
+# Deploy til Firebase
+firebase deploy --only hosting
+
+# URL: https://dgu-scorekort.web.app
+```
+
+#### Deploy til GitHub Pages
+```bash
+# Commit og push til GitHub
+git add .
+git commit -m "Deploy updates"
+git push
+
+# GitHub Actions deployer automatisk til:
+# https://dansk-golf-union.github.io/dgu-scorekort/
+```
+
 ## 📋 Feature Status
 
-### ✅ Completed (v1.2)
+### ✅ Completed (v1.3)
 - [x] Union ID login (simple, aktiv)
 - [x] OAuth 2.0 PKCE login (komplet, deaktiveret)
 - [x] Hent spiller data fra GolfBox API
@@ -284,22 +478,32 @@ flutter test
 - [x] Dropdown card styling
 - [x] GitHub Pages deployment
 - [x] CORS proxy for production
-- [x] Markør godkendelse flow
+- [x] Markør godkendelse flow (in-person)
 - [x] Digital signature pad (touch-optimeret)
 - [x] Signature preview på results screen
-- [x] Score submission flow med validation
-- [x] Submission status tracking
+- [x] **Firebase Core & Firestore integration** *(nyt)*
+- [x] **Remote marker assignment dialog** *(nyt)*
+- [x] **Save scorecards to Firestore** *(nyt)*
+- [x] **Generate marker approval URLs** *(nyt)*
+- [x] **Standalone marker approval screen** *(nyt)*
+- [x] **Approve/Reject with reason** *(nyt)*
+- [x] **"Luk Scorekort" button** *(nyt)*
+- [x] **Firebase Hosting deployment** *(nyt)*
+- [x] **go_router deep linking** *(nyt)*
+- [x] **Dual deployment (Firebase + GitHub)** *(nyt)*
 
 ### 🔄 In Progress
 - [ ] OAuth redirect URI configuration (venter på setup)
 - [ ] POST til DGU ScorecardExchange API
+- [ ] Push notification til markør (via DGU Mit Golf app)
 
 ### 📅 Future Enhancements
 - [ ] Aktivér DGU ScorecardExchange POST endpoint
-- [ ] Remote marker approval (QR code / link deling)
-- [ ] Gem scorekort lokalt (IndexedDB)
-- [ ] Gem signature i Firebase Storage
-- [ ] Historik over tidligere runder
+- [ ] Send marker approval URL via push besked (DGU app integration)
+- [ ] Email notification til markør
+- [ ] Historik over tidligere runder (query Firestore)
+- [ ] Marker kan se alle pending approvals
+- [ ] Player kan se approval status
 - [ ] Export til PDF/print
 - [ ] Multiple spillere (flightmode)
 - [ ] Statistik over tid (gennemsnit, trends)
@@ -307,12 +511,19 @@ flutter test
 - [ ] Offline support med sync
 - [ ] Native mobile apps (iOS/Android)
 - [ ] PWA support (install som app)
+- [ ] Firestore Security Rules (authentication required)
 
 ## 🔧 Tekniske Detaljer
 
 ### State Management
 
-Bruger **Provider** pattern med to hovedproviders:
+Bruger **Provider** pattern med tre hovedproviders:
+
+**AuthProvider:**
+- Håndterer login/logout
+- OAuth 2.0 eller Union ID
+- Token management
+- User state
 
 **MatchSetupProvider:**
 - Håndterer club/course/tee selection
@@ -353,6 +564,7 @@ Bruger **Provider** pattern med to hovedproviders:
 - Filtering og grouping i memory (ikke API)
 - Hot reload friendly architecture
 - Effektiv state updates med notifyListeners
+- Firebase Firestore indexing for queries
 
 ### Code Organization
 - **Clean Architecture** principper
@@ -367,25 +579,26 @@ Bruger **Provider** pattern med to hovedproviders:
   - OAuth 2.0 PKCE implementeret men deaktiveret
   - Skift til OAuth: Sæt `useSimpleLogin = false` i `main.dart`
   - Kræver OAuth redirect URI konfiguration i GolfBox
-- **Marker Approval**: Fysisk til stede (underskrift påkrævet)
-  - Remote approval (QR/link) kommer i v2
-- **Signature Storage**: Base64 PNG i memory
-  - Firebase Storage integration kommer senere
-- **No Persistence**: Scorekort gemmes ikke - forsvinder ved reload
+- **Marker Notification**: Manuel URL deling (email/SMS)
+  - Push notification via DGU app kommer senere
+- **Firestore Security**: Åben læsning/skrivning
+  - Authentication-based rules kommer senere
+- **Signature Storage**: Base64 PNG i Firestore document
+  - Firebase Storage integration kan tilføjes senere
 - **Token Security**: Basic Auth token hentes fra privat GitHub Gist
 - **CORS**: Løst via corsproxy.io for production
 - **Web Only**: Primært testet i Chrome web browser, mobil-optimeret
 
 ### Current Limitations
-- **No Score Submission**: POST til DGU API ikke implementeret endnu (mock)
-- **No Score History**: Tidligere runder gemmes ikke
-- **No Remote Marker**: Markør skal være fysisk til stede
+- **No Score Submission**: POST til DGU API ikke implementeret endnu
+- **Manual URL Sharing**: Markør skal modtage URL manuelt (indtil push notification)
 - **No Error Recovery**: Begrænsede retry strategier
 - **Single Player**: Ingen flight/gruppe support endnu
 
 ### Future Considerations
 - Aktivér OAuth login når redirect URI er konfigureret
-- Tilføj persistent storage for scorekort (IndexedDB)
+- Implementer push notification til markør (DGU app integration)
+- Tilføj Firestore Security Rules med authentication
 - Backend for token proxy (i stedet for Gist)
 - Implementer proper error handling og retry logic
 - Tilføj loading states og skeleton screens
@@ -407,10 +620,12 @@ Bruger **Provider** pattern med to hovedproviders:
 - [ ] Test 18-hullers bane → Verificer Ud/Ind/Total
 - [ ] Verificer score markers (circles/boxes)
 - [ ] Verificer handicap resultat beregning
-- [ ] **Klik "Indsend Score"** → Marker approval screen
-- [ ] **Prøv at godkende uden underskrift** → Skal give fejl
-- [ ] **Underskriv og bekræft** → Skal vise signature preview
-- [ ] **Submit scorecard** → Skal vise "Score indsendt!"
+- [ ] **Test In-Person Marker**: "Få Markør Underskrift Her" → underskrift → submit
+- [ ] **Test Remote Marker**: "Send til Markør" → indtast DGU nummer → gem
+- [ ] **Test Marker URLs**: Åbn både localhost og production URL
+- [ ] **Test Marker Approval**: Godkend scorekort → klik "Luk Scorekort"
+- [ ] **Test Marker Rejection**: Afvis med begrundelse → klik "Luk Scorekort"
+- [ ] **Test Firestore**: Verificer data gemmes korrekt i Firebase Console
 
 ### Automated Tests (Future)
 ```bash
@@ -435,6 +650,11 @@ flutter test test/integration/
 - [Provider Package](https://pub.dev/packages/provider)
 - [Material 3 Design](https://m3.material.io/)
 
+### Firebase
+- [Firebase for Flutter](https://firebase.google.com/docs/flutter/setup)
+- [Cloud Firestore](https://firebase.google.com/docs/firestore)
+- [Firebase Hosting](https://firebase.google.com/docs/hosting)
+
 ## 👥 Contributing
 
 Dette er et personligt projekt. Pull requests er velkomne!
@@ -443,8 +663,9 @@ Dette er et personligt projekt. Pull requests er velkomne!
 1. Follow Flutter/Dart style guide
 2. Run `flutter analyze` before committing
 3. Test både 9 og 18 hullers baner
-4. Behold DGU design consistency
-5. Dokumenter komplekse beregninger
+4. Test både in-person og remote marker flows
+5. Behold DGU design consistency
+6. Dokumenter komplekse beregninger
 
 ## 📞 Contact
 
@@ -456,4 +677,4 @@ Nick Hüttel
 
 ---
 
-**Bygget med ❤️ og Flutter**
+**Bygget med ❤️, Flutter og Firebase**
