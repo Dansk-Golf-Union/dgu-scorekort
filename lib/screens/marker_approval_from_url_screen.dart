@@ -507,20 +507,20 @@ class _MarkerApprovalFromUrlScreenState
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildSummaryItem(
-                  'Total Points',
+                  'Point',
                   _scorecardData!['totalPoints'].toString(),
                   Icons.emoji_events,
                 ),
                 if (_scorecardData!['totalStrokes'] != null)
                   _buildSummaryItem(
-                    'Brutto',
+                    'Slag',
                     _scorecardData!['totalStrokes'].toString(),
                     Icons.golf_course,
                   ),
                 _buildSummaryItem(
-                  'Adjusted',
+                  'Score',
                   _scorecardData!['adjustedGrossScore'].toString(),
-                  Icons.settings,
+                  Icons.scoreboard,
                 ),
               ],
             ),
@@ -544,9 +544,10 @@ class _MarkerApprovalFromUrlScreenState
         ),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
-            color: Colors.grey,
+            color: Colors.grey.shade700,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],

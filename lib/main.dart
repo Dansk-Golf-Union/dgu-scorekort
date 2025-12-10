@@ -13,6 +13,7 @@ import 'screens/scorecard_bulk_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/simple_login_screen.dart';
 import 'screens/marker_approval_from_url_screen.dart';
+import 'screens/cache_management_screen.dart';
 import 'theme/app_theme.dart';
 
 // TODO: Switch to OAuth when redirect URI is ready
@@ -150,6 +151,18 @@ class _SetupRoundScreenState extends State<SetupRoundScreen> {
         title: const Text('DGU Scorekort'),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.storage),
+            tooltip: 'Cache Management',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CacheManagementScreen(),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Log ud',

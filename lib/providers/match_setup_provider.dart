@@ -3,10 +3,12 @@ import '../models/club_model.dart';
 import '../models/course_model.dart';
 import '../models/player_model.dart';
 import '../services/dgu_service.dart';
+import '../services/course_cache_service.dart';
 import '../utils/handicap_calculator.dart';
 
 class MatchSetupProvider with ChangeNotifier {
   final DguService _dguService = DguService();
+  final CourseCacheService _cacheService = CourseCacheService();
 
   // Player
   Player? _currentPlayer;
@@ -91,7 +93,8 @@ class MatchSetupProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      _clubs = await _dguService.fetchClubs();
+      // Use cache service (automatically falls back to API if cache is stale/empty)
+      _clubs = await _cacheService.fetchCachedClubs();
       _clubsError = null;
     } catch (e) {
       _clubsError = e.toString();
@@ -150,7 +153,8 @@ class MatchSetupProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      _courses = await _dguService.fetchCourses(clubId);
+      // Use cache service (automatically falls back to API if cache is stale/empty)
+      _courses = await _cacheService.fetchCachedCourses(clubId);
       _coursesError = null;
     } catch (e) {
       _coursesError = e.toString();

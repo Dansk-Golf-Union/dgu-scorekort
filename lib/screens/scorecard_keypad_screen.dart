@@ -86,7 +86,10 @@ class _ScorecardKeypadScreenState extends State<ScorecardKeypadScreen> {
               child: Column(
                 children: [
                   // Hole card with keypad input
-                  Expanded(
+                  SizedBox(
+                    height: MediaQuery.of(context).size.width < 768
+                        ? MediaQuery.of(context).size.height * 0.55  // Mobile
+                        : MediaQuery.of(context).size.height * 0.60, // Tablet/Desktop
                     child: PageView.builder(
                       controller: _pageController,
                       itemCount: scorecard.holeScores.length,
@@ -113,16 +116,12 @@ class _ScorecardKeypadScreenState extends State<ScorecardKeypadScreen> {
                     ),
                   ),
 
-                  // Navigation buttons
-                  _NavigationBar(
-                    canGoPrevious: provider.canGoPrevious,
-                    canGoNext: provider.canGoNext,
-                    onPrevious: provider.previousHole,
-                    onNext: provider.nextHole,
+                  // Compact scorekort progress view (starts directly under keypad, grows down)
+                  // Dynamically shrink when "Afslut Runde" button appears
+                  Flexible(
+                    flex: scorecard.isComplete ? 3 : 5,
+                    child: _CompactScorecardView(scorecard: scorecard),
                   ),
-
-                  // Score summary
-                  _ScoreSummary(scorecard: scorecard),
                 ],
               ),
             ),
@@ -250,16 +249,43 @@ class _ScoreDisplay extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(8.0),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              Icon(Icons.touch_app, size: 20, color: Colors.grey[600]),
-              const SizedBox(width: 8),
-              Text(
-                'Vælg score',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
+              // Vælg score hint
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.touch_app, size: 18, color: Colors.grey[600]),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Vælg score',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+              // Divider
+              Container(
+                width: 1,
+                height: 12,
+                color: Colors.grey[400],
+              ),
+              // Swipe hint
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.swipe, size: 18, color: Colors.grey[600]),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Swipe for næste',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -275,34 +301,52 @@ class _ScoreDisplay extends StatelessWidget {
       color: hole.isPickedUp ? Colors.grey[600] : _getCardColor(colorCategory),
       elevation: 4,
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
               hole.isPickedUp ? '—' : '${hole.strokes}',
               style: TextStyle(
-                fontSize: 36,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
             ),
             if (golfTerm.isNotEmpty) ...[
-              const SizedBox(width: 12),
+              const SizedBox(width: 6),
               Text(
-                hole.isPickedUp ? golfTerm : '★ $golfTerm ★',
+                '•',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
+                  color: Colors.white.withOpacity(0.7),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                golfTerm,
+                style: TextStyle(
+                  fontSize: 12,
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
-            const SizedBox(width: 12),
+            const SizedBox(width: 6),
+            Text(
+              '•',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white.withOpacity(0.7),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 6),
             Text(
               '${hole.stablefordPoints}p',
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 12,
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
               ),
@@ -618,113 +662,156 @@ class _KeypadButton extends StatelessWidget {
   }
 }
 
-class _NavigationBar extends StatelessWidget {
-  final bool canGoPrevious;
-  final bool canGoNext;
-  final VoidCallback onPrevious;
-  final VoidCallback onNext;
-
-  const _NavigationBar({
-    required this.canGoPrevious,
-    required this.canGoNext,
-    required this.onPrevious,
-    required this.onNext,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          // Previous button
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: canGoPrevious ? onPrevious : null,
-              icon: const Icon(Icons.arrow_back),
-              label: const Text('Forrige'),
-            ),
-          ),
-          const SizedBox(width: 16),
-
-          // Next button
-          Expanded(
-            child: FilledButton.icon(
-              onPressed: canGoNext ? onNext : null,
-              icon: const Icon(Icons.arrow_forward),
-              label: const Text('Næste'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ScoreSummary extends StatelessWidget {
+/// Compact vertical scorekort showing completed holes with running totals
+/// Replaces the bottom footer bar with integrated view
+class _CompactScorecardView extends StatefulWidget {
   final Scorecard scorecard;
 
-  const _ScoreSummary({required this.scorecard});
+  const _CompactScorecardView({required this.scorecard});
+
+  @override
+  State<_CompactScorecardView> createState() => _CompactScorecardViewState();
+}
+
+class _CompactScorecardViewState extends State<_CompactScorecardView> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(_CompactScorecardView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Auto-scroll to bottom when new hole is added
+    if (widget.scorecard.holesCompleted > oldWidget.scorecard.holesCompleted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant,
-        border: Border(
-          top: BorderSide(
-            color: Theme.of(context).colorScheme.outline,
-          ),
-        ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _SummaryItem(
-                  label: 'Huller',
-                  value: '${scorecard.holesCompleted}/${scorecard.holeScores.length}',
+    // Get completed holes (including pickups)
+    final completedHoles = widget.scorecard.holeScores
+        .where((hole) => hole.strokes != null || hole.isPickedUp)
+        .toList();
+
+    // Return empty container if no holes completed yet
+    if (completedHoles.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Calculate totals (only count actual strokes, not pickups)
+    int totalStrokes = completedHoles
+        .where((h) => !h.isPickedUp && h.strokes != null)
+        .fold(0, (sum, hole) => sum + hole.strokes!);
+    int totalPoints = completedHoles.fold(0, (sum, hole) => sum + hole.stablefordPoints);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12), // No top padding, bottom padding for button
+      child: Column(
+        mainAxisSize: MainAxisSize.max,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                // Header row (fixed at top)
+                Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF1B5E20), // DGU Green
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(8),
+                      topRight: Radius.circular(8),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      _TableCell('Hul', isHeader: true, width: 70),
+                      _TableCell('Par', isHeader: true, width: 60),
+                      _TableCell('Slag', isHeader: true, width: 70),
+                      _TableCell('Point', isHeader: true, width: 70),
+                    ],
+                  ),
                 ),
-                _SummaryItem(
-                  label: 'Points',
-                  value: '${scorecard.totalPoints}',
-                  highlighted: true,
+                
+                // Scrollable data rows
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    child: Column(
+                      children: completedHoles.map((hole) => Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border(
+                                top: BorderSide(color: Colors.grey.shade200),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                _TableCell('${hole.holeNumber}', width: 70),
+                                _TableCell('${hole.par}', width: 60),
+                                _TableCell(hole.isPickedUp ? '-' : '${hole.strokes}', width: 70),
+                                _TableCell('${hole.stablefordPoints}', width: 70),
+                              ],
+                            ),
+                          )).toList(),
+                    ),
+                  ),
                 ),
-                _SummaryItem(
-                  label: 'Slag',
-                  value: scorecard.totalStrokes != null ? '${scorecard.totalStrokes}' : '-',
+                
+                // Total row (fixed at bottom)
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    border: Border(
+                      top: BorderSide(
+                        color: const Color(0xFF1B5E20),
+                        width: 2,
+                      ),
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(8),
+                      bottomRight: Radius.circular(8),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      _TableCell('Total', width: 70, isBold: true),
+                      _TableCell('-', width: 60, isBold: true),
+                      _TableCell('$totalStrokes', width: 70, isBold: true),
+                      _TableCell('$totalPoints', width: 70, isBold: true, highlight: true),
+                    ],
+                  ),
                 ),
               ],
-            ),
-            if (scorecard.holeScores.length == 18) ...[
-              const SizedBox(height: 2),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _SummaryItem(
-                    label: 'Front 9',
-                    value: '${scorecard.front9Points}p',
-                    small: true,
-                  ),
-                  _SummaryItem(
-                    label: 'Back 9',
-                    value: '${scorecard.back9Points}p',
-                    small: true,
-                  ),
-                ],
               ),
-            ],
-            if (scorecard.isComplete) ...[
-              const SizedBox(height: 6),
-              SizedBox(
+            ),
+          ),
+          
+          // Finish round button (when all holes completed)
+          if (widget.scorecard.isComplete)
+            Padding(
+              padding: const EdgeInsets.only(top: 12, bottom: 4),
+              child: SizedBox(
                 width: double.infinity,
-                child: FilledButton(
+                child: FilledButton.icon(
                   onPressed: () {
                     context.read<ScorecardProvider>().finishRound();
                     Navigator.push(
@@ -734,53 +821,55 @@ class _ScoreSummary extends StatelessWidget {
                       ),
                     );
                   },
+                  icon: const Icon(Icons.check_circle),
+                  label: const Text('Afslut Runde'),
                   style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    backgroundColor: const Color(0xFF1B5E20),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  child: const Text('Afslut Runde'),
                 ),
               ),
-            ],
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
 }
 
-class _SummaryItem extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool highlighted;
-  final bool small;
+/// Table cell widget for compact scorekort
+class _TableCell extends StatelessWidget {
+  final String text;
+  final bool isHeader;
+  final bool isBold;
+  final bool highlight;
+  final double width;
 
-  const _SummaryItem({
-    required this.label,
-    required this.value,
-    this.highlighted = false,
-    this.small = false,
+  const _TableCell(
+    this.text, {
+    this.isHeader = false,
+    this.isBold = false,
+    this.highlight = false,
+    required this.width,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: Colors.grey[600],
-          ),
+    return Container(
+      width: width,
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: isHeader ? 11 : 13,
+          fontWeight: isHeader || isBold ? FontWeight.bold : FontWeight.normal,
+          color: isHeader
+              ? Colors.white
+              : highlight
+                  ? const Color(0xFF1B5E20)
+                  : Colors.black87,
         ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: small ? 16 : 18,
-            fontWeight: FontWeight.bold,
-            color: highlighted ? Theme.of(context).colorScheme.primary : null,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
