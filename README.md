@@ -2,7 +2,7 @@
 
 Flutter Web App til danske golfspillere til at rapportere scorekort.
 
-## Status: ✅ Version 1.3 - Med Firebase Backend & Remote Markør Godkendelse
+## Status: ✅ Version 1.4 - Med Firebase Backend, Remote Markør Godkendelse & Firestore Caching
 
 **Live App (Firebase):** [https://dgu-scorekort.web.app](https://dgu-scorekort.web.app)  
 **Live App (GitHub):** [https://dansk-golf-union.github.io/dgu-scorekort/](https://dansk-golf-union.github.io/dgu-scorekort/)
@@ -17,9 +17,25 @@ DGU Scorekort er en moderne web-applikation bygget med Flutter, der gør det mul
 - Se detaljeret scorekort med Stableford points
 - Beregne handicap resultat (score differential)
 - Gemme scorekort i Firebase Firestore
+- **Firestore caching af klubber og baner** (nyt i v1.4!)
 - Indsende scores til DGU (klar til API integration)
 
-## ✨ Nye Features i v1.3
+## ✨ Nye Features i v1.4
+
+### ⚡ Firestore Caching (Performance Boost)
+- ✅ **Cache Management Screen**: UI til cache kontrol
+- ✅ **Club & Course Caching**: Gem alle DGU klubber og baner i Firestore
+- ✅ **Course Filtering**: Filtrerer inaktive og gamle course versioner før caching
+- ✅ **Split Data Structure**: `info` (lightweight) + `courses` (separate)
+- ✅ **Metadata-based Club List**: Hent 213 klubber med 1 read (instant!)
+- ✅ **API Fallback**: Automatisk fallback til API hvis cache tom/ugyldig
+- ✅ **Manual Seeding**: Seed cache fra UI (~2 min for alle klubber)
+- ✅ **Performance**: Reduktion fra 2-3s til <0.2s for klub-valg
+- ✅ **Data Optimization**: 
+  - Før: ~42MB data, 213 Firestore reads
+  - Nu: ~20KB metadata, 1 Firestore read
+
+### ✨ Features fra v1.3
 
 ### 🔥 Firebase Backend
 - ✅ **Firebase Core & Firestore** integration
@@ -160,7 +176,9 @@ lib/
 │   ├── auth_service.dart              # OAuth 2.0 PKCE service
 │   ├── dgu_service.dart               # DGU Basen API client (public endpoints)
 │   ├── player_service.dart            # Player API service (OAuth & Union ID)
-│   └── scorecard_storage_service.dart # Firestore operations (nyt)
+│   ├── scorecard_storage_service.dart # Firestore scorecard operations
+│   ├── course_cache_service.dart      # Firestore cache read + API fallback (nyt v1.4)
+│   └── cache_seed_service.dart        # Firestore cache seeding (nyt v1.4)
 ├── utils/
 │   ├── handicap_calculator.dart       # WHS handicap beregninger
 │   ├── stroke_allocator.dart          # Stroke allocation algoritme
@@ -171,9 +189,10 @@ lib/
     ├── scorecard_screen.dart          # Plus/Minus scorecard
     ├── scorecard_keypad_screen.dart   # Hurtig keypad scorecard
     ├── marker_approval_screen.dart    # In-person markør godkendelse
-    ├── marker_assignment_dialog.dart  # Remote marker selection (nyt)
-    ├── marker_approval_from_url_screen.dart # Remote approval screen (nyt)
-    └── scorecard_results_screen.dart  # Resultat visning & submission
+    ├── marker_assignment_dialog.dart  # Remote marker selection
+    ├── marker_approval_from_url_screen.dart # Remote approval screen
+    ├── scorecard_results_screen.dart  # Resultat visning & submission
+    └── cache_management_screen.dart   # Cache control & seeding (nyt v1.4)
 ```
 
 ## 🔥 Firebase Setup
@@ -209,21 +228,108 @@ lib/
 }
 ```
 
+### Firestore Collections
+
+#### 1. `scorecards` - Scorekort med markør godkendelse
+#### 2. `course-cache-metadata` - Cache metadata
+#### 3. `course-cache-clubs` - Cached klub/bane data
+
 ### Firestore Security Rules
 ```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Scorecards (marker approval)
     match /scorecards/{documentId} {
-      // Anyone can read (for marker approval)
-      allow read: if true;
-      
-      // Anyone can write (for now - should be authenticated later)
-      allow write: if true;
+      allow read: if true;  // Anyone can read (for marker approval)
+      allow write: if true; // Anyone can write (should be authenticated later)
+    }
+    
+    // Course cache metadata
+    match /course-cache-metadata/{document=**} {
+      allow read: if true;  // Public read for app
+      allow write: if true; // Anyone can seed (should be admin only later)
+    }
+    
+    // Course cache clubs
+    match /course-cache-clubs/{document=**} {
+      allow read: if true;  // Public read for app
+      allow write: if true; // Anyone can seed (should be admin only later)
     }
   }
 }
 ```
+
+### Firestore Cache Structure
+
+**Purpose:** Cache all Danish golf clubs and courses in Firestore to reduce API calls and improve performance.
+
+**Collections:**
+
+#### `course-cache-metadata/data`
+```json
+{
+  "lastUpdated": Timestamp,
+  "clubCount": 213,
+  "courseCount": 876,
+  "version": 2,
+  "clubs": [
+    {"ID": "club-id-1", "Name": "Aalborg Golf Klub"},
+    {"ID": "club-id-2", "Name": "Aarhus Golf Club"},
+    ...
+  ]
+}
+```
+
+**Why club list in metadata?**
+- ⚡ Load all 213 clubs with **1 Firestore read** instead of 213!
+- Metadata doc size: ~20KB (all club names)
+- Load time: <0.2s (before: 2-3s)
+
+#### `course-cache-clubs/{clubId}`
+```json
+{
+  "info": {
+    "ID": "club-id",
+    "Name": "Aalborg Golf Klub",
+    "Address": "...",
+    // Other club metadata WITHOUT courses
+  },
+  "courses": [
+    {
+      "ID": "course-id",
+      "Name": "Aalborg GK 18H",
+      "IsActive": true,
+      "ActivationDate": "2025-01-01T00:00:00",
+      "TemplateID": "template-123",
+      "Tees": [...],
+      "Holes": [...],
+      // Full course data
+    }
+  ],
+  "updatedAt": Timestamp
+}
+```
+
+**Cache Flow:**
+
+1. **App starts** → Load clubs from metadata (1 read, instant!)
+2. **User selects club** → Load courses for that club (1 read, ~0.2s)
+3. **Cache invalid/empty** → Automatic fallback to API
+4. **Manual seeding** → Cache Management screen (~2 min for all data)
+
+**Data Optimization:**
+- **Course Filtering** before caching:
+  - Only `IsActive: true` courses
+  - Only courses with `ActivationDate <= now`
+  - Only latest version per `TemplateID` (removes old course versions)
+- **Result**: 50-70% less data than raw API response
+- **Size per club**: 150-250KB (after filtering, before: 300KB-1MB+)
+
+**Cache Validity:**
+- Valid for 24 hours
+- Checked on each app load
+- Falls back to API if stale
 
 ### Firebase Hosting Config (`firebase.json`)
 ```json
@@ -301,9 +407,51 @@ https://dgu-scorekort.web.app/#/marker-approval/DOCUMENT_ID
 - `POST /ScorecardExchange` - Indsend scorekort (TODO: implementer)
 
 **Authentication:**
-- **Public endpoints**: Basic Auth via token fra GitHub Gist (sikkerhed)
+- **Public endpoints**: Basic Auth via token fra GitHub Gist
 - **Player endpoints**: Bearer token fra OAuth eller Basic Auth
 - **CORS**: Handled via `https://corsproxy.io/?` proxy for production
+
+### 🔐 API Token Configuration
+
+**Location:** `lib/config/auth_config.dart`
+
+**Basic Auth Token (Public API):**
+```dart
+class AuthConfig {
+  // Basic Auth token for public endpoints (clubs, courses)
+  static const String basicAuthToken = 'Basic aW5mb0Bpbmdlbm...'; // Hent fra Gist
+  
+  // GitHub Gist URL med aktuel token
+  static const String tokenGistUrl = 
+    'https://gist.githubusercontent.com/[USER]/[GIST_ID]/raw/token.txt';
+}
+```
+
+**Hvor er token?**
+1. **Production token**: Hentes fra privat GitHub Gist ved app start
+2. **Token format**: Base64 encoded `username:password`
+3. **Gist URL**: Defineret i `auth_config.dart`
+4. **Token refresh**: Opdater Gist fil hvis DGU ændrer credentials
+
+**Sådan opdaterer du token:**
+1. Få nyt brugernavn/password fra DGU
+2. Encode som Base64: `echo -n "username:password" | base64`
+3. Tilføj "Basic " prefix
+4. Opdater Gist fil på GitHub
+5. Appen henter automatisk nyt token ved næste opstart
+
+**OAuth Configuration:**
+```dart
+class AuthConfig {
+  static const String clientId = 'DGU_TEST_DK';
+  static const String authorizationEndpoint = 
+    'https://auth.golfbox.io/connect/authorize';
+  static const String tokenEndpoint = 
+    'https://auth.golfbox.io/connect/token';
+  static const String redirectUri = 
+    'https://dgu-scorekort.web.app/callback'; // Skal konfigureres i GolfBox
+}
+```
 
 **Data Filtering:**
 - Kun aktive baner (`IsActive: true`)
@@ -445,6 +593,14 @@ firebase deploy --only hosting
 # URL: https://dgu-scorekort.web.app
 ```
 
+**⚠️ Efter deploy: Seed production cache**
+1. Åbn https://dgu-scorekort.web.app
+2. Log ind med DGU nummer
+3. Klik på ⚙️ ikon (Storage) i top højre hjørne
+4. Klik "Seed Cache" (~2 minutter)
+5. Verificer i Firebase Console at data er gemt
+6. Test klub-valg - skal være instant!
+
 #### Deploy til GitHub Pages
 ```bash
 # Commit og push til GitHub
@@ -491,6 +647,11 @@ git push
 - [x] **Firebase Hosting deployment** *(nyt)*
 - [x] **go_router deep linking** *(nyt)*
 - [x] **Dual deployment (Firebase + GitHub)** *(nyt)*
+- [x] **Firestore caching for clubs/courses** *(nyt v1.4)*
+- [x] **Cache Management UI** *(nyt v1.4)*
+- [x] **Course filtering before caching** *(nyt v1.4)*
+- [x] **Metadata-based club list (instant load)** *(nyt v1.4)*
+- [x] **API fallback for invalid cache** *(nyt v1.4)*
 
 ### 🔄 In Progress
 - [ ] OAuth redirect URI configuration (venter på setup)
@@ -498,6 +659,13 @@ git push
 - [ ] Push notification til markør (via DGU Mit Golf app)
 
 ### 📅 Future Enhancements
+
+#### Cache & Performance
+- [ ] Cloud Function for automated cache updates (daglig kl. 02:00)
+- [ ] Cache analytics og monitoring
+- [ ] Cache version migration strategy
+
+#### Scorecard & Markers
 - [ ] Aktivér DGU ScorecardExchange POST endpoint
 - [ ] Send marker approval URL via push besked (DGU app integration)
 - [ ] Email notification til markør
@@ -505,13 +673,18 @@ git push
 - [ ] Marker kan se alle pending approvals
 - [ ] Player kan se approval status
 - [ ] Export til PDF/print
+
+#### Features
 - [ ] Multiple spillere (flightmode)
 - [ ] Statistik over tid (gennemsnit, trends)
 - [ ] Dark mode
 - [ ] Offline support med sync
 - [ ] Native mobile apps (iOS/Android)
 - [ ] PWA support (install som app)
+
+#### Security
 - [ ] Firestore Security Rules (authentication required)
+- [ ] Admin-only cache write access
 
 ## 🔧 Tekniske Detaljer
 
@@ -560,6 +733,10 @@ Bruger **Provider** pattern med tre hovedproviders:
 - `HoleScore` - Score for enkelt hul med points og netto
 
 ### Performance
+- **Firestore Caching**: 213 clubs loaded with 1 read (<0.2s vs 2-3s)
+- **Course filtering**: Pre-filtered data reduces size 50-70%
+- **Metadata-based lists**: Instant loading of club names
+- **API Fallback**: Automatic fallback if cache invalid
 - Lazy loading af courses (kun når klub vælges)
 - Filtering og grouping i memory (ikke API)
 - Hot reload friendly architecture
@@ -596,9 +773,11 @@ Bruger **Provider** pattern med tre hovedproviders:
 - **Single Player**: Ingen flight/gruppe support endnu
 
 ### Future Considerations
+- **Automated Cache Updates**: Cloud Function til daglig cache opdatering (kl. 02:00)
+- **Cache Analytics**: Track cache hit rate og performance metrics
 - Aktivér OAuth login når redirect URI er konfigureret
 - Implementer push notification til markør (DGU app integration)
-- Tilføj Firestore Security Rules med authentication
+- Tilføj Firestore Security Rules med authentication (admin-only cache write)
 - Backend for token proxy (i stedet for Gist)
 - Implementer proper error handling og retry logic
 - Tilføj loading states og skeleton screens
@@ -626,6 +805,10 @@ Bruger **Provider** pattern med tre hovedproviders:
 - [ ] **Test Marker Approval**: Godkend scorekort → klik "Luk Scorekort"
 - [ ] **Test Marker Rejection**: Afvis med begrundelse → klik "Luk Scorekort"
 - [ ] **Test Firestore**: Verificer data gemmes korrekt i Firebase Console
+- [ ] **Test Cache Management**: Åbn Cache Management screen
+- [ ] **Test Cache Seeding**: Seed cache (~2 min) → verificer i Firebase Console
+- [ ] **Test Cache Loading**: Verificer klub-liste loader instant efter seed
+- [ ] **Test Cache Fallback**: Ryd cache → verificer API fallback virker
 
 ### Automated Tests (Future)
 ```bash
