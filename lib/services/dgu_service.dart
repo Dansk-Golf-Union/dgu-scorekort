@@ -144,7 +144,7 @@ class DguService {
       if (response.statusCode == 200) {
         final List<dynamic> jsonData = json.decode(response.body);
         final allCourses = jsonData
-            .map((json) => GolfCourse.fromJson(json))
+            .map((json) => GolfCourse.fromJson(json, clubId: clubId))
             .toList();
 
         // 1. Filtrer: Behold kun aktive baner

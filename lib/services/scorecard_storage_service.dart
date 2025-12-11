@@ -5,7 +5,7 @@ import '../models/player_model.dart';
 
 class ScorecardStorageService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
+
   /// Collection reference for scorecards
   CollectionReference get _scorecards => _firestore.collection('scorecards');
 
@@ -25,12 +25,13 @@ class ScorecardStorageService {
         'playerHomeClubName': scorecard.player.homeClubName,
         'playerHandicap': scorecard.player.hcp,
         'playingHandicap': scorecard.playingHandicap,
-        
+
         // Marker information (assigned)
         'markerId': markerId,
         'markerName': markerName,
-        
+
         // Course information
+        'clubId': scorecard.course.clubId,
         'courseName': scorecard.course.name,
         'courseId': scorecard.course.id,
         'teeId': scorecard.tee.id,
@@ -39,18 +40,22 @@ class ScorecardStorageService {
         'teeLength': scorecard.tee.totalLength,
         'courseRating': scorecard.tee.courseRating,
         'slopeRating': scorecard.tee.slopeRating,
-        
+
         // Scores
-        'holes': scorecard.holeScores.map((hole) => {
-          'holeNumber': hole.holeNumber,
-          'par': hole.par,
-          'index': hole.index,
-          'strokesReceived': hole.strokesReceived,
-          'strokes': hole.strokes,
-          'putts': hole.putts,
-          'isPickedUp': hole.isPickedUp,
-        }).toList(),
-        
+        'holes': scorecard.holeScores
+            .map(
+              (hole) => {
+                'holeNumber': hole.holeNumber,
+                'par': hole.par,
+                'index': hole.index,
+                'strokesReceived': hole.strokesReceived,
+                'strokes': hole.strokes,
+                'putts': hole.putts,
+                'isPickedUp': hole.isPickedUp,
+              },
+            )
+            .toList(),
+
         // Calculated scores
         'totalStrokes': scorecard.totalStrokes,
         'totalPoints': scorecard.totalPoints,
@@ -58,23 +63,23 @@ class ScorecardStorageService {
         'handicapResult': scorecard.handicapResult,
         'front9Points': scorecard.front9Points,
         'back9Points': scorecard.back9Points,
-        
+
         // Timestamps
         'playedDate': Timestamp.fromDate(scorecard.startTime),
         'createdAt': FieldValue.serverTimestamp(),
         'approvedAt': null,
-        
+
         // Status tracking
         'status': 'pending', // pending, approved, rejected
         'isSubmittedToDgu': false,
-        
+
         // Optional marker approval fields (filled when approved)
         'markerLifetimeId': null,
         'markerHomeClubName': null,
         'markerSignature': null,
         'markerApprovedAt': null,
       });
-      
+
       return docRef.id;
     } catch (e) {
       throw Exception('Kunne ikke gemme scorekort: $e');
@@ -86,14 +91,14 @@ class ScorecardStorageService {
   Future<Map<String, dynamic>?> getScorecardById(String documentId) async {
     try {
       final doc = await _scorecards.doc(documentId).get();
-      
+
       if (!doc.exists) {
         return null;
       }
-      
+
       final data = doc.data() as Map<String, dynamic>;
       data['id'] = doc.id; // Add document ID to the data
-      
+
       return data;
     } catch (e) {
       throw Exception('Kunne ikke hente scorekort: $e');
@@ -138,19 +143,21 @@ class ScorecardStorageService {
   }
 
   /// Get all pending scorecards for a specific marker (by their DGU number)
-  Stream<List<Map<String, dynamic>>> getPendingScorecardsByMarkerId(String markerId) {
+  Stream<List<Map<String, dynamic>>> getPendingScorecardsByMarkerId(
+    String markerId,
+  ) {
     return _scorecards
         .where('markerId', isEqualTo: markerId)
         .where('status', isEqualTo: 'pending')
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id;
-        return data;
-      }).toList();
-    });
+          return snapshot.docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            data['id'] = doc.id;
+            return data;
+          }).toList();
+        });
   }
 
   /// Get all scorecards for a player (any status)
@@ -160,12 +167,12 @@ class ScorecardStorageService {
         .orderBy('playedDate', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id;
-        return data;
-      }).toList();
-    });
+          return snapshot.docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            data['id'] = doc.id;
+            return data;
+          }).toList();
+        });
   }
 
   /// Mark a scorecard as submitted to DGU
@@ -224,6 +231,7 @@ class ScorecardStorageService {
     final course = GolfCourse(
       id: data['courseId'] as String,
       name: data['courseName'] as String,
+      clubId: data['clubId'] as String? ?? '',
       tees: [tee],
       holes: holes,
       isActive: true,
@@ -246,7 +254,7 @@ class ScorecardStorageService {
 
     // Reconstruct Scorecard
     final playedDate = (data['playedDate'] as Timestamp).toDate();
-    final approvedAt = data['approvedAt'] != null 
+    final approvedAt = data['approvedAt'] != null
         ? (data['approvedAt'] as Timestamp).toDate()
         : null;
 
@@ -272,4 +280,3 @@ class ScorecardStorageService {
     );
   }
 }
-

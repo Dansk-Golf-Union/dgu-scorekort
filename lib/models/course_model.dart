@@ -1,6 +1,7 @@
 class GolfCourse {
   final String id;
   final String name;
+  final String clubId; // Club ID for WHS API submission
   final String templateID;
   final DateTime activationDate;
   final bool isActive;
@@ -10,6 +11,7 @@ class GolfCourse {
   GolfCourse({
     required this.id,
     required this.name,
+    required this.clubId,
     required this.templateID,
     required this.activationDate,
     required this.isActive,
@@ -17,7 +19,7 @@ class GolfCourse {
     required this.holes,
   });
 
-  factory GolfCourse.fromJson(Map<String, dynamic> json) {
+  factory GolfCourse.fromJson(Map<String, dynamic> json, {String? clubId}) {
     // Parse ActivationDate from format "20251117T230000" to DateTime
     DateTime parseActivationDate(String dateString) {
       try {
@@ -28,7 +30,9 @@ class GolfCourse {
           final day = dateString.substring(6, 8);
           final hour = dateString.substring(9, 11);
           final minute = dateString.substring(11, 13);
-          final second = dateString.length >= 15 ? dateString.substring(13, 15) : '00';
+          final second = dateString.length >= 15
+              ? dateString.substring(13, 15)
+              : '00';
           final isoString = '$year-$month-${day}T$hour:$minute:$second';
           return DateTime.parse(isoString);
         }
@@ -39,7 +43,8 @@ class GolfCourse {
       return DateTime(1970);
     }
 
-    final activationDateString = json['ActivationDate'] ?? json['activationDate'] ?? '';
+    final activationDateString =
+        json['ActivationDate'] ?? json['activationDate'] ?? '';
     final activationDate = activationDateString.isNotEmpty
         ? parseActivationDate(activationDateString)
         : DateTime(1970);
@@ -52,7 +57,7 @@ class GolfCourse {
 
     // Try to get holes from multiple possible locations
     List<Hole> holesList = [];
-    
+
     // 1. Try direct Holes array on course
     if (json['Holes'] != null || json['holes'] != null) {
       holesList = (json['Holes'] ?? json['holes'] ?? [])
@@ -66,27 +71,32 @@ class GolfCourse {
     }
     // 3. Try HoleCount/NumberOfHoles and create placeholder holes
     else {
-      final holeCount = json['HoleCount'] ?? 
-                       json['holeCount'] ?? 
-                       json['NumberOfHoles'] ?? 
-                       json['numberOfHoles'] ??
-                       json['HoleNumber'] ??
-                       json['holeNumber'] ??
-                       0;
+      final holeCount =
+          json['HoleCount'] ??
+          json['holeCount'] ??
+          json['NumberOfHoles'] ??
+          json['numberOfHoles'] ??
+          json['HoleNumber'] ??
+          json['holeNumber'] ??
+          0;
       if (holeCount > 0) {
-        holesList = List.generate(holeCount, (index) => Hole(
-          id: '',
-          number: index + 1,
-          par: 0,
-          length: 0,
-        ));
+        holesList = List.generate(
+          holeCount,
+          (index) => Hole(id: '', number: index + 1, par: 0, length: 0),
+        );
       }
     }
 
     return GolfCourse(
-      id: json['Id'] ?? json['id'] ?? '',
+      id: json['ID'] ?? json['Id'] ?? json['id'] ?? '',
       name: json['Name'] ?? json['name'] ?? '',
-      templateID: json['TemplateID'] ?? json['templateID'] ?? json['TemplateId'] ?? json['templateId'] ?? '',
+      clubId: clubId ?? json['ClubID'] ?? json['clubId'] ?? '',
+      templateID:
+          json['TemplateID'] ??
+          json['templateID'] ??
+          json['TemplateId'] ??
+          json['templateId'] ??
+          '',
       activationDate: activationDate,
       isActive: json['IsActive'] ?? json['isActive'] ?? false,
       tees: teesList,
@@ -111,7 +121,7 @@ class GolfCourse {
   Tee? get longestMenTee {
     final menTees = tees.where((tee) => tee.gender == 1).toList();
     if (menTees.isEmpty) return null;
-    
+
     menTees.sort((a, b) => b.totalLength.compareTo(a.totalLength));
     return menTees.first;
   }
@@ -140,7 +150,8 @@ class Tee {
 
   factory Tee.fromJson(Map<String, dynamic> json) {
     // Parse CourseRating from string (e.g., "719000") to double (71.9)
-    final courseRatingString = json['CourseRating'] ?? json['courseRating'] ?? '0';
+    final courseRatingString =
+        json['CourseRating'] ?? json['courseRating'] ?? '0';
     final courseRatingValue = double.tryParse(courseRatingString) ?? 0.0;
     final courseRating = courseRatingValue / 10000;
 
@@ -154,7 +165,7 @@ class Tee {
     }
 
     return Tee(
-      id: json['Id'] ?? json['id'] ?? '',
+      id: json['ID'] ?? json['Id'] ?? json['id'] ?? '',
       name: json['Name'] ?? json['name'] ?? '',
       gender: json['Gender'] ?? json['gender'] ?? 0,
       courseRating: courseRating,
@@ -185,13 +196,15 @@ class Hole {
 
   factory Hole.fromJson(Map<String, dynamic> json) {
     return Hole(
-      id: json['Id'] ?? json['id'] ?? '',
+      id: json['ID'] ?? json['Id'] ?? json['id'] ?? '',
       number: json['Number'] ?? json['number'] ?? 0,
       par: json['Par'] ?? json['par'] ?? 0,
       length: json['Length'] ?? json['length'] ?? 0,
-      index: json['Index'] ?? json['index'] ?? json['HcpIndex'] ?? json['hcpIndex'],
+      index:
+          json['Index'] ??
+          json['index'] ??
+          json['HcpIndex'] ??
+          json['hcpIndex'],
     );
   }
 }
-
-

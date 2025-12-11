@@ -9,10 +9,7 @@ import '../theme/app_theme.dart';
 class MarkerApprovalFromUrlScreen extends StatefulWidget {
   final String documentId;
 
-  const MarkerApprovalFromUrlScreen({
-    super.key,
-    required this.documentId,
-  });
+  const MarkerApprovalFromUrlScreen({super.key, required this.documentId});
 
   @override
   State<MarkerApprovalFromUrlScreen> createState() =>
@@ -35,10 +32,10 @@ class _MarkerApprovalFromUrlScreenState
 
   Future<void> _loadScorecard() async {
     print('🔍 Loading scorecard with ID: ${widget.documentId}');
-    
+
     try {
       final data = await _storage.getScorecardById(widget.documentId);
-      
+
       print('📦 Got data from Firestore: ${data != null ? 'YES' : 'NO'}');
       if (data != null) {
         print('📊 Data keys: ${data.keys}');
@@ -83,7 +80,8 @@ class _MarkerApprovalFromUrlScreenState
         documentId: widget.documentId,
         markerLifetimeId: _scorecardData!['markerId'] as String,
         markerHomeClubName: 'Godkendt via URL',
-        markerSignature: 'URL_APPROVAL_${DateTime.now().millisecondsSinceEpoch}',
+        markerSignature:
+            'URL_APPROVAL_${DateTime.now().millisecondsSinceEpoch}',
       );
 
       setState(() {
@@ -184,8 +182,10 @@ class _MarkerApprovalFromUrlScreenState
   }
 
   Widget _buildBody() {
-    print('🎨 Building body - isLoading: $_isLoading, hasError: ${_errorMessage != null}, hasData: ${_scorecardData != null}');
-    
+    print(
+      '🎨 Building body - isLoading: $_isLoading, hasError: ${_errorMessage != null}, hasData: ${_scorecardData != null}',
+    );
+
     if (_isLoading) {
       return const Center(
         child: Column(
@@ -313,10 +313,7 @@ class _MarkerApprovalFromUrlScreenState
           children: [
             const Text(
               'Spiller Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const Divider(),
             _buildInfoRow('Navn', _scorecardData!['playerName']),
@@ -330,7 +327,10 @@ class _MarkerApprovalFromUrlScreenState
               _scorecardData!['playingHandicap'].toString(),
             ),
             if (_scorecardData!['playerHomeClubName'] != null)
-              _buildInfoRow('Hjemmeklub', _scorecardData!['playerHomeClubName']),
+              _buildInfoRow(
+                'Hjemmeklub',
+                _scorecardData!['playerHomeClubName'],
+              ),
           ],
         ),
       ),
@@ -352,10 +352,7 @@ class _MarkerApprovalFromUrlScreenState
                 const SizedBox(width: 8),
                 const Text(
                   'Tildelt Markør',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -371,7 +368,11 @@ class _MarkerApprovalFromUrlScreenState
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                  Icon(
+                    Icons.info_outline,
+                    color: Colors.blue.shade700,
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   const Expanded(
                     child: Text(
@@ -403,19 +404,20 @@ class _MarkerApprovalFromUrlScreenState
           children: [
             const Text(
               'Bane Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const Divider(),
-            _buildInfoRow('Bane', _scorecardData!['courseName']),
-            _buildInfoRow('Tee', _scorecardData!['teeName']),
+            _buildInfoRow('Bane', _scorecardData!['courseName'] ?? 'Ukendt'),
+            _buildInfoRow('Tee', _scorecardData!['teeName'] ?? 'Ukendt'),
             _buildInfoRow(
               'Course Rating',
-              _scorecardData!['courseRating'].toStringAsFixed(1),
+              (_scorecardData!['courseRating'] as num?)?.toStringAsFixed(1) ??
+                  '-',
             ),
-            _buildInfoRow('Slope Rating', _scorecardData!['slopeRating'].toString()),
+            _buildInfoRow(
+              'Slope Rating',
+              _scorecardData!['slopeRating']?.toString() ?? '-',
+            ),
             _buildInfoRow(
               'Spillet',
               DateFormat('dd.MM.yyyy').format(playedDate),
@@ -438,10 +440,7 @@ class _MarkerApprovalFromUrlScreenState
           children: [
             const Text(
               'Scorekort',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             SingleChildScrollView(
@@ -449,11 +448,36 @@ class _MarkerApprovalFromUrlScreenState
               child: DataTable(
                 headingRowColor: WidgetStateProperty.all(Colors.grey.shade200),
                 columns: const [
-                  DataColumn(label: Text('Hul', style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('Par', style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('Index', style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('Slag', style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('Points', style: TextStyle(fontWeight: FontWeight.bold))),
+                  DataColumn(
+                    label: Text(
+                      'Hul',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  DataColumn(
+                    label: Text(
+                      'Par',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  DataColumn(
+                    label: Text(
+                      'Index',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  DataColumn(
+                    label: Text(
+                      'Slag',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  DataColumn(
+                    label: Text(
+                      'Points',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
                 ],
                 rows: holes.map((hole) {
                   final holeNumber = hole['holeNumber'] as int;
@@ -497,10 +521,7 @@ class _MarkerApprovalFromUrlScreenState
           children: [
             const Text(
               'Resultat',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             Row(
@@ -537,10 +558,7 @@ class _MarkerApprovalFromUrlScreenState
         const SizedBox(height: 8),
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
         Text(
           label,
@@ -573,13 +591,16 @@ class _MarkerApprovalFromUrlScreenState
               ),
               const SizedBox(height: 8),
               Text(
-                status == 'approved' ? 'Dette scorekort er godkendt' : 'Dette scorekort er afvist',
+                status == 'approved'
+                    ? 'Dette scorekort er godkendt'
+                    : 'Dette scorekort er afvist',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              if (status == 'rejected' && _scorecardData!['rejectionReason'] != null) ...[
+              if (status == 'rejected' &&
+                  _scorecardData!['rejectionReason'] != null) ...[
                 const SizedBox(height: 8),
                 Text(
                   'Årsag: ${_scorecardData!['rejectionReason']}',
@@ -662,9 +683,7 @@ class _MarkerApprovalFromUrlScreenState
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -719,13 +738,10 @@ class _RejectDialogState extends State<_RejectDialog> {
               Navigator.pop(context, _controller.text.trim());
             }
           },
-          style: FilledButton.styleFrom(
-            backgroundColor: Colors.red,
-          ),
+          style: FilledButton.styleFrom(backgroundColor: Colors.red),
           child: const Text('Afvis'),
         ),
       ],
     );
   }
 }
-
