@@ -1,9 +1,10 @@
-import 'package:cloud_functions/cloud_functions.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class NotificationService {
-  final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(
-    region: 'europe-west1',
-  );
+  // Cloud Function URL (no CORS issues!)
+  static const String cloudFunctionUrl =
+      'https://europe-west1-dgu-scorekort.cloudfunctions.net/sendNotification';
 
   /// Send push notification to marker when scorecard is ready for approval
   /// Uses Firebase Cloud Function as CORS-free proxy
@@ -17,27 +18,46 @@ class NotificationService {
       print('📤 Sending push notification via Cloud Function...');
       print('  Marker: $markerUnionId');
       print('  Player: $playerName');
+      print('  URL: $cloudFunctionUrl');
 
-      // Call Firebase Cloud Function
-      final callable = _functions.httpsCallable('sendNotification');
-
-      final result = await callable.call({
-        'markerUnionId': markerUnionId,
-        'playerName': playerName,
-        'approvalUrl': approvalUrl,
-      });
-
-      print('✅ Push notification sent successfully!');
-      print('📦 Response: ${result.data}');
-
-      return {'success': true, 'response': result.data.toString()};
-    } on FirebaseFunctionsException catch (e) {
-      print('❌ Cloud Function error: ${e.code} - ${e.message}');
-      return {
-        'success': false,
-        'error': '${e.code}: ${e.message}',
-        'details': e.details?.toString(),
+      // Build request payload
+      final requestBody = {
+        'data': {
+          'markerUnionId': markerUnionId,
+          'playerName': playerName,
+          'approvalUrl': approvalUrl,
+        },
       };
+
+      print('📦 Request: ${json.encode(requestBody)}');
+
+      // Call Cloud Function via HTTP POST
+      final response = await http.post(
+        Uri.parse(cloudFunctionUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode(requestBody),
+      );
+
+      print('📥 Response Status: ${response.statusCode}');
+      print('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'statusCode': response.statusCode,
+          'response': response.body,
+        };
+      } else {
+        return {
+          'success': false,
+          'statusCode': response.statusCode,
+          'response': response.body,
+          'error': 'HTTP ${response.statusCode}',
+        };
+      }
     } catch (e) {
       print('❌ Push notification error: $e');
       return {'success': false, 'error': e.toString()};
