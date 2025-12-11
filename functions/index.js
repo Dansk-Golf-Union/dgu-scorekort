@@ -17,6 +17,13 @@ const TOKEN_GIST_URL = 'https://gist.githubusercontent.com/nhuttel/a907dd7d60bf4
 const BATCH_SIZE = 20;
 const API_DELAY_MS = 300;
 
+// OAuth Dispatcher - Allowlist for redirect URLs
+const ALLOW_LIST = [
+  'http://localhost',
+  'https://dgu-scorekort.web.app',
+  'https://dgu-scorekort.firebaseapp.com'
+];
+
 /**
  * Scheduled function: Update course cache every night at 02:00 CET
  * Schedule: "0 2 * * *" = At 02:00 every day
@@ -32,21 +39,28 @@ exports.updateCourseCache = functions
   .onRun(async (context) => {
     console.log('🕒 Starting scheduled course cache update...');
     const startTime = Date.now();
+    const db = admin.firestore();
     
     try {
-      // 1. Fetch Basic Auth token from Gist
+      // 1. Determine update strategy (full vs incremental)
+      console.log('🔍 Determining update strategy...');
+      const strategy = await determineUpdateType(db);
+      console.log(`📋 Strategy: ${strategy.type}, changedsince: ${strategy.changedsince}`);
+      
+      // 2. Fetch Basic Auth token from Gist
       console.log('📡 Fetching auth token...');
       const authToken = await fetchAuthToken();
       
-      // 2. Fetch all clubs from DGU API
+      // 3. Fetch all clubs from DGU API
       console.log('📡 Fetching all clubs from DGU API...');
       const clubsRaw = await fetchClubsFromAPI(authToken);
       console.log(`✅ Found ${clubsRaw.length} clubs`);
       
-      // 3. Fetch courses for each club and filter
-      console.log('📡 Fetching courses for each club...');
-      const clubsWithCourses = [];
+      // 4. Fetch courses for each club and filter
+      console.log(`📡 Fetching courses for each club (${strategy.type} mode)...`);
+      const clubsForBatch = [];
       let totalCourses = 0;
+      let clubsUpdated = 0;
       let skippedClubs = 0;
       
       for (let i = 0; i < clubsRaw.length; i++) {
@@ -57,19 +71,26 @@ exports.updateCourseCache = functions
         try {
           console.log(`  [${i + 1}/${clubsRaw.length}] ${clubName}...`);
           
-          // Fetch raw courses
-          const coursesRaw = await fetchCoursesFromAPI(clubId, authToken);
+          // Fetch raw courses with changedsince parameter
+          const coursesRaw = await fetchCoursesFromAPI(clubId, authToken, strategy.changedsince);
           
-          // Filter courses (active, current versions only)
+          if (coursesRaw.length === 0) {
+            console.log(`    → No changes`);
+            continue; // Skip if no changes
+          }
+          
+          // Filter courses (with +7 days window)
           const filteredCourses = filterCourses(coursesRaw);
           
-          console.log(`    → Filtered ${coursesRaw.length} → ${filteredCourses.length} courses`);
+          console.log(`    → ${coursesRaw.length} raw → ${filteredCourses.length} filtered`);
           
-          // Add filtered courses to club data
-          club.courses = filteredCourses;
+          if (filteredCourses.length === 0) continue;
+          
           totalCourses += filteredCourses.length;
+          clubsUpdated++;
           
           // Check size (warn if >900KB)
+          club.courses = filteredCourses;
           const clubSize = JSON.stringify(club).length;
           if (clubSize > 900000) {
             console.log(`    ⚠️  Large club: ${(clubSize / 1024).toFixed(0)}KB`);
@@ -82,7 +103,15 @@ exports.updateCourseCache = functions
             continue;
           }
           
-          clubsWithCourses.push(club);
+          if (strategy.type === 'full') {
+            // Full seed: collect for batch write later
+            clubsForBatch.push(club);
+          } else {
+            // Incremental: REPLACE immediately
+            const clubInfo = { ...club };
+            delete clubInfo.courses;
+            await replaceClubCourses(db, clubId, clubInfo, filteredCourses);
+          }
           
           // Rate limiting delay
           if (i < clubsRaw.length - 1) {
@@ -94,21 +123,28 @@ exports.updateCourseCache = functions
         }
       }
       
-      console.log(`✅ Fetched ${totalCourses} courses across ${clubsWithCourses.length} clubs`);
+      console.log(`✅ Processed ${clubsUpdated} clubs, ${totalCourses} courses`);
       if (skippedClubs > 0) {
         console.log(`⚠️  Skipped ${skippedClubs} clubs (too large)`);
       }
       
-      // 4. Save to Firestore
-      console.log('💾 Saving cache to Firestore...');
-      await saveCacheToFirestore(clubsWithCourses, totalCourses);
+      // 5. Finalize based on strategy
+      console.log('💾 Finalizing cache...');
+      if (strategy.type === 'full') {
+        // Full seed: clear + batch write all
+        await saveCacheToFirestore(clubsForBatch, totalCourses);
+      } else {
+        // Incremental: just update metadata
+        await updateMetadataIncremental(db, clubsUpdated, totalCourses);
+      }
       
       const duration = ((Date.now() - startTime) / 1000).toFixed(0);
-      console.log(`✅ Cache update completed successfully in ${duration}s`);
+      console.log(`✅ Cache update (${strategy.type}) completed successfully in ${duration}s`);
       
       return {
         success: true,
-        clubCount: clubsWithCourses.length,
+        updateType: strategy.type,
+        clubCount: clubsForBatch.length > 0 ? clubsForBatch.length : clubsUpdated,
         courseCount: totalCourses,
         skippedClubs,
         durationSeconds: duration
@@ -117,6 +153,143 @@ exports.updateCourseCache = functions
     } catch (error) {
       console.error('❌ Cache update failed:', error);
       throw error;
+    }
+  });
+
+/**
+ * Callable function: Force full reseed on next scheduled run
+ * Resets lastSeeded to null, triggering full reseed at 02:00
+ */
+exports.forceFullReseed = functions
+  .region('europe-west1')
+  .https.onCall(async (data, context) => {
+    console.log('🔄 Manual force full reseed triggered');
+    
+    const db = admin.firestore();
+    
+    try {
+      // Reset lastSeeded to trigger full reseed next run
+      await db.collection('course-cache-metadata').doc('data').update({
+        lastSeeded: null,
+        lastUpdateType: 'pending_full_reseed'
+      });
+      
+      console.log('✅ Full reseed scheduled for next run (02:00)');
+      
+      return { 
+        success: true, 
+        message: 'Full reseed scheduled for next run at 02:00' 
+      };
+    } catch (error) {
+      console.error('❌ Failed to schedule full reseed:', error);
+      throw new functions.https.HttpsError('internal', 'Failed to schedule reseed', error.message);
+    }
+  });
+
+/**
+ * GolfBox OAuth Callback Dispatcher (2nd Gen Cloud Function)
+ * 
+ * Acts as a blind relay for GolfBox OAuth callbacks, enabling PKCE flow
+ * from both localhost (development) and production URLs.
+ * 
+ * GolfBox only supports one Return URI, so this function:
+ * 1. Receives the OAuth callback with code and state
+ * 2. Decodes the state parameter to find the targetUrl
+ * 3. Validates targetUrl against ALLOW_LIST
+ * 4. Redirects to targetUrl with all original query parameters
+ * 
+ * Security: Only allows redirects to pre-approved domains (allowlist)
+ */
+exports.golfboxCallback = functions
+  .region('europe-west1')
+  .https.onRequest((req, res) => {
+    console.log('🔐 GolfBox OAuth callback received');
+    console.log('  Method:', req.method);
+    console.log('  Query params:', JSON.stringify(req.query));
+    
+    try {
+      // 1. Extract query parameters
+      const queryParams = req.query;
+      const stateParam = queryParams.state;
+      
+      // 2. Validate that state parameter exists
+      if (!stateParam) {
+        console.error('❌ Missing state parameter');
+        res.status(400).send('Bad Request: Missing state parameter');
+        return;
+      }
+      
+      // 3. Decode state parameter (base64 -> JSON)
+      let decodedState;
+      try {
+        // State can be base64-encoded or URL-encoded JSON
+        const stateJson = Buffer.from(stateParam, 'base64').toString('utf-8');
+        console.log('  Decoded state (base64):', stateJson);
+        decodedState = JSON.parse(stateJson);
+      } catch (base64Error) {
+        // If base64 decoding fails, try parsing as plain JSON (URL-decoded)
+        try {
+          console.log('  Base64 decode failed, trying plain JSON');
+          decodedState = JSON.parse(decodeURIComponent(stateParam));
+          console.log('  Decoded state (plain JSON):', JSON.stringify(decodedState));
+        } catch (jsonError) {
+          console.error('❌ Failed to decode state parameter:', jsonError.message);
+          res.status(400).send('Bad Request: Invalid state parameter (not valid base64 or JSON)');
+          return;
+        }
+      }
+      
+      // 4. Extract targetUrl from decoded state
+      const targetUrl = decodedState.targetUrl;
+      if (!targetUrl) {
+        console.error('❌ Missing targetUrl in decoded state');
+        res.status(400).send('Bad Request: Missing targetUrl in state parameter');
+        return;
+      }
+      
+      console.log('  Target URL:', targetUrl);
+      
+      // 5. Validate targetUrl against ALLOW_LIST
+      const isAllowed = ALLOW_LIST.some(allowedPrefix => {
+        // Check if targetUrl starts with any allowed prefix
+        // For localhost, allow any port (e.g., http://localhost:3000, http://localhost:8080)
+        if (allowedPrefix === 'http://localhost') {
+          return targetUrl === 'http://localhost' || 
+                 targetUrl.startsWith('http://localhost:') ||
+                 targetUrl.startsWith('http://localhost/');
+        }
+        return targetUrl.startsWith(allowedPrefix);
+      });
+      
+      if (!isAllowed) {
+        console.error('🚨 SECURITY: Rejected redirect to unauthorized URL:', targetUrl);
+        console.error('  Allowed domains:', ALLOW_LIST.join(', '));
+        res.status(400).send('Bad Request: Unauthorized redirect URL');
+        return;
+      }
+      
+      console.log('  ✅ Target URL validated against allowlist');
+      
+      // 6. Build redirect URL with all original query parameters
+      // Parse targetUrl to check if it already has query params
+      const url = new URL(targetUrl);
+      
+      // Append all query parameters from the original request
+      Object.keys(queryParams).forEach(key => {
+        url.searchParams.append(key, queryParams[key]);
+      });
+      
+      const redirectUrl = url.toString();
+      console.log('  Redirect URL:', redirectUrl);
+      console.log('✅ Redirecting (302) to client');
+      
+      // 7. Perform 302 redirect
+      res.redirect(302, redirectUrl);
+      
+    } catch (error) {
+      console.error('❌ Unexpected error in golfboxCallback:', error);
+      console.error('  Stack trace:', error.stack);
+      res.status(500).send('Internal Server Error');
     }
   });
 
@@ -165,11 +338,11 @@ async function fetchClubsFromAPI(authToken) {
 }
 
 /**
- * Fetch courses for a specific club from DGU API
+ * Fetch courses for a specific club from DGU API with dynamic changedsince parameter
  */
-async function fetchCoursesFromAPI(clubId, authToken) {
+async function fetchCoursesFromAPI(clubId, authToken, changedsince = '20250301T000000') {
   return new Promise((resolve, reject) => {
-    const path = `/info@ingeniumgolf.dk/clubs/${clubId}/courses?active=1&sort=ActivationDate:1&sortTee=TotalLength:1&changedsince=20250301T000000`;
+    const path = `/info@ingeniumgolf.dk/clubs/${clubId}/courses?active=1&sort=ActivationDate:1&sortTee=TotalLength:1&changedsince=${changedsince}`;
     
     const options = {
       hostname: 'dgubasen.api.union.golfbox.io',
@@ -213,23 +386,82 @@ function parseCompactDate(dateStr) {
 }
 
 /**
- * Filter courses: Only active, activation date <= now, latest version per template
- * Same logic as Flutter app's CacheSeedService
+ * Format Date to DGU compact format: yyyymmddThhnnss
+ */
+function formatCompactDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hour = String(date.getHours()).padStart(2, '0');
+  const minute = String(date.getMinutes()).padStart(2, '0');
+  const second = String(date.getSeconds()).padStart(2, '0');
+  
+  return `${year}${month}${day}T${hour}${minute}${second}`;
+}
+
+/**
+ * Determine update type: full or incremental
+ */
+async function determineUpdateType(db) {
+  const metadataRef = db.collection('course-cache-metadata').doc('data');
+  const metadataDoc = await metadataRef.get();
+  
+  if (!metadataDoc.exists || !metadataDoc.data().lastSeeded) {
+    console.log('  No lastSeeded found - performing full seed');
+    return { type: 'full', changedsince: '20250101T000000' };
+  }
+  
+  const metadata = metadataDoc.data();
+  const lastSeededDate = metadata.lastSeeded.toDate();
+  const daysSince = (new Date() - lastSeededDate) / (1000 * 60 * 60 * 24);
+  
+  if (daysSince > 30) {
+    console.log(`  Last seed ${daysSince.toFixed(1)} days ago - forcing full reseed`);
+    return { type: 'full', changedsince: '20250101T000000' };
+  }
+  
+  const changedsince = formatCompactDate(lastSeededDate);
+  console.log(`  Incremental update with changedsince=${changedsince}`);
+  return { type: 'incremental', changedsince };
+}
+
+/**
+ * REPLACE club courses (simple overwrite for incremental updates)
+ */
+async function replaceClubCourses(db, clubId, clubInfo, courses) {
+  await db.collection('course-cache-clubs').doc(clubId).set({
+    info: clubInfo,
+    courses: courses,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+  });
+  
+  return courses.length;
+}
+
+/**
+ * Filter courses: Active, activation date <= now + 7 days (HYBRID), latest version per template
+ * Server-side caches courses activated in next 7 days
+ * Client-side filters to only show courses activated today
  */
 function filterCourses(coursesRaw) {
   const currentDate = new Date();
   
+  // Add 7 days for future activation window (HYBRID FILTERING)
+  const futureDate = new Date(currentDate);
+  futureDate.setDate(futureDate.getDate() + 7);
+  
   // 1. Filter: Only active courses
   let courses = coursesRaw.filter(course => course.IsActive === true);
   
-  // 2. Filter: Only courses with ActivationDate <= now
+  // 2. Filter: ActivationDate <= now + 7 days (HYBRID FILTERING)
   courses = courses.filter(course => {
     if (!course.ActivationDate) return true;
     
     try {
       const activationDate = parseCompactDate(course.ActivationDate);
       if (!activationDate) return true;
-      return activationDate <= currentDate;
+      // Accept courses activated up to 7 days in the future
+      return activationDate <= futureDate;
     } catch (e) {
       return true; // Include if can't parse
     }
@@ -323,13 +555,34 @@ async function saveCacheToFirestore(clubsWithCourses, totalCourses) {
   console.log('  💾 Updating metadata...');
   await db.collection('course-cache-metadata').doc('data').set({
     lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+    lastSeeded: admin.firestore.FieldValue.serverTimestamp(),
+    lastUpdateType: 'full',
     clubCount: clubsWithCourses.length,
     courseCount: totalCourses,
+    clubsUpdatedLastRun: clubsWithCourses.length,
+    coursesUpdatedLastRun: totalCourses,
     clubs: clubList, // Lightweight club list for instant loading
     version: 2
   });
   
   console.log('  ✅ Metadata updated');
+}
+
+/**
+ * Update metadata after incremental update
+ */
+async function updateMetadataIncremental(db, clubsUpdated, coursesUpdated) {
+  const metadataRef = db.collection('course-cache-metadata').doc('data');
+  
+  await metadataRef.update({
+    lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+    lastSeeded: admin.firestore.FieldValue.serverTimestamp(),
+    lastUpdateType: 'incremental',
+    clubsUpdatedLastRun: clubsUpdated,
+    coursesUpdatedLastRun: coursesUpdated
+  });
+  
+  console.log(`  ✅ Metadata updated: ${clubsUpdated} clubs, ${coursesUpdated} courses`);
 }
 
 /**

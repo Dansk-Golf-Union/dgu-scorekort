@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import '../services/cache_seed_service.dart';
 import '../services/course_cache_service.dart';
 import '../theme/app_theme.dart';
@@ -120,6 +121,60 @@ class _CacheManagementScreenState extends State<CacheManagementScreen> {
     }
   }
 
+  Future<void> _forceFullReseed() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Force Full Reseed'),
+        content: const Text(
+          'Dette vil planlægge en fuld cache-opdatering næste nat kl. 02:00.\n\n'
+          'Cloud Function vil hente ALLE baner fra 1. januar 2025.\n\n'
+          'Fortsæt?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuller'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppTheme.dguGreen,
+            ),
+            child: const Text('Planlæg'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final callable = FirebaseFunctions.instanceFor(region: 'europe-west1')
+          .httpsCallable('forceFullReseed');
+      
+      await callable.call();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Full reseed planlagt til kl. 02:00'),
+            backgroundColor: AppTheme.dguGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Fejl: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _clearCache() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -215,6 +270,20 @@ class _CacheManagementScreenState extends State<CacheManagementScreen> {
                     label: Text(_isSeeding ? 'Seeding...' : 'Seed Cache'),
                     style: FilledButton.styleFrom(
                       backgroundColor: AppTheme.dguGreen,
+                      padding: const EdgeInsets.all(16),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 8),
+                  
+                  // Force Full Reseed Button
+                  OutlinedButton.icon(
+                    onPressed: _isSeeding ? null : _forceFullReseed,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Force Full Reseed (næste nat)'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.dguGreen,
+                      side: const BorderSide(color: AppTheme.dguGreen),
                       padding: const EdgeInsets.all(16),
                     ),
                   ),
