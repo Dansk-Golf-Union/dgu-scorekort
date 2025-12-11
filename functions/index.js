@@ -693,38 +693,43 @@ function formatNotificationDate(date) {
 
 /**
  * Send notification request to DGU API
+ * Uses axios for better compatibility with Cloud Run endpoints
  */
 async function sendNotificationRequest(payload) {
-  return new Promise((resolve, reject) => {
-    const postData = JSON.stringify(payload);
-    
-    const options = {
-      hostname: NOTIFICATION_API_URL,
-      path: '/',
-      method: 'POST',
+  const axios = require('axios');
+  
+  console.log('  📤 Sending to DGU notification API:');
+  console.log('  🌐 URL: https://' + NOTIFICATION_API_URL);
+  console.log('  📦 Payload:', JSON.stringify(payload));
+  
+  try {
+    const response = await axios.post(`https://${NOTIFICATION_API_URL}`, payload, {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Content-Length': Buffer.byteLength(postData)
-      }
-    };
-    
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        if (res.statusCode === 200 || res.statusCode === 201) {
-          resolve(data);
-        } else {
-          reject(new Error(`HTTP ${res.statusCode}: ${data}`));
-        }
-      });
+        'User-Agent': 'DGU-Scorekort/1.0'
+      },
+      timeout: 10000, // 10 second timeout
+      validateStatus: (status) => status < 500 // Don't throw on 4xx errors
     });
     
-    req.on('error', reject);
-    req.write(postData);
-    req.end();
-  });
+    console.log(`  📥 Response Status: ${response.status}`);
+    console.log(`  📦 Response Body:`, JSON.stringify(response.data));
+    
+    if (response.status === 200 || response.status === 201) {
+      console.log('  ✅ Notification sent successfully!');
+      return response.data;
+    } else {
+      console.error(`  ❌ Notification failed: HTTP ${response.status}`);
+      throw new Error(`HTTP ${response.status}: ${JSON.stringify(response.data)}`);
+    }
+  } catch (error) {
+    console.error('  ❌ Request error:', error.message);
+    if (error.response) {
+      console.error('  📥 Error Response:', error.response.status, error.response.data);
+    }
+    throw error;
+  }
 }
 
 /**
