@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
-import 'dart:html' as html;
 import '../providers/scorecard_provider.dart';
 import '../providers/match_setup_provider.dart';
 import '../models/scorecard_model.dart';
 import '../models/player_model.dart';
 import '../theme/app_theme.dart';
 import 'package:intl/intl.dart';
-import 'marker_approval_screen.dart';
 import 'marker_assignment_dialog.dart';
 import '../services/scorecard_storage_service.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -192,61 +190,6 @@ class ScorecardResultsScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _handleSubmitScore(
-    BuildContext context,
-    ScorecardProvider provider,
-  ) async {
-    // Check 1: Is marker approved?
-    if (!provider.scorecard!.isMarkerApproved) {
-      // Show marker approval screen first
-      final approved = await Navigator.push<bool>(
-        context,
-        MaterialPageRoute(
-          builder: (context) => MarkerApprovalScreen(
-            scorecard: provider.scorecard!,
-            onMarkerApproved:
-                (name, unionId, lifetimeId, homeClubName, signature) {
-                  provider.setMarkerInfo(
-                    fullName: name,
-                    unionId: unionId,
-                    lifetimeId: lifetimeId,
-                    homeClubName: homeClubName,
-                    signature: signature,
-                  );
-                },
-          ),
-        ),
-      );
-
-      // If marker was NOT approved, stop here
-      if (approved != true) return;
-    }
-
-    // Check 2: Submit scorecard
-    try {
-      final success = await provider.submitScorecard();
-
-      if (success && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Score indsendt til DGU'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Fejl: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -377,7 +320,7 @@ class ScorecardResultsScreen extends StatelessWidget {
                       const SizedBox(height: 16),
                     ],
 
-                    // Submission status or button
+                    // Submission status
                     if (scorecard.isSubmitted)
                       Container(
                         padding: const EdgeInsets.all(20),
@@ -411,16 +354,6 @@ class ScorecardResultsScreen extends StatelessWidget {
                               ),
                             ),
                           ],
-                        ),
-                      )
-                    else
-                      FilledButton.icon(
-                        onPressed: () => _handleSubmitScore(context, provider),
-                        icon: const Icon(Icons.edit),
-                        label: const Text('Få Markør Underskrift Her'),
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size(double.infinity, 48),
-                          backgroundColor: AppTheme.dguGreen,
                         ),
                       ),
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:html' as html;
 import '../services/scorecard_storage_service.dart';
+import '../services/whs_submission_service.dart';
 import '../theme/app_theme.dart';
 
 /// Standalone screen for marker approval via external URL
@@ -74,8 +75,7 @@ class _MarkerApprovalFromUrlScreenState
     setState(() => _isProcessing = true);
 
     try {
-      // For now, we'll use marker info from the scorecard
-      // In production, you'd get this from authentication
+      // 1. Godkend i Firestore
       await _storage.approveScorecardById(
         documentId: widget.documentId,
         markerLifetimeId: _scorecardData!['markerId'] as String,
@@ -84,17 +84,43 @@ class _MarkerApprovalFromUrlScreenState
             'URL_APPROVAL_${DateTime.now().millisecondsSinceEpoch}',
       );
 
+      // 2. ⚡ Submit til WHS API (med whitelist check)
+      final whsService = WhsSubmissionService();
+      bool whsSuccess = false;
+      String? whsError;
+
+      try {
+        print('📤 Submitting to WHS API...');
+        whsSuccess = await whsService.submitScorecard(_scorecardData!);
+
+        if (whsSuccess) {
+          print('✅ WHS submission successful!');
+          await _storage.markAsSubmittedToDgu(
+            documentId: widget.documentId,
+            submissionResponse: 'Successfully submitted to WHS API',
+          );
+        }
+      } catch (e) {
+        whsError = e.toString();
+        print('⚠️ WHS submission failed: $e');
+      }
+
       setState(() {
         _scorecardData!['status'] = 'approved';
+        _scorecardData!['isSubmittedToDgu'] = whsSuccess;
         _isProcessing = false;
       });
 
       if (mounted) {
+        final message = whsSuccess
+            ? '✅ Scorekort godkendt og indsendt til DGU!'
+            : '✅ Scorekort godkendt\n⚠️ DGU submission fejlede: ${whsError ?? "Ukendt fejl"}';
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Scorekort godkendt!'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
+          SnackBar(
+            content: Text(message),
+            backgroundColor: whsSuccess ? Colors.green : Colors.orange,
+            duration: Duration(seconds: whsSuccess ? 3 : 8),
           ),
         );
       }
