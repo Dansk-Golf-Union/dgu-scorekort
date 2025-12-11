@@ -6,7 +6,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDfp1Lisl0lxNJzLBqczzmfd48seWmnhCg',
+    apiKey: 'AIzaSyAiEGQOU4uqTksvLyeofl5AoDePiVjEXcQ',
     authDomain: 'dgu-scorekort.firebaseapp.com',
     projectId: 'dgu-scorekort',
     storageBucket: 'dgu-scorekort.firebasestorage.app',
