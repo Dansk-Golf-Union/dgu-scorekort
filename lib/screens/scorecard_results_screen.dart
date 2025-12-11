@@ -10,6 +10,7 @@ import '../theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'marker_assignment_dialog.dart';
 import '../services/scorecard_storage_service.dart';
+import '../services/notification_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // Score marker types for visual indication
@@ -62,6 +63,32 @@ class ScorecardResultsScreen extends StatelessWidget {
       // Retrieve scorecard
       final retrievedData = await storage.getScorecardById(documentId);
 
+      // Send push notification to marker
+      bool notificationSent = false;
+      if (retrievedData != null) {
+        try {
+          final notificationService = NotificationService();
+          final approvalUrl =
+              'https://dgu-scorekort.web.app/#/marker-approval/$documentId';
+
+          print('📤 Sending notification to marker: ${marker.unionId ?? marker.memberNo}');
+
+          notificationSent = await notificationService.sendMarkerApprovalNotification(
+            markerUnionId: marker.unionId ?? marker.memberNo,
+            playerName: scorecard.player.name,
+            approvalUrl: approvalUrl,
+          );
+
+          if (notificationSent) {
+            print('✅ Push notification sent to marker');
+          } else {
+            print('⚠️ Push notification failed (but scorecard was saved)');
+          }
+        } catch (e) {
+          print('❌ Notification error: $e (but scorecard was saved)');
+        }
+      }
+
       if (context.mounted) {
         if (retrievedData != null) {
           // Success!
@@ -81,6 +108,47 @@ class ScorecardResultsScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Scorekortet er gemt og klar til godkendelse!'),
+                  const SizedBox(height: 16),
+                  // Notification status
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: notificationSent
+                          ? Colors.green.shade50
+                          : Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: notificationSent
+                            ? Colors.green.shade200
+                            : Colors.orange.shade200,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          notificationSent
+                              ? Icons.notifications_active
+                              : Icons.notifications_off,
+                          color: notificationSent ? Colors.green : Colors.orange,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            notificationSent
+                                ? 'Push besked sendt til markør'
+                                : 'Push besked kunne ikke sendes',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: notificationSent
+                                  ? Colors.green.shade900
+                                  : Colors.orange.shade900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'Document ID: $documentId',

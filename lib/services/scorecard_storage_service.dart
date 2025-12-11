@@ -181,22 +181,23 @@ class ScorecardStorageService {
     String? submissionResponse,
   }) async {
     try {
-      print('📝 Updating Firestore: isSubmittedToDgu = true for doc: $documentId');
-      
+      print(
+        '📝 Updating Firestore: isSubmittedToDgu = true for doc: $documentId',
+      );
+
       await _scorecards.doc(documentId).update({
         'isSubmittedToDgu': true,
         'submittedToDguAt': FieldValue.serverTimestamp(),
         'submissionResponse': submissionResponse ?? 'Success',
       });
-      
+
       print('✅ Firestore updated successfully');
-      
+
       // Verify the update
       final doc = await _scorecards.doc(documentId).get();
       final data = doc.data() as Map<String, dynamic>?;
       final updatedValue = data?['isSubmittedToDgu'];
       print('🔍 Verification: isSubmittedToDgu = $updatedValue');
-      
     } catch (e) {
       print('❌ Failed to update Firestore: $e');
       throw Exception('Kunne ikke opdatere submission status: $e');
