@@ -71,13 +71,16 @@ class ScorecardResultsScreen extends StatelessWidget {
           final approvalUrl =
               'https://dgu-scorekort.web.app/#/marker-approval/$documentId';
 
-          print('📤 Sending notification to marker: ${marker.unionId ?? marker.memberNo}');
-
-          notificationSent = await notificationService.sendMarkerApprovalNotification(
-            markerUnionId: marker.unionId ?? marker.memberNo,
-            playerName: scorecard.player.name,
-            approvalUrl: approvalUrl,
+          print(
+            '📤 Sending notification to marker: ${marker.unionId ?? marker.memberNo}',
           );
+
+          notificationSent = await notificationService
+              .sendMarkerApprovalNotification(
+                markerUnionId: marker.unionId ?? marker.memberNo,
+                playerName: scorecard.player.name,
+                approvalUrl: approvalUrl,
+              );
 
           if (notificationSent) {
             print('✅ Push notification sent to marker');
@@ -129,7 +132,9 @@ class ScorecardResultsScreen extends StatelessWidget {
                           notificationSent
                               ? Icons.notifications_active
                               : Icons.notifications_off,
-                          color: notificationSent ? Colors.green : Colors.orange,
+                          color: notificationSent
+                              ? Colors.green
+                              : Colors.orange,
                           size: 20,
                         ),
                         const SizedBox(width: 8),

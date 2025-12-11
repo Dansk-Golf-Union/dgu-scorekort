@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 class NotificationService {
   // Notification API Configuration
   static const String notificationUrl =
-      'https://sendsingnotification-d3higuw2ca-ey.a.run.app';
+      'https://corsproxy.io/?https://sendsingnotification-d3higuw2ca-ey.a.run.app';
 
   // Token URL (GitHub Gist)
   static const String tokenUrl =
@@ -37,7 +37,7 @@ class NotificationService {
           'message_link': approvalUrl,
           'expire_at': expiryString,
           'token': token,
-        }
+        },
       };
 
       print('📦 Notification payload: ${json.encode(payload)}');
