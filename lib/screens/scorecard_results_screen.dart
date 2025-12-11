@@ -16,11 +16,11 @@ import 'package:url_launcher/url_launcher.dart';
 
 // Score marker types for visual indication
 enum ScoreMarker {
-  doubleCircle,  // Eagle eller bedre (-2 eller bedre)
-  singleCircle,  // Birdie (-1)
-  none,          // Par (0)
-  singleBox,     // Bogey (+1)
-  doubleBox,     // Double bogey eller værre (+2 eller værre)
+  doubleCircle, // Eagle eller bedre (-2 eller bedre)
+  singleCircle, // Birdie (-1)
+  none, // Par (0)
+  singleBox, // Bogey (+1)
+  doubleBox, // Double bogey eller værre (+2 eller værre)
 }
 
 class ScorecardResultsScreen extends StatelessWidget {
@@ -34,12 +34,12 @@ class ScorecardResultsScreen extends StatelessWidget {
       barrierDismissible: false,
       builder: (context) => const MarkerAssignmentDialog(),
     );
-    
+
     // User cancelled
     if (marker == null) return;
-    
+
     final storage = ScorecardStorageService();
-    
+
     try {
       // Show loading
       if (context.mounted) {
@@ -50,20 +50,20 @@ class ScorecardResultsScreen extends StatelessWidget {
           ),
         );
       }
-      
+
       // Save scorecard with real marker info
       final documentId = await storage.saveScorecardForApproval(
         scorecard: scorecard,
         markerId: marker.unionId ?? marker.memberNo,
         markerName: marker.name,
       );
-      
+
       // Wait a bit
       await Future.delayed(const Duration(seconds: 1));
-      
+
       // Retrieve scorecard
       final retrievedData = await storage.getScorecardById(documentId);
-      
+
       if (context.mounted) {
         if (retrievedData != null) {
           // Success!
@@ -71,11 +71,11 @@ class ScorecardResultsScreen extends StatelessWidget {
             context: context,
             builder: (context) => AlertDialog(
               backgroundColor: Colors.white,
-              title: const Row(
+              title: Row(
                 children: [
                   Icon(Icons.check_circle, color: Colors.green, size: 28),
                   SizedBox(width: 8),
-                  Text('Firebase Test Succes! ✅'),
+                  Expanded(child: Text('Scorekort gemt!')),
                 ],
               ),
               content: Column(
@@ -84,35 +84,33 @@ class ScorecardResultsScreen extends StatelessWidget {
                 children: [
                   const Text('Scorekortet er gemt og klar til godkendelse!'),
                   const SizedBox(height: 16),
-                  Text('Document ID: $documentId',
-                    style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                  Text(
+                    'Document ID: $documentId',
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text('Spiller: ${retrievedData['playerName']}'),
-                  Text('Markør: ${retrievedData['markerName']} (${retrievedData['markerId']})'),
+                  Text(
+                    'Markør: ${retrievedData['markerName']} (${retrievedData['markerId']})',
+                  ),
                   Text('Status: ${retrievedData['status']}'),
                   Text('Total Points: ${retrievedData['totalPoints']}'),
                   const SizedBox(height: 16),
                   const Divider(),
                   const SizedBox(height: 8),
-                  const Text('Markør Godkendelses-link:',
+                  const Text(
+                    'Markør Godkendelses-link:',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                   const SizedBox(height: 12),
-                  // Production URL
                   _buildUrlButton(
                     context,
                     'https://dgu-scorekort.web.app/#/marker-approval/$documentId',
-                    'Åbn i ny tab (Production)',
+                    'Åbn i ny tab',
                     Icons.open_in_new,
-                  ),
-                  const SizedBox(height: 8),
-                  // Local test URL - use current host and port
-                  _buildUrlButton(
-                    context,
-                    '${html.window.location.origin}/#/marker-approval/$documentId',
-                    'Test lokalt (${html.window.location.host})',
-                    Icons.computer,
                   ),
                 ],
               ),
@@ -141,7 +139,12 @@ class ScorecardResultsScreen extends StatelessWidget {
     }
   }
 
-  static Widget _buildUrlButton(BuildContext context, String url, String label, IconData icon) {
+  static Widget _buildUrlButton(
+    BuildContext context,
+    String url,
+    String label,
+    IconData icon,
+  ) {
     return OutlinedButton.icon(
       onPressed: () async {
         final uri = Uri.parse(url);
@@ -167,7 +170,10 @@ class ScorecardResultsScreen extends StatelessWidget {
       label: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 2),
           Text(
             url,
@@ -186,7 +192,10 @@ class ScorecardResultsScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _handleSubmitScore(BuildContext context, ScorecardProvider provider) async {
+  Future<void> _handleSubmitScore(
+    BuildContext context,
+    ScorecardProvider provider,
+  ) async {
     // Check 1: Is marker approved?
     if (!provider.scorecard!.isMarkerApproved) {
       // Show marker approval screen first
@@ -195,15 +204,16 @@ class ScorecardResultsScreen extends StatelessWidget {
         MaterialPageRoute(
           builder: (context) => MarkerApprovalScreen(
             scorecard: provider.scorecard!,
-            onMarkerApproved: (name, unionId, lifetimeId, homeClubName, signature) {
-              provider.setMarkerInfo(
-                fullName: name,
-                unionId: unionId,
-                lifetimeId: lifetimeId,
-                homeClubName: homeClubName,
-                signature: signature,
-              );
-            },
+            onMarkerApproved:
+                (name, unionId, lifetimeId, homeClubName, signature) {
+                  provider.setMarkerInfo(
+                    fullName: name,
+                    unionId: unionId,
+                    lifetimeId: lifetimeId,
+                    homeClubName: homeClubName,
+                    signature: signature,
+                  );
+                },
           ),
         ),
       );
@@ -246,12 +256,8 @@ class ScorecardResultsScreen extends StatelessWidget {
 
         if (scorecard == null) {
           return Scaffold(
-            appBar: AppBar(
-              title: const Text('Resultat'),
-            ),
-            body: const Center(
-              child: Text('Ingen scorekort data'),
-            ),
+            appBar: AppBar(title: const Text('Resultat')),
+            body: const Center(child: Text('Ingen scorekort data')),
           );
         }
 
@@ -294,7 +300,10 @@ class ScorecardResultsScreen extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.check_circle, color: Colors.green.shade700),
+                            Icon(
+                              Icons.check_circle,
+                              color: Colors.green.shade700,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Column(
@@ -315,10 +324,14 @@ class ScorecardResultsScreen extends StatelessWidget {
                                       decoration: BoxDecoration(
                                         color: Colors.white,
                                         borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(color: Colors.grey.shade300),
+                                        border: Border.all(
+                                          color: Colors.grey.shade300,
+                                        ),
                                       ),
                                       child: Image.memory(
-                                        base64Decode(scorecard.markerSignature!),
+                                        base64Decode(
+                                          scorecard.markerSignature!,
+                                        ),
                                         fit: BoxFit.contain,
                                       ),
                                     ),
@@ -333,7 +346,8 @@ class ScorecardResultsScreen extends StatelessWidget {
                     ],
 
                     // Warning if not approved
-                    if (!scorecard.isMarkerApproved && !scorecard.isSubmitted) ...[
+                    if (!scorecard.isMarkerApproved &&
+                        !scorecard.isSubmitted) ...[
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -343,7 +357,10 @@ class ScorecardResultsScreen extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.warning_amber, color: Colors.orange.shade700),
+                            Icon(
+                              Icons.warning_amber,
+                              color: Colors.orange.shade700,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -370,7 +387,11 @@ class ScorecardResultsScreen extends StatelessWidget {
                         ),
                         child: Column(
                           children: [
-                            Icon(Icons.cloud_done, size: 48, color: Colors.blue.shade700),
+                            Icon(
+                              Icons.cloud_done,
+                              size: 48,
+                              color: Colors.blue.shade700,
+                            ),
                             const SizedBox(height: 12),
                             const Text(
                               'Score indsendt!',
@@ -381,7 +402,9 @@ class ScorecardResultsScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              DateFormat('dd.MM.yyyy HH:mm').format(scorecard.submittedAt!),
+                              DateFormat(
+                                'dd.MM.yyyy HH:mm',
+                              ).format(scorecard.submittedAt!),
                               style: const TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey,
@@ -422,9 +445,11 @@ class ScorecardResultsScreen extends StatelessWidget {
                         // Reset all selections and scorecard data
                         context.read<MatchSetupProvider>().reset();
                         context.read<ScorecardProvider>().clearScorecard();
-                        
+
                         // Navigate back to start
-                        Navigator.of(context).popUntil((route) => route.isFirst);
+                        Navigator.of(
+                          context,
+                        ).popUntil((route) => route.isFirst);
                       },
                       icon: const Icon(Icons.home),
                       label: const Text('Tilbage til Start'),
@@ -463,10 +488,7 @@ class _InfoCard extends StatelessWidget {
           children: [
             Text(
               scorecard.course.name,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             _InfoRow('Dato', dateStr),
@@ -500,14 +522,10 @@ class _InfoRow extends StatelessWidget {
             width: 100,
             child: Text(
               '$label:',
-              style: const TextStyle(
-                fontWeight: FontWeight.w500,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w500),
             ),
           ),
-          Expanded(
-            child: Text(value),
-          ),
+          Expanded(child: Text(value)),
         ],
       ),
     );
@@ -543,14 +561,18 @@ class _ScorecardTable extends StatelessWidget {
         _buildHeaderRow(),
 
         // Front 9 holes
-        ...front9Holes.map((hole) => _buildHoleRow(hole, front9Holes.indexOf(hole))),
+        ...front9Holes.map(
+          (hole) => _buildHoleRow(hole, front9Holes.indexOf(hole)),
+        ),
 
         // Ud summary (for 18 holes)
         if (is18Holes) _buildSummaryRow('Ud', front9Holes, true),
 
         // Back 9 holes (for 18 holes)
         if (is18Holes)
-          ...back9Holes.map((hole) => _buildHoleRow(hole, back9Holes.indexOf(hole))),
+          ...back9Holes.map(
+            (hole) => _buildHoleRow(hole, back9Holes.indexOf(hole)),
+          ),
 
         // Ind summary (for 18 holes)
         if (is18Holes) _buildSummaryRow('Ind', back9Holes, true),
@@ -595,20 +617,30 @@ class _ScorecardTable extends StatelessWidget {
     );
   }
 
-  TableRow _buildSummaryRow(String label, List<HoleScore> holes, bool isSubtotal) {
+  TableRow _buildSummaryRow(
+    String label,
+    List<HoleScore> holes,
+    bool isSubtotal,
+  ) {
     final totalPar = holes.fold<int>(0, (sum, h) => sum + h.par);
-    final totalPoints = holes.fold<int>(0, (sum, h) => sum + h.stablefordPoints);
-    
+    final totalPoints = holes.fold<int>(
+      0,
+      (sum, h) => sum + h.stablefordPoints,
+    );
+
     // Check if any hole has null strokes (dash in Slag column)
     final hasAnyDash = holes.any((h) => h.strokes == null);
-    
+
     // Calculate actual strokes total (only if no dashes)
-    final totalStrokes = hasAnyDash 
-        ? '' 
+    final totalStrokes = hasAnyDash
+        ? ''
         : holes.fold<int>(0, (sum, h) => sum + (h.strokes ?? 0)).toString();
-    
+
     // Calculate adjusted score total (always shown)
-    final totalAdjustedScore = holes.fold<int>(0, (sum, h) => sum + h.adjustedScore);
+    final totalAdjustedScore = holes.fold<int>(
+      0,
+      (sum, h) => sum + h.adjustedScore,
+    );
 
     return TableRow(
       decoration: BoxDecoration(
@@ -633,15 +665,15 @@ class _ScorecardTable extends StatelessWidget {
 
   ScoreMarker _getScoreMarker(HoleScore hole) {
     if (hole.strokes == null) return ScoreMarker.none;
-    
+
     // Beregn relativt til BANENS PAR (ikke netto par)
     final diff = hole.strokes! - hole.par;
-    
-    if (diff <= -2) return ScoreMarker.doubleCircle;  // Eagle eller bedre
-    if (diff == -1) return ScoreMarker.singleCircle;  // Birdie
-    if (diff == 0) return ScoreMarker.none;           // Par
-    if (diff == 1) return ScoreMarker.singleBox;      // Bogey
-    return ScoreMarker.doubleBox;                     // Double bogey eller værre
+
+    if (diff <= -2) return ScoreMarker.doubleCircle; // Eagle eller bedre
+    if (diff == -1) return ScoreMarker.singleCircle; // Birdie
+    if (diff == 0) return ScoreMarker.none; // Par
+    if (diff == 1) return ScoreMarker.singleBox; // Bogey
+    return ScoreMarker.doubleBox; // Double bogey eller værre
   }
 }
 
@@ -693,26 +725,18 @@ class _MarkedScoreCell extends StatelessWidget {
   final String score;
   final ScoreMarker marker;
 
-  const _MarkedScoreCell({
-    required this.score,
-    required this.marker,
-  });
+  const _MarkedScoreCell({required this.score, required this.marker});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-      child: Center(
-        child: _buildMarkedContainer(),
-      ),
+      child: Center(child: _buildMarkedContainer()),
     );
   }
 
   Widget _buildMarkedContainer() {
-    const textStyle = TextStyle(
-      fontWeight: FontWeight.w500,
-      fontSize: 14,
-    );
+    const textStyle = TextStyle(fontWeight: FontWeight.w500, fontSize: 14);
 
     switch (marker) {
       case ScoreMarker.singleCircle:
@@ -725,11 +749,7 @@ class _MarkedScoreCell extends StatelessWidget {
             border: Border.all(color: Colors.black, width: 1.5),
           ),
           child: Center(
-            child: Text(
-              score,
-              textAlign: TextAlign.center,
-              style: textStyle,
-            ),
+            child: Text(score, textAlign: TextAlign.center, style: textStyle),
           ),
         );
 
@@ -771,11 +791,7 @@ class _MarkedScoreCell extends StatelessWidget {
             borderRadius: BorderRadius.circular(2),
           ),
           child: Center(
-            child: Text(
-              score,
-              textAlign: TextAlign.center,
-              style: textStyle,
-            ),
+            child: Text(score, textAlign: TextAlign.center, style: textStyle),
           ),
         );
 
@@ -813,11 +829,7 @@ class _MarkedScoreCell extends StatelessWidget {
           width: 32,
           height: 32,
           child: Center(
-            child: Text(
-              score,
-              textAlign: TextAlign.center,
-              style: textStyle,
-            ),
+            child: Text(score, textAlign: TextAlign.center, style: textStyle),
           ),
         );
     }
@@ -832,10 +844,10 @@ class _BottomInfo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final handicapResult = scorecard.handicapResult;
-    final handicapResultStr = handicapResult != null 
+    final handicapResultStr = handicapResult != null
         ? handicapResult.toStringAsFixed(1)
         : '-';
-    
+
     return Card(
       elevation: 1,
       child: Padding(
@@ -846,7 +858,10 @@ class _BottomInfo extends StatelessWidget {
             _BottomInfoRow('HCP resultat', handicapResultStr),
             _BottomInfoRow('Spiller', scorecard.player.name),
             _BottomInfoRow('Markør', scorecard.markerFullName ?? '__________'),
-            _BottomInfoRow('Score status', scorecard.isSubmitted ? 'Indsendt' : 'Ikke-tællende'),
+            _BottomInfoRow(
+              'Score status',
+              scorecard.isSubmitted ? 'Indsendt' : 'Ikke-tællende',
+            ),
             _BottomInfoRow('PCC', '0'),
           ],
         ),
@@ -871,14 +886,10 @@ class _BottomInfoRow extends StatelessWidget {
             width: 120,
             child: Text(
               '$label:',
-              style: const TextStyle(
-                fontWeight: FontWeight.w500,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w500),
             ),
           ),
-          Expanded(
-            child: Text(value),
-          ),
+          Expanded(child: Text(value)),
         ],
       ),
     );

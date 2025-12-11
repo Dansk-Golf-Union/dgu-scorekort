@@ -12,7 +12,7 @@ const http = require('http');
 admin.initializeApp();
 
 // Constants
-const DGU_API_BASE = 'https://dgubasen.api.union.golfbox.io/info@ingeniumgolf.dk';
+const DGU_API_BASE = 'https://dgubasen.api.union.golfbox.io/DGUScorkortAapp';
 const TOKEN_GIST_URL = 'https://gist.githubusercontent.com/nhuttel/a907dd7d60bf417b584333dfd5fff74a/raw/9b743740c4a7476c79d6a03c726e0d32b4034ec6/dgu_token.txt';
 const BATCH_SIZE = 20;
 const API_DELAY_MS = 300;
@@ -314,7 +314,7 @@ async function fetchClubsFromAPI(authToken) {
   return new Promise((resolve, reject) => {
     const options = {
       hostname: 'dgubasen.api.union.golfbox.io',
-      path: '/info@ingeniumgolf.dk/clubs',
+      path: '/DGUScorkortAapp/clubs',
       method: 'GET',
       headers: {
         'Authorization': authToken,
@@ -342,7 +342,7 @@ async function fetchClubsFromAPI(authToken) {
  */
 async function fetchCoursesFromAPI(clubId, authToken, changedsince = '20250301T000000') {
   return new Promise((resolve, reject) => {
-    const path = `/info@ingeniumgolf.dk/clubs/${clubId}/courses?active=1&sort=ActivationDate:1&sortTee=TotalLength:1&changedsince=${changedsince}`;
+    const path = `/DGUScorkortAapp/clubs/${clubId}/courses?active=1&sort=ActivationDate:1&sortTee=TotalLength:1&changedsince=${changedsince}`;
     
     const options = {
       hostname: 'dgubasen.api.union.golfbox.io',

@@ -397,7 +397,7 @@ https://dgu-scorekort.web.app/#/marker-approval/DOCUMENT_ID
 
 ### GolfBox DGU Basen API
 
-**Base URL:** `https://dgubasen.api.union.golfbox.io/info@ingeniumgolf.dk`
+**Base URL:** `https://dgubasen.api.union.golfbox.io/DGUScorkortAapp`
 
 **Endpoints:**
 - `GET /clubs` - Alle danske golfklubber (Basic Auth)

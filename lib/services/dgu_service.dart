@@ -5,7 +5,7 @@ import '../models/club_model.dart';
 
 class DguService {
   static const String baseUrl =
-      "https://corsproxy.io/?https://dgubasen.api.union.golfbox.io/info@ingeniumgolf.dk";
+      "https://corsproxy.io/?https://dgubasen.api.union.golfbox.io/DGUScorkortAapp";
 
   // Token is fetched from external gist to keep it out of GitHub
   static const String _tokenUrl =
