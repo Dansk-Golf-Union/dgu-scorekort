@@ -15,7 +15,7 @@ admin.initializeApp();
 const DGU_API_BASE = 'https://dgubasen.api.union.golfbox.io/DGUScorkortAapp';
 const TOKEN_GIST_URL = 'https://gist.githubusercontent.com/nhuttel/a907dd7d60bf417b584333dfd5fff74a/raw/9b743740c4a7476c79d6a03c726e0d32b4034ec6/dgu_token.txt';
 const NOTIFICATION_TOKEN_URL = 'https://gist.githubusercontent.com/nhuttel/ad197ae6de63e78d3d450fd70d604b7d/raw/6036a00fec46c4e5b1d05e4295c5e32566090abf/gistfile1.txt';
-const NOTIFICATION_API_URL = 'sendsingnotification-d3higuw2ca-ey.a.run.app';
+const NOTIFICATION_API_URL = 'sendsinglenotification-d3higuw2ca-ey.a.run.app';
 const BATCH_SIZE = 20;
 const API_DELAY_MS = 300;
 
