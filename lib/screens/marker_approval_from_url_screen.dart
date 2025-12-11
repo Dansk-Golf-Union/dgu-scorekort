@@ -90,19 +90,38 @@ class _MarkerApprovalFromUrlScreenState
       String? whsError;
 
       try {
-        print('📤 Submitting to WHS API...');
+        print('📤 Starting WHS API submission...');
+        print('📋 Document ID: ${widget.documentId}');
+        print('👤 Player ID: ${_scorecardData!['playerId']}');
+        
         whsSuccess = await whsService.submitScorecard(_scorecardData!);
 
         if (whsSuccess) {
-          print('✅ WHS submission successful!');
-          await _storage.markAsSubmittedToDgu(
-            documentId: widget.documentId,
-            submissionResponse: 'Successfully submitted to WHS API',
-          );
+          print('✅ WHS submission successful! Now updating Firestore...');
+          
+          try {
+            final playerId = _scorecardData!['playerId'] as String;
+            final isWhitelisted = playerId == '8-9995' || playerId == '8-9994';
+            final responseMsg = isWhitelisted 
+                ? 'Successfully submitted to WHS API'
+                : 'Simulated success (not on whitelist)';
+            
+            await _storage.markAsSubmittedToDgu(
+              documentId: widget.documentId,
+              submissionResponse: responseMsg,
+            );
+            print('✅ Firestore update completed');
+          } catch (firestoreError) {
+            print('❌ CRITICAL: WHS submission OK, but Firestore update FAILED: $firestoreError');
+            whsError = 'Firestore update failed: $firestoreError';
+            whsSuccess = false; // Mark as failed since Firestore wasn't updated
+          }
+        } else {
+          print('⚠️ WHS submission returned false');
         }
       } catch (e) {
         whsError = e.toString();
-        print('⚠️ WHS submission failed: $e');
+        print('❌ WHS submission failed with exception: $e');
       }
 
       setState(() {

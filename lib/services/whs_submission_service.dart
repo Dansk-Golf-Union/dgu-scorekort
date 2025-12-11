@@ -28,7 +28,9 @@ class WhsSubmissionService {
     final documentId = firestoreData['id'] as String?;
 
     if (documentId == null || documentId.isEmpty) {
-      throw Exception('Missing Firestore document ID - cannot generate ExternalID');
+      throw Exception(
+        'Missing Firestore document ID - cannot generate ExternalID',
+      );
     }
 
     // Check whitelist
@@ -106,7 +108,8 @@ class WhsSubmissionService {
   /// ⚠️ VIGTIGT: API forventer et ARRAY med ét scorecard objekt!
   List<Map<String, dynamic>> _mapToApiFormat(Map<String, dynamic> data) {
     // Format timestamps: "20251211T090200"
-    final createdAt = (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+    final createdAt =
+        (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
     final playedDate = (data['playedDate'] as Timestamp).toDate();
 
     final createDateTime = _formatDguDateTime(createdAt);
