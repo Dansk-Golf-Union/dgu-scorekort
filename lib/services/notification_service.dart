@@ -3,8 +3,9 @@ import 'package:http/http.dart' as http;
 
 class NotificationService {
   // Notification API Configuration
+  // Note: No CORS proxy needed - works directly from Firebase Hosting
   static const String notificationUrl =
-      'https://corsproxy.io/?https://sendsingnotification-d3higuw2ca-ey.a.run.app';
+      'https://sendsingnotification-d3higuw2ca-ey.a.run.app';
 
   // Token URL (GitHub Gist)
   static const String tokenUrl =
