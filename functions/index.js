@@ -14,6 +14,8 @@ admin.initializeApp();
 // Constants
 const DGU_API_BASE = 'https://dgubasen.api.union.golfbox.io/DGUScorkortAapp';
 const TOKEN_GIST_URL = 'https://gist.githubusercontent.com/nhuttel/a907dd7d60bf417b584333dfd5fff74a/raw/9b743740c4a7476c79d6a03c726e0d32b4034ec6/dgu_token.txt';
+const NOTIFICATION_TOKEN_URL = 'https://gist.githubusercontent.com/nhuttel/ad197ae6de63e78d3d450fd70d604b7d/raw/6036a00fec46c4e5b1d05e4295c5e32566090abf/gistfile1.txt';
+const NOTIFICATION_API_URL = 'sendsingnotification-d3higuw2ca-ey.a.run.app';
 const BATCH_SIZE = 20;
 const API_DELAY_MS = 300;
 
@@ -183,6 +185,82 @@ exports.forceFullReseed = functions
     } catch (error) {
       console.error('❌ Failed to schedule full reseed:', error);
       throw new functions.https.HttpsError('internal', 'Failed to schedule reseed', error.message);
+    }
+  });
+
+/**
+ * Send Push Notification Proxy
+ * 
+ * Callable Cloud Function that acts as a CORS-free proxy for sending
+ * push notifications to DGU's notification service.
+ * 
+ * This function:
+ * 1. Receives notification payload from Flutter app
+ * 2. Fetches notification token from GitHub Gist
+ * 3. Sends POST request to DGU notification API
+ * 4. Returns success/failure response to client
+ * 
+ * This bypasses CORS restrictions that prevent direct browser->API calls.
+ */
+exports.sendNotification = functions
+  .region('europe-west1')
+  .https.onCall(async (data, context) => {
+    console.log('📤 Push notification request received');
+    
+    try {
+      // 1. Validate input
+      const { markerUnionId, playerName, approvalUrl } = data;
+      
+      if (!markerUnionId || !playerName || !approvalUrl) {
+        throw new functions.https.HttpsError(
+          'invalid-argument',
+          'Missing required fields: markerUnionId, playerName, or approvalUrl'
+        );
+      }
+      
+      console.log(`  Marker: ${markerUnionId}`);
+      console.log(`  Player: ${playerName}`);
+      
+      // 2. Fetch notification token
+      console.log('  Fetching notification token...');
+      const notificationToken = await fetchNotificationToken();
+      
+      // 3. Build notification payload
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + 7);
+      const expiryString = formatNotificationDate(expiryDate);
+      
+      const payload = {
+        data: {
+          recipients: [markerUnionId],
+          title: 'Nyt scorekort afventer din godkendelse',
+          message: `${playerName} har sendt et scorekort til godkendelse.\r\n\r\nKlik på 'Gå til' for at godkende scorekortet.`,
+          message_type: 'DGUMessage',
+          message_link: approvalUrl,
+          expire_at: expiryString,
+          token: notificationToken
+        }
+      };
+      
+      console.log('  Payload prepared');
+      
+      // 4. Send to DGU notification API
+      console.log('  Sending to DGU notification API...');
+      const result = await sendNotificationRequest(payload);
+      
+      console.log(`  ✅ Notification sent successfully: ${result}`);
+      
+      return {
+        success: true,
+        response: result
+      };
+      
+    } catch (error) {
+      console.error('❌ Notification failed:', error.message);
+      throw new functions.https.HttpsError(
+        'internal',
+        error.message || 'Failed to send notification'
+      );
     }
   });
 
@@ -583,6 +661,70 @@ async function updateMetadataIncremental(db, clubsUpdated, coursesUpdated) {
   });
   
   console.log(`  ✅ Metadata updated: ${clubsUpdated} clubs, ${coursesUpdated} courses`);
+}
+
+/**
+ * Fetch notification token from GitHub Gist
+ */
+async function fetchNotificationToken() {
+  return new Promise((resolve, reject) => {
+    https.get(NOTIFICATION_TOKEN_URL, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => resolve(data.trim()));
+      res.on('error', reject);
+    }).on('error', reject);
+  });
+}
+
+/**
+ * Format date for notification API: "2025-12-18T23:15:53"
+ */
+function formatNotificationDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hour = String(date.getHours()).padStart(2, '0');
+  const minute = String(date.getMinutes()).padStart(2, '0');
+  const second = String(date.getSeconds()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+}
+
+/**
+ * Send notification request to DGU API
+ */
+async function sendNotificationRequest(payload) {
+  return new Promise((resolve, reject) => {
+    const postData = JSON.stringify(payload);
+    
+    const options = {
+      hostname: NOTIFICATION_API_URL,
+      path: '/',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Content-Length': Buffer.byteLength(postData)
+      }
+    };
+    
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        if (res.statusCode === 200 || res.statusCode === 201) {
+          resolve(data);
+        } else {
+          reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+        }
+      });
+    });
+    
+    req.on('error', reject);
+    req.write(postData);
+    req.end();
+  });
 }
 
 /**
