@@ -65,6 +65,8 @@ class ScorecardResultsScreen extends StatelessWidget {
 
       // Send push notification to marker
       bool notificationSent = false;
+      Map<String, dynamic>? notificationResult;
+      
       if (retrievedData != null) {
         try {
           final notificationService = NotificationService();
@@ -75,17 +77,19 @@ class ScorecardResultsScreen extends StatelessWidget {
             '📤 Sending notification to marker: ${marker.unionId ?? marker.memberNo}',
           );
 
-          notificationSent = await notificationService
+          notificationResult = await notificationService
               .sendMarkerApprovalNotification(
                 markerUnionId: marker.unionId ?? marker.memberNo,
                 playerName: scorecard.player.name,
                 approvalUrl: approvalUrl,
               );
 
+          notificationSent = notificationResult['success'] == true;
+
           if (notificationSent) {
             print('✅ Push notification sent to marker');
           } else {
-            print('⚠️ Push notification failed (but scorecard was saved)');
+            print('⚠️ Push notification failed: ${notificationResult['error']}');
           }
         } catch (e) {
           print('❌ Notification error: $e (but scorecard was saved)');
@@ -170,6 +174,57 @@ class ScorecardResultsScreen extends StatelessWidget {
                   Text('Status: ${retrievedData['status']}'),
                   Text('Total Points: ${retrievedData['totalPoints']}'),
                   const SizedBox(height: 16),
+                  // Debug: Show notification error details if failed
+                  if (!notificationSent && notificationResult != null) ...[
+                    ExpansionTile(
+                      tilePadding: EdgeInsets.zero,
+                      title: const Text(
+                        '🔧 Debug: Notification Error',
+                        style: TextStyle(fontSize: 12, color: Colors.red),
+                      ),
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          color: Colors.red.shade50,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (notificationResult['statusCode'] != null)
+                                Text(
+                                  'Status: ${notificationResult['statusCode']}',
+                                  style: const TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              const SizedBox(height: 4),
+                              if (notificationResult['error'] != null)
+                                Text(
+                                  'Error: ${notificationResult['error']}',
+                                  style: const TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              const SizedBox(height: 4),
+                              if (notificationResult['response'] != null)
+                                Text(
+                                  'Response: ${notificationResult['response']}',
+                                  style: const TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 10,
+                                  ),
+                                  maxLines: 10,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   const Divider(),
                   const SizedBox(height: 8),
                   const Text(

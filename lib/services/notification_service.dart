@@ -12,7 +12,8 @@ class NotificationService {
       'https://gist.githubusercontent.com/nhuttel/ad197ae6de63e78d3d450fd70d604b7d/raw/6036a00fec46c4e5b1d05e4295c5e32566090abf/gistfile1.txt';
 
   /// Send push notification to marker when scorecard is ready for approval
-  Future<bool> sendMarkerApprovalNotification({
+  /// Returns a map with success status and optional error details
+  Future<Map<String, dynamic>> sendMarkerApprovalNotification({
     required String markerUnionId,
     required String playerName,
     required String approvalUrl,
@@ -56,15 +57,27 @@ class NotificationService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         print('✅ Push notification sent successfully!');
         print('📦 Response: ${response.body}');
-        return true;
+        return {
+          'success': true,
+          'statusCode': response.statusCode,
+          'response': response.body,
+        };
       } else {
         print('⚠️ Push notification failed: ${response.statusCode}');
         print('📦 Response: ${response.body}');
-        return false;
+        return {
+          'success': false,
+          'statusCode': response.statusCode,
+          'response': response.body,
+          'error': 'HTTP ${response.statusCode}: ${response.reasonPhrase}',
+        };
       }
     } catch (e) {
       print('❌ Push notification error: $e');
-      return false;
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
     }
   }
 
