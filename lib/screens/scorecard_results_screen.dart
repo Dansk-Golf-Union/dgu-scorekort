@@ -190,7 +190,6 @@ class ScorecardResultsScreen extends StatelessWidget {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Consumer<ScorecardProvider>(

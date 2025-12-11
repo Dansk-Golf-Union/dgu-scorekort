@@ -22,8 +22,14 @@ class WhsSubmissionService {
 
   /// Submit scorecard til WHS API (Minimum API format)
   /// Hvis spiller IKKE er på whitelist: Fake success (ingen API kald)
+  /// firestoreData MUST include 'id' field (Firestore document ID) for ExternalID
   Future<bool> submitScorecard(Map<String, dynamic> firestoreData) async {
     final playerId = firestoreData['playerId'] as String;
+    final documentId = firestoreData['id'] as String?;
+
+    if (documentId == null || documentId.isEmpty) {
+      throw Exception('Missing Firestore document ID - cannot generate ExternalID');
+    }
 
     // Check whitelist
     if (!_testWhitelist.contains(playerId)) {
@@ -100,14 +106,15 @@ class WhsSubmissionService {
   /// ⚠️ VIGTIGT: API forventer et ARRAY med ét scorecard objekt!
   List<Map<String, dynamic>> _mapToApiFormat(Map<String, dynamic> data) {
     // Format timestamps: "20251211T090200"
-    final createdAt = (data['createdAt'] as Timestamp).toDate();
+    final createdAt = (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
     final playedDate = (data['playedDate'] as Timestamp).toDate();
 
     final createDateTime = _formatDguDateTime(createdAt);
     final startTime = _formatDguDateTime(playedDate);
 
-    // Generate ExternalID: "1016-500-02062025-Yellow-18-3"
-    final externalId = _generateExternalId(data);
+    // Generate ExternalID: Use Firestore document ID with prefix
+    final documentId = data['id'] as String;
+    final externalId = 'dgu_$documentId';
 
     // Format HCP: 15.8 → "158000" (multiply by 10000)
     final hcpInt = ((data['playerHandicap'] as num) * 10000).round();
@@ -132,37 +139,19 @@ class WhsSubmissionService {
         'Marker': {
           'UnionID': data['markerId'], // Kun UnionID (API slår op automatisk)
         },
-        'Result': {
-          'Strokes': strokes,
-          'IsQualifying': true,
-        },
+        'Result': {'Strokes': strokes, 'IsQualifying': true},
         'Round': {
           'HolesPlayed': holes.length,
           'RoundType': 1,
           'StartTime': startTime,
         },
-        'Player': {
-          'UnionID': data['playerId'],
-        },
-      }
+        'Player': {'UnionID': data['playerId']},
+      },
     ];
   }
 
   String _formatDguDateTime(DateTime dt) {
     return '${dt.year}${dt.month.toString().padLeft(2, '0')}${dt.day.toString().padLeft(2, '0')}'
         'T${dt.hour.toString().padLeft(2, '0')}${dt.minute.toString().padLeft(2, '0')}${dt.second.toString().padLeft(2, '0')}';
-  }
-
-  String _generateExternalId(Map<String, dynamic> data) {
-    // Format: "1016-500-02062025-Yellow-18-3"
-    final unionId = data['playerId'] as String;
-    final playedDate = (data['playedDate'] as Timestamp).toDate();
-    final dateStr =
-        '${playedDate.day.toString().padLeft(2, '0')}${playedDate.month.toString().padLeft(2, '0')}${playedDate.year}';
-    final teeName = (data['teeName'] as String).replaceAll(' ', '');
-    final holes = (data['holes'] as List).length;
-    final roundNumber = 1;
-
-    return '$unionId-$dateStr-$teeName-$holes-$roundNumber';
   }
 }

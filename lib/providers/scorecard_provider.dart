@@ -11,9 +11,9 @@ class ScorecardProvider with ChangeNotifier {
   // Getters
   Scorecard? get scorecard => _currentScorecard;
   int get currentHoleIndex => _currentHoleIndex;
-  
+
   HoleScore? get currentHole {
-    if (_currentScorecard == null || 
+    if (_currentScorecard == null ||
         _currentHoleIndex >= _currentScorecard!.holeScores.length) {
       return null;
     }
@@ -25,8 +25,8 @@ class ScorecardProvider with ChangeNotifier {
   }
 
   bool get canGoNext {
-    return _currentScorecard != null && 
-           _currentHoleIndex < _currentScorecard!.holeScores.length - 1;
+    return _currentScorecard != null &&
+        _currentHoleIndex < _currentScorecard!.holeScores.length - 1;
   }
 
   bool get canGoPrevious {
@@ -34,12 +34,7 @@ class ScorecardProvider with ChangeNotifier {
   }
 
   /// Start a new round
-  void startRound(
-    GolfCourse course,
-    Tee tee,
-    Player player,
-    int playingHcp,
-  ) {
+  void startRound(GolfCourse course, Tee tee, Player player, int playingHcp) {
     // Get holes from the tee
     final holes = tee.holes ?? course.holes;
 
@@ -85,12 +80,15 @@ class ScorecardProvider with ChangeNotifier {
   void setScore(int holeNumber, int strokes) {
     if (_currentScorecard == null) return;
 
-    final holeIndex = _currentScorecard!.holeScores
-        .indexWhere((h) => h.holeNumber == holeNumber);
+    final holeIndex = _currentScorecard!.holeScores.indexWhere(
+      (h) => h.holeNumber == holeNumber,
+    );
 
     if (holeIndex == -1) return;
 
-    final updatedHoleScores = List<HoleScore>.from(_currentScorecard!.holeScores);
+    final updatedHoleScores = List<HoleScore>.from(
+      _currentScorecard!.holeScores,
+    );
     updatedHoleScores[holeIndex] = updatedHoleScores[holeIndex].copyWith(
       strokes: strokes,
       isPickedUp: false, // Reset picked up status when manually setting score
@@ -107,12 +105,15 @@ class ScorecardProvider with ChangeNotifier {
   void pickUpHole(int holeNumber) {
     if (_currentScorecard == null) return;
 
-    final holeIndex = _currentScorecard!.holeScores
-        .indexWhere((h) => h.holeNumber == holeNumber);
+    final holeIndex = _currentScorecard!.holeScores.indexWhere(
+      (h) => h.holeNumber == holeNumber,
+    );
 
     if (holeIndex == -1) return;
 
-    final updatedHoleScores = List<HoleScore>.from(_currentScorecard!.holeScores);
+    final updatedHoleScores = List<HoleScore>.from(
+      _currentScorecard!.holeScores,
+    );
     updatedHoleScores[holeIndex] = updatedHoleScores[holeIndex].copyWith(
       strokes: null,
       isPickedUp: true,
@@ -129,12 +130,15 @@ class ScorecardProvider with ChangeNotifier {
   void setPutts(int holeNumber, int putts) {
     if (_currentScorecard == null) return;
 
-    final holeIndex = _currentScorecard!.holeScores
-        .indexWhere((h) => h.holeNumber == holeNumber);
+    final holeIndex = _currentScorecard!.holeScores.indexWhere(
+      (h) => h.holeNumber == holeNumber,
+    );
 
     if (holeIndex == -1) return;
 
-    final updatedHoleScores = List<HoleScore>.from(_currentScorecard!.holeScores);
+    final updatedHoleScores = List<HoleScore>.from(
+      _currentScorecard!.holeScores,
+    );
     updatedHoleScores[holeIndex] = updatedHoleScores[holeIndex].copyWith(
       putts: putts,
     );
@@ -164,8 +168,8 @@ class ScorecardProvider with ChangeNotifier {
 
   /// Jump to specific hole
   void goToHole(int index) {
-    if (_currentScorecard != null && 
-        index >= 0 && 
+    if (_currentScorecard != null &&
+        index >= 0 &&
         index < _currentScorecard!.holeScores.length) {
       _currentHoleIndex = index;
       notifyListeners();
@@ -176,9 +180,7 @@ class ScorecardProvider with ChangeNotifier {
   void finishRound() {
     if (_currentScorecard == null) return;
 
-    _currentScorecard = _currentScorecard!.copyWith(
-      endTime: DateTime.now(),
-    );
+    _currentScorecard = _currentScorecard!.copyWith(endTime: DateTime.now());
 
     notifyListeners();
   }
@@ -194,8 +196,8 @@ class ScorecardProvider with ChangeNotifier {
   /// This method is kept for backward compatibility but should not be used
   @Deprecated('Use remote marker approval flow instead')
   Future<bool> submitScorecard() async {
-    throw Exception('Direct submission is deprecated - use remote marker approval');
+    throw Exception(
+      'Direct submission is deprecated - use remote marker approval',
+    );
   }
 }
-
-
