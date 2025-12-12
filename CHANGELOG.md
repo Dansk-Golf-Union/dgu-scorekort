@@ -2,6 +2,83 @@
 
 Alle væsentlige ændringer til dette projekt dokumenteres i denne fil.
 
+## [1.5.0] - 2025-12-12
+
+### 🔔 Push Notifications
+- **Tilføjet**: Automatisk push notification til markør når scorekort sendes
+- **Tilføjet**: Firebase Cloud Function proxy for DGU Notification API
+- **Tilføjet**: Notification token management via GitHub Gist
+- **Tilføjet**: Notification status feedback i UI (grøn/orange)
+- **Tilføjet**: 7-dages udløb på notifications
+- **Tilføjet**: NotificationService med Cloud Function integration
+
+### 🎯 WHS API Submission
+- **Tilføjet**: Automatisk submission til WHS API ved markør godkendelse
+- **Tilføjet**: Test whitelist for gradvis udrulning (kun test-brugere)
+- **Tilføjet**: ExternalID tracking med Firestore document ID
+- **Tilføjet**: Minimum API payload med påkrævede felter
+- **Tilføjet**: Status tracking med `isSubmittedToDgu` flag
+- **Tilføjet**: WHSSubmissionService med detaljeret error handling
+
+### 🔧 Firebase Cloud Functions
+- **Tilføjet**: `sendNotification` callable function (europe-west1)
+- **Tilføjet**: CORS-fri API kald til DGU notification endpoint
+- **Tilføjet**: Automatisk token fetching fra GitHub Gist
+- **Tilføjet**: Detaljeret logging for debugging
+
+### 🛠️ Tekniske Forbedringer
+- **Opdateret**: Results screen med notification feedback
+- **Opdateret**: Marker approval flow med WHS submission
+- **Fixet**: Web compatibility ved brug af HTTP POST i stedet for cloud_functions package
+
+## [1.4.0] - 2025-12-10
+
+### ⚡ Firestore Caching (Performance Boost)
+- **Tilføjet**: Cache Management Screen med UI kontrol
+- **Tilføjet**: Club & Course caching i Firestore
+- **Tilføjet**: Course filtering (kun aktive, nyeste versioner)
+- **Tilføjet**: Split data structure (info + courses)
+- **Tilføjet**: Metadata-based club list (1 read, instant load!)
+- **Tilføjet**: Automatisk API fallback ved invalid cache
+- **Tilføjet**: Manual cache seeding fra UI (~2 min)
+- **Tilføjet**: CourseCacheService med optimeret data struktur
+
+### 📊 Performance Forbedringer
+- **Forbedret**: Klub-liste load tid fra 2-3s til <0.2s
+- **Reduceret**: Data fra ~42MB til ~20KB metadata
+- **Optimeret**: Kun 1 Firestore read i stedet for 213
+
+## [1.3.0] - 2025-12-08
+
+### 🔥 Firebase Backend
+- **Tilføjet**: Firebase Core & Cloud Firestore integration
+- **Tilføjet**: Firestore security rules for public marker approval
+- **Tilføjet**: ScorecardStorageService for database operations
+- **Tilføjet**: Real-time status updates (pending → approved/rejected)
+- **Tilføjet**: Timestamp tracking (createdAt, updatedAt)
+
+### 🌐 Remote Markør Godkendelse
+- **Tilføjet**: Marker Assignment Dialog med DGU nummer lookup
+- **Tilføjet**: Fetch marker info fra DGU API
+- **Tilføjet**: Save scorecard til Firestore med "pending" status
+- **Tilføjet**: Generer unik godkendelses-URL
+- **Tilføjet**: Standalone Marker Approval Screen
+- **Tilføjet**: Read-only scorecard view for markør
+- **Tilføjet**: Approve/Reject med valgfri begrundelse
+- **Tilføjet**: "Luk Scorekort" knap efter godkendelse
+- **Tilføjet**: Status tracking flow (pending → approved/rejected → submitted)
+
+### 🚀 Deployment & Routing
+- **Tilføjet**: Firebase Hosting deployment
+- **Tilføjet**: go_router med deep linking support
+- **Tilføjet**: Hash routing for Flutter web
+- **Tilføjet**: Dual deployment (Firebase + GitHub Pages)
+
+### 📦 Dependencies
+- **Tilføjet**: `firebase_core: ^3.8.1`
+- **Tilføjet**: `cloud_firestore: ^5.5.1`
+- **Tilføjet**: `go_router: ^14.6.2`
+
 ## [1.1.0] - 2025-12-05
 
 ### 🔐 Authentication & Player Management
@@ -61,4 +138,5 @@ Alle væsentlige ændringer til dette projekt dokumenteres i denne fil.
 ---
 
 **Format:** Baseret på [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
+
 

@@ -16,7 +16,7 @@ class _MarkerAssignmentDialogState extends State<MarkerAssignmentDialog> {
   final TextEditingController _unionIdController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   final _playerService = PlayerService();
-  
+
   Player? _markerInfo;
   bool _isLoading = false;
   String? _errorMessage;
@@ -61,9 +61,7 @@ class _MarkerAssignmentDialogState extends State<MarkerAssignmentDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         constraints: const BoxConstraints(maxWidth: 500),
         padding: const EdgeInsets.all(24),
@@ -101,10 +99,7 @@ class _MarkerAssignmentDialogState extends State<MarkerAssignmentDialog> {
                 const SizedBox(height: 8),
                 Text(
                   'Indtast DGU nummeret på den person der skal godkende dit scorekort',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade700,
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
                 ),
                 const SizedBox(height: 24),
 
@@ -112,7 +107,14 @@ class _MarkerAssignmentDialogState extends State<MarkerAssignmentDialog> {
                 TextFormField(
                   controller: _unionIdController,
                   decoration: InputDecoration(
-                    labelText: 'Markørens DGU Nummer',
+                    labelText: 'Indtast DGU-nummer',
+                    labelStyle: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.normal,
+                      color: Colors
+                          .grey
+                          .shade400, // Lysere grå - tydeligere som label
+                    ),
                     hintText: 'F.eks. 123-4567',
                     helperText: 'Format: XXX-XXXXXX',
                     prefixIcon: const Icon(Icons.badge),
@@ -135,38 +137,51 @@ class _MarkerAssignmentDialogState extends State<MarkerAssignmentDialog> {
                     if (value == null || value.isEmpty) {
                       return 'Indtast markørens DGU nummer';
                     }
-                    
+
                     // Validate format: 1-3 digits, dash, 1-6 digits
                     final regex = RegExp(r'^\d{1,3}-\d{1,6}$');
                     if (!regex.hasMatch(value.trim())) {
                       return 'Ugyldigt format. Brug: XXX-XXXXXX';
                     }
-                    
+
                     return null;
                   },
                   onFieldSubmitted: (_) => _fetchMarkerInfo(),
                 ),
                 const SizedBox(height: 16),
 
-                // Fetch button
-                FilledButton.icon(
-                  onPressed: _isLoading ? null : _fetchMarkerInfo,
-                  icon: _isLoading 
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Icon(Icons.search),
-                  label: Text(_isLoading ? 'Henter...' : 'Hent Markør'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppTheme.dguGreen,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                ),
+                // Fetch button - grå/outlined når markør er fundet
+                _markerInfo == null
+                    ? FilledButton.icon(
+                        onPressed: _isLoading ? null : _fetchMarkerInfo,
+                        icon: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Icon(Icons.search),
+                        label: Text(_isLoading ? 'Henter...' : 'Hent Markør'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppTheme.dguGreen,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                      )
+                    : OutlinedButton.icon(
+                        onPressed: _fetchMarkerInfo,
+                        icon: const Icon(Icons.search),
+                        label: const Text('Hent Markør Igen'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          side: BorderSide(color: Colors.grey.shade400),
+                          foregroundColor: Colors.grey.shade700,
+                        ),
+                      ),
 
                 // Error message
                 if (_errorMessage != null) ...[
@@ -201,14 +216,20 @@ class _MarkerAssignmentDialogState extends State<MarkerAssignmentDialog> {
                     decoration: BoxDecoration(
                       color: Colors.green.shade50,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.green.shade200, width: 2),
+                      border: Border.all(
+                        color: Colors.green.shade200,
+                        width: 2,
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.check_circle, color: Colors.green.shade700),
+                            Icon(
+                              Icons.check_circle,
+                              color: Colors.green.shade700,
+                            ),
                             const SizedBox(width: 8),
                             const Text(
                               'Markør Fundet',
@@ -240,7 +261,11 @@ class _MarkerAssignmentDialogState extends State<MarkerAssignmentDialog> {
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              const Icon(Icons.golf_course, size: 16, color: Colors.grey),
+                              const Icon(
+                                Icons.golf_course,
+                                size: 16,
+                                color: Colors.grey,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 _markerInfo!.homeClubName!,
@@ -256,7 +281,7 @@ class _MarkerAssignmentDialogState extends State<MarkerAssignmentDialog> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Confirm button
                   FilledButton.icon(
                     onPressed: _confirmMarker,

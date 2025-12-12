@@ -75,3 +75,4 @@ The SVG favicon will be used by modern browsers, but PNG is provided as fallback
 - White golf flag icon
 - White golf ball at the base of the flag pole
 
+

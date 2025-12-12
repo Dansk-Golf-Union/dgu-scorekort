@@ -609,9 +609,9 @@ class _MarkerApprovalFromUrlScreenState
         ),
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 12,
-            color: Colors.grey.shade700,
+            color: Colors.black87, // Mørkere for bedre læsbarhed
             fontWeight: FontWeight.w500,
           ),
         ),

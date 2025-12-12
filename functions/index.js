@@ -234,7 +234,7 @@ exports.sendNotification = functions
         data: {
           recipients: [markerUnionId],
           title: 'Nyt scorekort afventer din godkendelse',
-          message: `${playerName} har sendt et scorekort til godkendelse.\r\n\r\nKlik på 'Gå til' for at godkende scorekortet.`,
+          message: `${playerName} har sendt et scorekort til godkendelse.\r\n\r\nGå til godkendelse af scorekort herunder.`,
           message_type: 'DGUMessage',
           message_link: approvalUrl,
           expire_at: expiryString,

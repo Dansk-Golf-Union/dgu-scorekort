@@ -66,7 +66,7 @@ class ScorecardResultsScreen extends StatelessWidget {
       // Send push notification to marker
       bool notificationSent = false;
       Map<String, dynamic>? notificationResult;
-      
+
       if (retrievedData != null) {
         try {
           final notificationService = NotificationService();
@@ -89,7 +89,9 @@ class ScorecardResultsScreen extends StatelessWidget {
           if (notificationSent) {
             print('✅ Push notification sent to marker');
           } else {
-            print('⚠️ Push notification failed: ${notificationResult['error']}');
+            print(
+              '⚠️ Push notification failed: ${notificationResult['error']}',
+            );
           }
         } catch (e) {
           print('❌ Notification error: $e (but scorecard was saved)');
@@ -225,19 +227,6 @@ class ScorecardResultsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                   ],
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Markør Godkendelses-link:',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildUrlButton(
-                    context,
-                    'https://dgu-scorekort.web.app/#/marker-approval/$documentId',
-                    'Åbn i ny tab',
-                    Icons.open_in_new,
-                  ),
                 ],
               ),
               actions: [
@@ -920,7 +909,7 @@ class _BottomInfo extends StatelessWidget {
             _BottomInfoRow('Markør', scorecard.markerFullName ?? '__________'),
             _BottomInfoRow(
               'Score status',
-              scorecard.isSubmitted ? 'Indsendt' : 'Ikke-tællende',
+              '', // Tom værdi - klar til fremtidig status
             ),
             _BottomInfoRow('PCC', '0'),
           ],
