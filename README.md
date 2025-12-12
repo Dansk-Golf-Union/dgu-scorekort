@@ -2,7 +2,7 @@
 
 Flutter Web App til danske golfspillere til at rapportere scorekort.
 
-## Status: ✅ Version 1.4 - Med Firebase Backend, Remote Markør Godkendelse & Firestore Caching
+## Status: ✅ Version 1.5 - Med Push Notifications, WHS API Submission & Automatisk Godkendelse
 
 **Live App (Firebase):** [https://dgu-scorekort.web.app](https://dgu-scorekort.web.app)  
 **Live App (GitHub):** [https://dansk-golf-union.github.io/dgu-scorekort/](https://dansk-golf-union.github.io/dgu-scorekort/)
@@ -13,14 +13,39 @@ DGU Scorekort er en moderne web-applikation bygget med Flutter, der gør det mul
 - Vælge golfklub, bane og tee fra DGU Basen API
 - Beregne spillehandicap efter danske WHS regler
 - Indtaste scores på to måder (Plus/Minus eller Hurtig keypad)
-- **Få remote markør godkendelse via URL** (nyt i v1.3!)
 - Se detaljeret scorekort med Stableford points
 - Beregne handicap resultat (score differential)
+- **Send scorekort til markør via push notification** (nyt i v1.5!)
+- **Remote markør godkendelse via URL** (v1.3)
+- **Automatisk WHS API submission** ved godkendelse (nyt i v1.5!)
 - Gemme scorekort i Firebase Firestore
-- **Firestore caching af klubber og baner** (nyt i v1.4!)
-- Indsende scores til DGU (klar til API integration)
+- **Firestore caching af klubber og baner** (v1.4)
 
-## ✨ Nye Features i v1.4
+## ✨ Nye Features i v1.5
+
+### 🔔 Push Notifications til Markør
+- ✅ **Automatisk Push Besked**: Markør får besked i DGU Mit Golf app når scorekort sendes
+- ✅ **DGU Notification API Integration**: Via Firebase Cloud Function proxy
+- ✅ **Notification Token Management**: Sikkert gemt i GitHub Gist
+- ✅ **Message Formatting**: Professionel besked med godkendelses-link
+- ✅ **7-dages Udløb**: Notifikationer udløber automatisk efter 1 uge
+- ✅ **Status Feedback**: Grøn/orange UI feedback på notification status
+
+### 🎯 WHS API Automatisk Submission
+- ✅ **Automatic Submission**: Scorekort sendes automatisk til WHS ved markør godkendelse
+- ✅ **Test Whitelist**: Kun specificerede test-brugere sender reelt til WHS API
+- ✅ **ExternalID Tracking**: Brug Firestore document ID som ekstern reference
+- ✅ **Minimum API Payload**: Optimal payload med kun påkrævede felter
+- ✅ **Status Tracking**: `isSubmittedToDgu` flag i Firestore
+- ✅ **Error Handling**: Detaljeret logging og fejlhåndtering
+
+### 🔧 Cloud Functions
+- ✅ **Notification Proxy**: `sendNotification` Cloud Function til CORS-fri API kald
+- ✅ **Token Fetching**: Automatisk hentning af notification token fra Gist
+- ✅ **Payload Building**: Korrekt formatering til DGU notification API
+- ✅ **Error Logging**: Omfattende logging for debugging
+
+## ✨ Features fra v1.4
 
 ### ⚡ Firestore Caching (Performance Boost)
 - ✅ **Cache Management Screen**: UI til cache kontrol
@@ -97,26 +122,22 @@ DGU Scorekort er en moderne web-applikation bygget med Flutter, der gør det mul
 
 ### ✍️ Markør Godkendelse & Submission
 
-#### Lokal Markør (Original Flow)
-- ✅ **In-Person Approval**: "Få Markør Underskrift Her"
-- ✅ **Digital Signature Pad**: Touch-optimeret signature canvas
-- ✅ **Signature Preview**: Vises på results screen
-- ✅ **Direct Submission**: Indsend direkte efter underskrift
-
-#### Remote Markør (Ny Firebase Flow)
+#### Remote Markør (Primary Flow)
 - ✅ **"Send til Markør" knap**: Starter remote approval
 - ✅ **Marker Selection Dialog**: Indtast markørs DGU nummer
 - ✅ **Fetch Marker Info**: Slå markør op i DGU database
 - ✅ **Save to Firestore**: Gem scorekort med "pending" status
-- ✅ **Generate URLs**: Både localhost og production URLs
-- ✅ **Clickable Links**: Åbn i ny tab direkte fra app
+- ✅ **Push Notification**: Automatisk besked til markør i Mit Golf app *(nyt v1.5)*
+- ✅ **Notification Feedback**: Grøn/orange status i UI *(nyt v1.5)*
+- ✅ **Generate URLs**: Embedded i notification + vist i app
 - ✅ **Marker Approval Screen**: Standalone screen med:
   - Assigned marker info (navn, DGU nummer)
   - Komplet read-only scorekort
   - Spiller information
   - Bane/tee detaljer
   - Approve/Reject knapper
-- ✅ **Status Updates**: Real-time opdatering af scorecard status
+- ✅ **Automatic WHS Submission**: Ved godkendelse sendes til DGU automatisk *(nyt v1.5)*
+- ✅ **Status Tracking**: pending → approved → submitted to DGU *(opdateret v1.5)*
 - ✅ **"Luk Scorekort" knap**: Luk browser tab efter godkendelse
 - ✅ **Rejection Reason**: Valgfri begrundelse ved afvisning
 
@@ -177,8 +198,10 @@ lib/
 │   ├── dgu_service.dart               # DGU Basen API client (public endpoints)
 │   ├── player_service.dart            # Player API service (OAuth & Union ID)
 │   ├── scorecard_storage_service.dart # Firestore scorecard operations
-│   ├── course_cache_service.dart      # Firestore cache read + API fallback (nyt v1.4)
-│   └── cache_seed_service.dart        # Firestore cache seeding (nyt v1.4)
+│   ├── course_cache_service.dart      # Firestore cache read + API fallback (v1.4)
+│   ├── cache_seed_service.dart        # Firestore cache seeding (v1.4)
+│   ├── notification_service.dart      # Push notifications via Cloud Function (nyt v1.5)
+│   └── whs_submission_service.dart    # WHS API submission service (nyt v1.5)
 ├── utils/
 │   ├── handicap_calculator.dart       # WHS handicap beregninger
 │   ├── stroke_allocator.dart          # Stroke allocation algoritme
@@ -188,18 +211,33 @@ lib/
     ├── simple_login_screen.dart       # Union ID login (aktiv)
     ├── scorecard_screen.dart          # Plus/Minus scorecard
     ├── scorecard_keypad_screen.dart   # Hurtig keypad scorecard
-    ├── marker_approval_screen.dart    # In-person markør godkendelse
     ├── marker_assignment_dialog.dart  # Remote marker selection
-    ├── marker_approval_from_url_screen.dart # Remote approval screen
-    ├── scorecard_results_screen.dart  # Resultat visning & submission
-    └── cache_management_screen.dart   # Cache control & seeding (nyt v1.4)
+    ├── marker_approval_from_url_screen.dart # Remote approval screen (v1.3)
+    ├── scorecard_results_screen.dart  # Resultat & submission med notification (v1.5)
+    └── cache_management_screen.dart   # Cache control & seeding (v1.4)
 ```
 
 ## 🔥 Firebase Setup
 
 ### Firebase Project
 **Project ID**: `dgu-scorekort`  
-**Hosting URL**: `https://dgu-scorekort.web.app`
+**Hosting URL**: `https://dgu-scorekort.web.app`  
+**Region**: `europe-west1`
+
+### Cloud Functions
+**Region**: `europe-west1` (Frankfurt)
+
+#### `sendNotification`
+- **Type**: Callable HTTPS function
+- **Purpose**: Proxy for DGU notification API (CORS bypass)
+- **URL**: `https://europe-west1-dgu-scorekort.cloudfunctions.net/sendNotification`
+- **Input**: `{ markerUnionId, playerName, approvalUrl }`
+- **Output**: `{ success, response }`
+- **Features**:
+  - Fetches notification token from GitHub Gist
+  - Formats payload for DGU notification API
+  - Sends to `https://sendsinglenotification-d3higuw2ca-ey.a.run.app`
+  - Returns detailed error info for debugging
 
 ### Firestore Collection: `scorecards`
 
@@ -347,7 +385,7 @@ service cloud.firestore {
 }
 ```
 
-## 🌐 Marker Approval Flow
+## 🌐 Marker Approval Flow (v1.5)
 
 ### 1. Player Creates Scorecard
 1. Spiller afslutter runde
@@ -356,42 +394,61 @@ service cloud.firestore {
 4. System henter markør info fra DGU API
 5. Bekræfter markør valg
 
-### 2. Save to Firebase
+### 2. Save to Firebase & Send Notification
 1. Scorecard gemmes i Firestore med status "pending"
 2. Unikt document ID genereres
 3. Markør info inkluderes i document
+4. **Push notification sendes automatisk til markør** *(nyt v1.5)*
+5. UI viser grøn feedback hvis notification sendt ✅
 
-### 3. Generate Approval URLs
-**Localhost:**
-```
-http://localhost:PORT/#/marker-approval/DOCUMENT_ID
+### 3. Push Notification Details
+**Notification Payload:**
+```json
+{
+  "recipients": ["177-2813"],
+  "title": "Nyt scorekort afventer din godkendelse",
+  "message": "Nick Hüttel har sendt et scorekort til godkendelse.\r\n\r\nKlik på 'Gå til' for at godkende scorekortet.",
+  "message_type": "DGUMessage",
+  "message_link": "https://dgu-scorekort.web.app/#/marker-approval/DOCUMENT_ID",
+  "expire_at": "2025-12-18T23:15:53",
+  "token": "..."
+}
 ```
 
-**Production:**
-```
-https://dgu-scorekort.web.app/#/marker-approval/DOCUMENT_ID
-```
+**Delivered via:**
+- DGU Mit Golf app (iOS/Android)
+- Cloud Function proxy: `sendNotification`
+- API: `https://sendsinglenotification-d3higuw2ca-ey.a.run.app`
 
-### 4. Marker Opens URL
-1. Markør modtager URL (via mail/SMS)
-2. Åbner URL i browser (ingen login påkrævet)
-3. Ser komplet scorecard i read-only mode
-4. Ser egen info som assigned marker
+### 4. Marker Opens Notification
+1. Markør får besked i Mit Golf app
+2. Klikker på "Gå til" i notifikationen
+3. Åbnes i browser (ingen login påkrævet)
+4. Ser komplet scorecard i read-only mode
+5. Ser egen info som assigned marker
 
 ### 5. Marker Approves/Rejects
 **Approve:**
 - Klikker "✅ Godkend Scorekort"
-- Status opdateres til "approved"
+- Status opdateres til "approved" i Firestore
+- **Scorekort sendes automatisk til WHS API** *(nyt v1.5)*
+- `isSubmittedToDgu = true` sættes i Firestore
 - Klikker "Luk Scorekort" for at lukke tab
 
 **Reject:**
 - Klikker "❌ Afvis Scorekort"
 - Indtaster begrundelse
 - Status opdateres til "rejected"
+- Scorekort sendes IKKE til WHS
 - Klikker "Luk Scorekort" for at lukke tab
 
-### 6. Player Receives Confirmation
-*(Kommer i fremtidig version - push notification eller email)*
+### 6. WHS API Submission
+**Automatic på godkendelse:**
+- Kun for test-brugere i whitelist (8-9994, 8-9995)
+- POST til `https://dgubasen.api.union.golfbox.io/DGUScorkortAapp/ScorecardExchange`
+- Minimum payload med påkrævede felter
+- `ExternalID` = Firestore document ID (med `dgu_` prefix)
+- Detaljeret logging af submission status
 
 ## 🌐 API Integration
 
@@ -582,15 +639,33 @@ flutter test
 
 ### Deployment
 
-#### Deploy til Firebase Hosting
+#### Deploy til Firebase (Hosting + Functions)
 ```bash
-# Build production version
+# Build production web version
 flutter build web --release
 
-# Deploy til Firebase
-firebase deploy --only hosting
+# Deploy hosting + Cloud Functions
+firebase deploy
 
-# URL: https://dgu-scorekort.web.app
+# Eller deploy separat:
+firebase deploy --only hosting
+firebase deploy --only functions
+
+# URLs:
+# Hosting: https://dgu-scorekort.web.app
+# Function: https://europe-west1-dgu-scorekort.cloudfunctions.net/sendNotification
+```
+
+#### Deploy kun Cloud Functions
+```bash
+# Deploy alle functions
+firebase deploy --only functions
+
+# Deploy specifik function
+firebase deploy --only functions:sendNotification
+
+# Check function logs
+firebase functions:log --only sendNotification
 ```
 
 **⚠️ Efter deploy: Seed production cache**
@@ -647,16 +722,21 @@ git push
 - [x] **Firebase Hosting deployment** *(nyt)*
 - [x] **go_router deep linking** *(nyt)*
 - [x] **Dual deployment (Firebase + GitHub)** *(nyt)*
-- [x] **Firestore caching for clubs/courses** *(nyt v1.4)*
-- [x] **Cache Management UI** *(nyt v1.4)*
-- [x] **Course filtering before caching** *(nyt v1.4)*
-- [x] **Metadata-based club list (instant load)** *(nyt v1.4)*
-- [x] **API fallback for invalid cache** *(nyt v1.4)*
+- [x] **Firestore caching for clubs/courses** *(v1.4)*
+- [x] **Cache Management UI** *(v1.4)*
+- [x] **Course filtering before caching** *(v1.4)*
+- [x] **Metadata-based club list (instant load)** *(v1.4)*
+- [x] **API fallback for invalid cache** *(v1.4)*
+- [x] **Push notifications til markør** *(nyt v1.5)*
+- [x] **DGU Notification API integration** *(nyt v1.5)*
+- [x] **Firebase Cloud Function proxy** *(nyt v1.5)*
+- [x] **Automatisk WHS API submission** *(nyt v1.5)*
+- [x] **Test whitelist for WHS submission** *(nyt v1.5)*
+- [x] **Notification status feedback i UI** *(nyt v1.5)*
 
 ### 🔄 In Progress
 - [ ] OAuth redirect URI configuration (venter på setup)
-- [ ] POST til DGU ScorecardExchange API
-- [ ] Push notification til markør (via DGU Mit Golf app)
+- [ ] Expand test whitelist (flere test-brugere til WHS submission)
 
 ### 📅 Future Enhancements
 
@@ -666,12 +746,11 @@ git push
 - [ ] Cache version migration strategy
 
 #### Scorecard & Markers
-- [ ] Aktivér DGU ScorecardExchange POST endpoint
-- [ ] Send marker approval URL via push besked (DGU app integration)
-- [ ] Email notification til markør
+- [ ] Expand test whitelist (flere test-brugere)
+- [ ] Player notification ved markør godkendelse (push tilbage til spiller)
 - [ ] Historik over tidligere runder (query Firestore)
-- [ ] Marker kan se alle pending approvals
-- [ ] Player kan se approval status
+- [ ] Marker dashboard (se alle pending approvals)
+- [ ] Player dashboard (se alle egne scorekort + status)
 - [ ] Export til PDF/print
 
 #### Features
@@ -756,27 +835,33 @@ Bruger **Provider** pattern med tre hovedproviders:
   - OAuth 2.0 PKCE implementeret men deaktiveret
   - Skift til OAuth: Sæt `useSimpleLogin = false` i `main.dart`
   - Kræver OAuth redirect URI konfiguration i GolfBox
-- **Marker Notification**: Manuel URL deling (email/SMS)
-  - Push notification via DGU app kommer senere
+- **Push Notifications**: Via Firebase Cloud Function proxy *(implementeret v1.5)*
+  - Sender til DGU Mit Golf app
+  - Token stored sikkert i GitHub Gist
+- **WHS API Submission**: Test whitelist aktiv *(implementeret v1.5)*
+  - Kun specificerede test-brugere sender til production WHS
+  - Resten får "simulated" submission
 - **Firestore Security**: Åben læsning/skrivning
   - Authentication-based rules kommer senere
-- **Signature Storage**: Base64 PNG i Firestore document
-  - Firebase Storage integration kan tilføjes senere
-- **Token Security**: Basic Auth token hentes fra privat GitHub Gist
-- **CORS**: Løst via corsproxy.io for production
+- **Token Security**: Basic Auth + notification tokens hentes fra private GitHub Gists
+- **CORS**: Løst via Firebase Cloud Functions for notification API
 - **Web Only**: Primært testet i Chrome web browser, mobil-optimeret
 
 ### Current Limitations
-- **No Score Submission**: POST til DGU API ikke implementeret endnu
-- **Manual URL Sharing**: Markør skal modtage URL manuelt (indtil push notification)
-- **No Error Recovery**: Begrænsede retry strategier
+- **Test Whitelist**: WHS submission kun aktiv for test-brugere (8-9994, 8-9995)
+- **No Player Notification**: Spiller får ikke besked når markør har godkendt
+- **No Error Recovery**: Begrænsede retry strategier for API calls
 - **Single Player**: Ingen flight/gruppe support endnu
+- **No Scorecard History**: Ingen UI til at se tidligere runder
 
 ### Future Considerations
 - **Automated Cache Updates**: Cloud Function til daglig cache opdatering (kl. 02:00)
 - **Cache Analytics**: Track cache hit rate og performance metrics
+- **Expand Whitelist**: Tilføj flere test-brugere til WHS submission
+- **Player Notifications**: Push notification tilbage til spiller ved markør godkendelse
+- **Scorecard History**: UI til at se alle egne scorekort + status
+- **Marker Dashboard**: Oversigt over alle pending approvals
 - Aktivér OAuth login når redirect URI er konfigureret
-- Implementer push notification til markør (DGU app integration)
 - Tilføj Firestore Security Rules med authentication (admin-only cache write)
 - Backend for token proxy (i stedet for Gist)
 - Implementer proper error handling og retry logic
@@ -799,12 +884,15 @@ Bruger **Provider** pattern med tre hovedproviders:
 - [ ] Test 18-hullers bane → Verificer Ud/Ind/Total
 - [ ] Verificer score markers (circles/boxes)
 - [ ] Verificer handicap resultat beregning
-- [ ] **Test In-Person Marker**: "Få Markør Underskrift Her" → underskrift → submit
 - [ ] **Test Remote Marker**: "Send til Markør" → indtast DGU nummer → gem
-- [ ] **Test Marker URLs**: Åbn både localhost og production URL
+- [ ] **Test Push Notification**: Verificer grøn feedback "Push besked sendt til markør"
+- [ ] **Test Notification Receipt**: Check Mit Golf app for notification
+- [ ] **Test Notification Link**: Klik "Gå til" i notification → åbn approval screen
 - [ ] **Test Marker Approval**: Godkend scorekort → klik "Luk Scorekort"
+- [ ] **Test WHS Submission**: Verificer `isSubmittedToDgu = true` i Firestore efter approval
 - [ ] **Test Marker Rejection**: Afvis med begrundelse → klik "Luk Scorekort"
 - [ ] **Test Firestore**: Verificer data gemmes korrekt i Firebase Console
+- [ ] **Test Cloud Functions**: Check Cloud Function logs for notification + WHS submission
 - [ ] **Test Cache Management**: Åbn Cache Management screen
 - [ ] **Test Cache Seeding**: Seed cache (~2 min) → verificer i Firebase Console
 - [ ] **Test Cache Loading**: Verificer klub-liste loader instant efter seed
