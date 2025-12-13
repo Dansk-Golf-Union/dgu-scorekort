@@ -30,10 +30,14 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         centerTitle: true,
         automaticallyImplyLeading: false,
-        title: Image.asset(
-          'assets/images/dgu_logo.png',
-          height: 40,
-          fit: BoxFit.contain,
+        toolbarHeight: 80, // Højere for at give plads til iOS status bar
+        title: Padding(
+          padding: const EdgeInsets.only(top: 12), // Ekstra spacing over logo
+          child: Image.asset(
+            'assets/images/dgu_logo.png',
+            height: 40,
+            fit: BoxFit.contain,
+          ),
         ),
         iconTheme: const IconThemeData(color: AppTheme.dguGreen),
         actions: [
