@@ -2,7 +2,6 @@
   "hosting": [
     {
       "site": "dgu-scorekort",
-      "target": "production",
       "public": "build/web",
       "ignore": [
         "firebase.json",
@@ -38,7 +37,6 @@
     },
     {
       "site": "dgu-app-poc",
-      "target": "poc",
       "public": "build/web",
       "ignore": [
         "firebase.json",
