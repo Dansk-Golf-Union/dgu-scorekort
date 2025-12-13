@@ -739,3 +739,144 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+/**
+ * Cloud Function: Get WHS Scores (CORS Proxy)
+ * 
+ * Proxies requests to DGU Statistik API to avoid CORS issues in web browsers.
+ * Fetches token from GitHub Gist and forwards request to WHS API.
+ * 
+ * Usage from Flutter:
+ * ```dart
+ * final callable = FirebaseFunctions.instance.httpsCallable('getWhsScores');
+ * final result = await callable.call({
+ *   'unionId': '177-2813',
+ *   'limit': 20,
+ * });
+ * ```
+ */
+exports.getWhsScores = functions
+  .region('europe-west1')
+  .runWith({
+    timeoutSeconds: 30,
+    memory: '256MB'
+  })
+  .https.onCall(async (data, context) => {
+    console.log('📊 getWhsScores called');
+    console.log('  📥 Input:', JSON.stringify(data));
+    
+    // Validate input
+    const unionId = data.unionId;
+    if (!unionId) {
+      console.error('  ❌ Missing unionId');
+      throw new functions.https.HttpsError('invalid-argument', 'unionId is required');
+    }
+    
+    const limit = data.limit || 20;
+    const dateFrom = data.dateFrom; // Optional: "20240101T000000"
+    const dateTo = data.dateTo;     // Optional: "20251231T235959"
+    
+    try {
+      // 1. Fetch Statistik API token from GitHub Gist
+      console.log('  🔐 Fetching Statistik API token...');
+      const WHS_TOKEN_URL = 'https://gist.githubusercontent.com/nhuttel/36871c0145d83c3111174b5c87542ee8/raw/17bee0485c5420d473310de8deeaeccd58e3b9cc/statistik%2520token';
+      
+      const tokenResponse = await new Promise((resolve, reject) => {
+        https.get(WHS_TOKEN_URL, (res) => {
+          let data = '';
+          res.on('data', chunk => data += chunk);
+          res.on('end', () => resolve(data.trim()));
+          res.on('error', reject);
+        }).on('error', reject);
+      });
+      
+      // Token format: "basic c3RhdGlzdGlrOk5pY2swMDA3"
+      let authHeader;
+      if (tokenResponse.toLowerCase().startsWith('basic ')) {
+        const credentials = tokenResponse.substring(6);
+        authHeader = `Basic ${credentials}`;
+      } else {
+        throw new Error('Invalid token format in Gist');
+      }
+      
+      console.log('  ✅ Token fetched');
+      
+      // 2. Calculate date range if not provided
+      const now = new Date();
+      const oneYearAgo = new Date(now);
+      oneYearAgo.setFullYear(now.getFullYear() - 1);
+      
+      const formatDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}${month}${day}T000000`;
+      };
+      
+      const fromDate = dateFrom || formatDate(oneYearAgo);
+      const toDate = dateTo || formatDate(now);
+      
+      // 3. Build API URL
+      const apiUrl = `https://api.danskgolfunion.dk/Statistik/GetWHSScores?UnionID=${encodeURIComponent(unionId)}&RoundDateFrom=${fromDate}&RoundDateTo=${toDate}`;
+      console.log('  📡 Calling WHS API:', apiUrl);
+      
+      // 4. Call WHS API
+      const apiResponse = await new Promise((resolve, reject) => {
+        https.get(apiUrl, {
+          headers: {
+            'Authorization': authHeader,
+            'Accept': 'application/json',
+            'User-Agent': 'DGU-Scorekort/2.0'
+          },
+          timeout: 25000
+        }, (res) => {
+          let data = '';
+          res.on('data', chunk => data += chunk);
+          res.on('end', () => {
+            if (res.statusCode === 200) {
+              try {
+                const parsed = JSON.parse(data);
+                resolve(parsed);
+              } catch (e) {
+                reject(new Error(`Failed to parse JSON: ${e.message}`));
+              }
+            } else {
+              reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+            }
+          });
+          res.on('error', reject);
+        }).on('error', reject).on('timeout', () => {
+          reject(new Error('Request timeout'));
+        });
+      });
+      
+      console.log(`  ✅ Got ${apiResponse.length} scores from API`);
+      
+      // 5. Sort by date (newest first) and apply limit
+      apiResponse.sort((a, b) => {
+        const dateA = a.Round?.StartTime || '';
+        const dateB = b.Round?.StartTime || '';
+        return dateB.localeCompare(dateA);
+      });
+      
+      const limitedScores = apiResponse.slice(0, limit);
+      console.log(`  📦 Returning ${limitedScores.length} scores (limit: ${limit})`);
+      
+      return {
+        success: true,
+        scores: limitedScores,
+        count: limitedScores.length
+      };
+      
+    } catch (error) {
+      console.error('  ❌ Error:', error.message);
+      
+      if (error.message.includes('HTTP 401')) {
+        throw new functions.https.HttpsError('unauthenticated', 'Invalid API token');
+      } else if (error.message.includes('timeout')) {
+        throw new functions.https.HttpsError('deadline-exceeded', 'Request timeout');
+      } else {
+        throw new functions.https.HttpsError('internal', `Failed to fetch WHS scores: ${error.message}`);
+      }
+    }
+  });
+
