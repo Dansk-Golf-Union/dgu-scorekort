@@ -114,15 +114,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.people, color: AppTheme.dguGreen),
-              title: const Text('Match Play / Hulspil'),
-              onTap: () {
-                Navigator.pop(context);
-                context.go('/match-play');
-              },
-            ),
-            const Divider(),
-            ListTile(
               leading: const Icon(Icons.settings),
               title: const Text('Indstillinger'),
               onTap: () {
