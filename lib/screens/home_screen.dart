@@ -24,33 +24,45 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: const Color(0xFFF5F5F5), // Light grey background
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-        toolbarHeight: 80, // Højere for at give plads til iOS status bar
-        title: Padding(
-          padding: const EdgeInsets.only(top: 12), // Ekstra spacing over logo
-          child: Image.asset(
-            'assets/images/dgu_logo.png',
-            height: 40,
-            fit: BoxFit.contain,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(80),
+        child: AppBar(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          elevation: 0,
+          automaticallyImplyLeading: false,
+          flexibleSpace: SafeArea(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end, // Push logo to bottom
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8), // Small margin from bottom
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Spacer(),
+                      Image.asset(
+                        'assets/images/dgu_logo.png',
+                        height: 40,
+                        fit: BoxFit.contain,
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.mail_outline, color: AppTheme.dguGreen),
+                        tooltip: 'Beskeder',
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Beskeder coming soon!')),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        iconTheme: const IconThemeData(color: AppTheme.dguGreen),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.mail_outline, color: AppTheme.dguGreen),
-            tooltip: 'Beskeder',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Beskeder coming soon!')),
-              );
-            },
-          ),
-        ],
       ),
       drawer: Drawer(
         child: ListView(
@@ -149,9 +161,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         child: SafeArea(
+          top: false, // Don't add padding at top
           child: Container(
-            height: 72, // Højere navigation bar
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: const EdgeInsets.only(bottom: 8), // Only bottom padding
             child: BottomNavigationBar(
               currentIndex: _selectedIndex == 4 ? 0 : _selectedIndex,
               onTap: (index) {
