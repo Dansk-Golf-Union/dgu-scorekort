@@ -27,10 +27,27 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.white,
         elevation: 2,
         centerTitle: true,
-        title: Image.asset(
-          'assets/images/dgu_logo.png',
-          height: 32,
-          fit: BoxFit.contain,
+        automaticallyImplyLeading: false, // Remove hamburger menu
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'DANSK GOLF UNION',
+              style: TextStyle(
+                color: AppTheme.dguGreen,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+            ),
+            Container(
+              height: 2,
+              width: 200,
+              decoration: const BoxDecoration(
+                color: AppTheme.dguGreen,
+              ),
+            ),
+          ],
         ),
         iconTheme: const IconThemeData(color: AppTheme.dguGreen),
         actions: [
