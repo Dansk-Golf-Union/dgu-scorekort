@@ -6,6 +6,7 @@ import 'config/firebase_options.dart';
 import 'providers/match_setup_provider.dart';
 import 'providers/scorecard_provider.dart';
 import 'providers/auth_provider.dart';
+import 'providers/match_play_provider.dart';
 import 'models/club_model.dart';
 import 'models/course_model.dart';
 import 'screens/scorecard_keypad_screen.dart';
@@ -13,6 +14,7 @@ import 'screens/scorecard_bulk_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/simple_login_screen.dart';
 import 'screens/marker_approval_from_url_screen.dart';
+import 'screens/match_play_screen.dart';
 import 'theme/app_theme.dart';
 
 // TODO: Switch to OAuth when redirect URI is ready
@@ -41,6 +43,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()..initialize()),
         ChangeNotifierProvider(create: (_) => MatchSetupProvider()),
         ChangeNotifierProvider(create: (_) => ScorecardProvider()),
+        ChangeNotifierProvider(create: (_) => MatchPlayProvider()),
       ],
       child: const _AppRouter(),
     );
@@ -96,6 +99,10 @@ class _AppRouter extends StatelessWidget {
               : const LoginScreen(),
         ),
         GoRoute(
+          path: '/match-play',
+          builder: (context, state) => const MatchPlayScreen(),
+        ),
+        GoRoute(
           path: '/marker-approval/:documentId',
           builder: (context, state) {
             final documentId = state.pathParameters['documentId']!;
@@ -147,6 +154,13 @@ class _SetupRoundScreenState extends State<SetupRoundScreen> {
     
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.people),
+          tooltip: 'Match Play / Hulspil',
+          onPressed: () {
+            context.push('/match-play');
+          },
+        ),
         title: const Text('DGU Scorekort'),
         centerTitle: true,
         actions: [

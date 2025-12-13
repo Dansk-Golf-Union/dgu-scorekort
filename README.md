@@ -2,7 +2,7 @@
 
 Flutter Web App til danske golfspillere til at rapportere scorekort.
 
-## Status: ✅ Version 1.5 - Med Push Notifications, WHS API Submission & Automatisk Godkendelse
+## Status: ✅ Version 1.6 - Med Match Play / Hulspil Feature
 
 **Live App (Firebase):** [https://dgu-scorekort.web.app](https://dgu-scorekort.web.app)  
 **Live App (GitHub):** [https://dansk-golf-union.github.io/dgu-scorekort/](https://dansk-golf-union.github.io/dgu-scorekort/)
@@ -15,13 +15,30 @@ DGU Scorekort er en moderne web-applikation bygget med Flutter, der gør det mul
 - Indtaste scores på to måder (Plus/Minus eller Hurtig keypad)
 - Se detaljeret scorekort med Stableford points
 - Beregne handicap resultat (score differential)
-- **Send scorekort til markør via push notification** (nyt i v1.5!)
+- **Match Play / Hulspil mod modstander** (nyt i v1.6!)
+- **Send scorekort til markør via push notification** (v1.5)
 - **Remote markør godkendelse via URL** (v1.3)
-- **Automatisk WHS API submission** ved godkendelse (nyt i v1.5!)
+- **Automatisk WHS API submission** ved godkendelse (v1.5)
 - Gemme scorekort i Firebase Firestore
-- **Firestore caching af klubber og baner** (v1.4)
+- **Automatisk cache opdatering hver nat kl. 02:00** (v1.4)
 
-## ✨ Nye Features i v1.5
+## ✨ Nye Features i v1.6
+
+### ⚔️ Match Play / Hulspil
+- ✅ **Match Play Mode**: Spil hulspil (match play) mod en modstander
+- ✅ **Opponent Lookup**: Hent modstanders info via DGU-nummer
+- ✅ **Handicap Calculation**: Beregn spillehandicap for begge spillere
+- ✅ **Stroke Distribution**: Se hvor modstanderen får ekstra slag
+- ✅ **Match Play Stroke Allocation**: Kun forskellen fordeles (handicap-nøgle 1-N)
+- ✅ **Multiple Strokes Per Hole**: Support for >18 slag forskel (2+ slag på samme hul)
+- ✅ **Live Match Scoring**: Hole-by-hole scoring med match status
+- ✅ **Match Status Tracking**: Se hvem der er "op" i realtid
+- ✅ **Early Finish Detection**: Match slutter automatisk når en spiller ikke kan nå tilbage
+- ✅ **9 & 18 Hole Support**: Fungerer på både 9 og 18 hullers baner
+- ✅ **Undo Functionality**: Fortryd sidste hul hvis fejl
+- ✅ **Match Results**: Vis resultat som "3/2", "1 hul", eller "Match delt"
+
+## ✨ Features fra v1.5
 
 ### 🔔 Push Notifications til Markør
 - ✅ **Automatisk Push Besked**: Markør får besked i DGU Mit Golf app når scorekort sendes
@@ -40,6 +57,7 @@ DGU Scorekort er en moderne web-applikation bygget med Flutter, der gør det mul
 - ✅ **Error Handling**: Detaljeret logging og fejlhåndtering
 
 ### 🔧 Cloud Functions
+- ✅ **Automated Cache Updates**: `updateCourseCache` scheduled function (kl. 02:00)
 - ✅ **Notification Proxy**: `sendNotification` Cloud Function til CORS-fri API kald
 - ✅ **Token Fetching**: Automatisk hentning af notification token fra Gist
 - ✅ **Payload Building**: Korrekt formatering til DGU notification API
@@ -48,13 +66,14 @@ DGU Scorekort er en moderne web-applikation bygget med Flutter, der gør det mul
 ## ✨ Features fra v1.4
 
 ### ⚡ Firestore Caching (Performance Boost)
-- ✅ **Cache Management Screen**: UI til cache kontrol
+- ✅ **Automated Cache Updates**: Cloud Function kører hver nat kl. 02:00 (Copenhagen tid)
+- ✅ **Incremental Updates**: Kun ændringer siden sidste kørsel opdateres (~15-20 sek)
+- ✅ **Smart Full Reseed**: Automatisk full reseed hver 30. dag eller hvis cache tom
 - ✅ **Club & Course Caching**: Gem alle DGU klubber og baner i Firestore
 - ✅ **Course Filtering**: Filtrerer inaktive og gamle course versioner før caching
 - ✅ **Split Data Structure**: `info` (lightweight) + `courses` (separate)
 - ✅ **Metadata-based Club List**: Hent 213 klubber med 1 read (instant!)
 - ✅ **API Fallback**: Automatisk fallback til API hvis cache tom/ugyldig
-- ✅ **Manual Seeding**: Seed cache fra UI (~2 min for alle klubber)
 - ✅ **Performance**: Reduktion fra 2-3s til <0.2s for klub-valg
 - ✅ **Data Optimization**: 
   - Før: ~42MB data, 213 Firestore reads
@@ -96,13 +115,25 @@ DGU Scorekort er en moderne web-applikation bygget med Flutter, der gør det mul
 - ✅ Logout funktionalitet
 
 ### 🏌️ Setup & Handicap
-- ✅ Vælg mellem alle 190+ danske golfklubber
+- ✅ Vælg mellem alle 213 danske golfklubber
 - ✅ Filtrer og vælg aktive baner
 - ✅ Vælg tee (filtreret efter køn) med Course Rating og Slope
 - ✅ Beregning af spillehandicap (dansk WHS formel)
 - ✅ Understøtter både 9 og 18 hullers baner
 - ✅ WHS-korrekt afrunding for 9-hullers handicap
 - ✅ Moderne dropdown design med card styling
+
+### ⚔️ Match Play / Hulspil
+- ✅ **Opponent Selection**: Indtast modstanders DGU-nummer
+- ✅ **Player Info Display**: Vis begge spilleres handicap og spillehandicap
+- ✅ **Stroke Distribution View**: Visualiser hvor modstanderen får slag
+- ✅ **Match Play Allocation**: Kun forskellen fordeles (index 1-N)
+- ✅ **Multi-stroke Support**: Håndter >18 slag forskel (2+ slag per hul)
+- ✅ **Live Scoring**: Hole-by-hole med "Spiller 1" / "Delt" / "Spiller 2" knapper
+- ✅ **Match Status**: Real-time opdatering ("3 op", "Match lige", etc.)
+- ✅ **Early Finish**: Automatisk når match ikke kan nås
+- ✅ **Undo**: Fortryd sidste hul
+- ✅ **Results Screen**: Vis endelig resultat (3/2, 1 hul, delt)
 
 ### ⛳ Scorekort Input
 - ✅ To input metoder:
@@ -167,9 +198,9 @@ DGU Scorekort er en moderne web-applikation bygget med Flutter, der gør det mul
 - **Signature 5.5.0** - Digital signature pad
 
 ### Arkitektur
-- **State Management**: Provider pattern (AuthProvider, MatchSetupProvider, ScorecardProvider)
-- **Backend**: Firebase (Firestore Database + Hosting)
-- **Routing**: go_router med deep linking til marker approval
+- **State Management**: Provider pattern (AuthProvider, MatchSetupProvider, ScorecardProvider, MatchPlayProvider)
+- **Backend**: Firebase (Firestore Database + Hosting + Cloud Functions)
+- **Routing**: go_router med deep linking til marker approval og match play
 - **Design System**: Material 3 med DGU farver og custom theming
 - **API**: DGU Basen REST API med Basic Auth (public) og Bearer tokens (OAuth)
 - **CORS**: Handled via corsproxy.io for production
@@ -192,7 +223,8 @@ lib/
 ├── providers/
 │   ├── auth_provider.dart             # Authentication state (OAuth & Simple)
 │   ├── match_setup_provider.dart      # Club/Course/Tee selection state
-│   └── scorecard_provider.dart        # Scorecard state & score input
+│   ├── scorecard_provider.dart        # Scorecard state & score input
+│   └── match_play_provider.dart       # Match play state & scoring (v1.6)
 ├── services/
 │   ├── auth_service.dart              # OAuth 2.0 PKCE service
 │   ├── dgu_service.dart               # DGU Basen API client (public endpoints)
@@ -211,9 +243,11 @@ lib/
     ├── simple_login_screen.dart       # Union ID login (aktiv)
     ├── scorecard_screen.dart          # Plus/Minus scorecard
     ├── scorecard_keypad_screen.dart   # Hurtig keypad scorecard
+    ├── scorecard_bulk_screen.dart     # Bulk score input (Indberet)
     ├── marker_assignment_dialog.dart  # Remote marker selection
     ├── marker_approval_from_url_screen.dart # Remote approval screen (v1.3)
     ├── scorecard_results_screen.dart  # Resultat & submission med notification (v1.5)
+    ├── match_play_screen.dart         # Match play / Hulspil (v1.6)
     └── cache_management_screen.dart   # Cache control & seeding (v1.4)
 ```
 
@@ -227,6 +261,19 @@ lib/
 ### Cloud Functions
 **Region**: `europe-west1` (Frankfurt)
 
+#### `updateCourseCache` ⏰
+- **Type**: Scheduled function (PubSub trigger)
+- **Schedule**: Hver nat kl. 02:00 (Copenhagen tid)
+- **Purpose**: Automatisk opdatering af klub/bane cache
+- **Memory**: 1GB
+- **Timeout**: 9 minutter
+- **Features**:
+  - Incremental updates (kun ændringer siden sidste kørsel)
+  - Automatic full reseed hver 30. dag
+  - Smart filtering af inaktive/gamle baner
+  - ~15-20 sekunder for typisk daglig kørsel
+  - Detaljeret logging af opdateringer
+
 #### `sendNotification`
 - **Type**: Callable HTTPS function
 - **Purpose**: Proxy for DGU notification API (CORS bypass)
@@ -238,6 +285,16 @@ lib/
   - Formats payload for DGU notification API
   - Sends to `https://sendsinglenotification-d3higuw2ca-ey.a.run.app`
   - Returns detailed error info for debugging
+
+#### `forceFullReseed`
+- **Type**: Callable HTTPS function
+- **Purpose**: Force en full cache reseed ved næste scheduled run
+- **Usage**: Kald functionen for at nulstille `lastSeeded` metadata
+
+#### `golfboxCallback`
+- **Type**: HTTP request function
+- **Purpose**: OAuth callback dispatcher for GolfBox PKCE flow
+- **Security**: Allowlist-based redirect validation
 
 ### Firestore Collection: `scorecards`
 
@@ -354,7 +411,8 @@ service cloud.firestore {
 1. **App starts** → Load clubs from metadata (1 read, instant!)
 2. **User selects club** → Load courses for that club (1 read, ~0.2s)
 3. **Cache invalid/empty** → Automatic fallback to API
-4. **Manual seeding** → Cache Management screen (~2 min for all data)
+4. **Nightly update** → Cloud Function kører automatisk kl. 02:00 (~15-20 sek)
+5. **Manual seeding** → Cache Management screen hvis nødvendigt (~2 min for alle data)
 
 **Data Optimization:**
 - **Course Filtering** before caching:
@@ -365,9 +423,10 @@ service cloud.firestore {
 - **Size per club**: 150-250KB (after filtering, before: 300KB-1MB+)
 
 **Cache Validity:**
-- Valid for 24 hours
-- Checked on each app load
-- Falls back to API if stale
+- Opdateres automatisk hver nat kl. 02:00
+- Incremental updates (kun ændringer)
+- Full reseed hver 30. dag automatisk
+- Falls back to API if cache empty or stale
 
 ### Firebase Hosting Config (`firebase.json`)
 ```json
@@ -566,10 +625,21 @@ Eksempel: 14.5 / 2 = 7.25 → 7.3 → bruges i beregning
 
 ### Stroke Allocation
 
+**Slagspil (Stroke Play):**
 Strokes fordeles baseret på hole index og playing handicap:
 ```
 - Holes modtager 1 stroke hvis: hole.index <= playingHcp % 18
 - Holes modtager ekstra stroke hvis: hole.index <= playingHcp / 18
+```
+
+**Match Play (Hulspil):**
+Kun forskellen mellem spillernes handicaps fordeles:
+```
+1. Beregn spillehandicap for begge spillere
+2. Find forskel: diff = abs(player1Hcp - player2Hcp)
+3. Fordel kun diff slag på handicap-nøglerne 1 til diff
+4. Hvis diff > antal huller: Nogle huller får 2+ slag
+   - Eksempel 20 på 18 huller: Alle får 1 slag + index 1-2 får ekstra 1 slag
 ```
 
 ## 🎨 Design System
@@ -668,13 +738,30 @@ firebase deploy --only functions:sendNotification
 firebase functions:log --only sendNotification
 ```
 
-**⚠️ Efter deploy: Seed production cache**
+**ℹ️ Cache opdateres automatisk:**
+- Cloud Function `updateCourseCache` kører hver nat kl. 02:00
+- Incremental updates (~15-20 sek)
+- Første gang (eller efter 30 dage): Full reseed (~2 min)
+- Manuel seeding kun nødvendig hvis cache er helt tom efter deployment
+
+**Manuel seeding (hvis nødvendigt):**
 1. Åbn https://dgu-scorekort.web.app
 2. Log ind med DGU nummer
 3. Klik på ⚙️ ikon (Storage) i top højre hjørne
 4. Klik "Seed Cache" (~2 minutter)
 5. Verificer i Firebase Console at data er gemt
 6. Test klub-valg - skal være instant!
+
+**Check at automatisk opdatering virker:**
+```bash
+# Se om functionen er deployed
+firebase functions:list
+
+# Check seneste kørsels-logs
+firebase functions:log --only updateCourseCache
+
+# Verificer lastUpdated i Firestore metadata
+```
 
 #### Deploy til GitHub Pages
 ```bash
@@ -733,6 +820,12 @@ git push
 - [x] **Automatisk WHS API submission** *(nyt v1.5)*
 - [x] **Test whitelist for WHS submission** *(nyt v1.5)*
 - [x] **Notification status feedback i UI** *(nyt v1.5)*
+- [x] **Match Play / Hulspil feature** *(nyt v1.6)*
+- [x] **Opponent lookup via DGU-nummer** *(nyt v1.6)*
+- [x] **Match play stroke distribution** *(nyt v1.6)*
+- [x] **Live match scoring** *(nyt v1.6)*
+- [x] **Automated cache updates (kl. 02:00)** *(nyt v1.6)*
+- [x] **Incremental cache updates** *(nyt v1.6)*
 
 ### 🔄 In Progress
 - [ ] OAuth redirect URI configuration (venter på setup)
@@ -741,7 +834,7 @@ git push
 ### 📅 Future Enhancements
 
 #### Cache & Performance
-- [ ] Cloud Function for automated cache updates (daglig kl. 02:00)
+- [x] Cloud Function for automated cache updates (daglig kl. 02:00) *(implementeret v1.6)*
 - [ ] Cache analytics og monitoring
 - [ ] Cache version migration strategy
 
@@ -754,6 +847,8 @@ git push
 - [ ] Export til PDF/print
 
 #### Features
+- [x] Match Play / Hulspil *(implementeret v1.6)*
+- [ ] Match history (gemme afsluttede matches)
 - [ ] Multiple spillere (flightmode)
 - [ ] Statistik over tid (gennemsnit, trends)
 - [ ] Dark mode
@@ -791,6 +886,16 @@ Bruger **Provider** pattern med tre hovedproviders:
 - Marker approval tracking
 - Scorecard submission (ready for API)
 - Round completion
+
+**MatchPlayProvider:** *(nyt v1.6)*
+- Håndterer match play state
+- Opponent lookup og info
+- Match setup (club/course/tee selection)
+- Handicap calculation for both players
+- Stroke distribution (match play rules)
+- Live match scoring
+- Match status tracking
+- Early finish detection
 
 ### Data Models
 
@@ -855,8 +960,9 @@ Bruger **Provider** pattern med tre hovedproviders:
 - **No Scorecard History**: Ingen UI til at se tidligere runder
 
 ### Future Considerations
-- **Automated Cache Updates**: Cloud Function til daglig cache opdatering (kl. 02:00)
 - **Cache Analytics**: Track cache hit rate og performance metrics
+- **Match History**: Gem og vis tidligere match play runder
+- **Match Statistics**: Win/loss record, typiske modstandere
 - **Expand Whitelist**: Tilføj flere test-brugere til WHS submission
 - **Player Notifications**: Push notification tilbage til spiller ved markør godkendelse
 - **Scorecard History**: UI til at se alle egne scorekort + status
@@ -874,16 +980,34 @@ Bruger **Provider** pattern med tre hovedproviders:
 ## 🧪 Testing
 
 ### Manual Testing Checklist
+
+**Scorekort (Stroke Play):**
 - [ ] Log ind med DGU nummer
 - [ ] Vælg klub → Skal vise baner
 - [ ] Vælg bane → Skal vise tees (filtreret efter køn)
 - [ ] Vælg tee → Skal beregne spillehandicap
-- [ ] Start runde (Plus/Minus) → Indtast scores → Se resultat
-- [ ] Start runde (Hurtig) → Indtast scores → Se resultat
+- [ ] Start runde (Indberet) → Indtast scores → Se resultat
+- [ ] Start runde (Hul-for-hul) → Indtast scores → Se resultat
 - [ ] Test 9-hullers bane → Verificer handicap beregning
 - [ ] Test 18-hullers bane → Verificer Ud/Ind/Total
 - [ ] Verificer score markers (circles/boxes)
 - [ ] Verificer handicap resultat beregning
+
+**Match Play / Hulspil:**
+- [ ] Klik hulspil-ikon (to personer) i venstre hjørne
+- [ ] Indtast modstanders DGU-nummer → Hent info
+- [ ] Vælg klub/bane/tee
+- [ ] Verificer spillehandicap for begge spillere vises
+- [ ] Verificer forskel beregnes korrekt
+- [ ] Klik "Se Slag Fordeling"
+- [ ] Verificer strokes på korrekte huller (index 1-diff)
+- [ ] Test >18 slag forskel → Verificer 2+ slag på samme hul
+- [ ] Start match → Score hul-for-hul
+- [ ] Verificer match status opdateres korrekt
+- [ ] Test early finish (3 op med 2 tilbage = 3/2)
+- [ ] Test undo funktionalitet
+- [ ] Test match til sidste hul
+- [ ] Test delt match
 - [ ] **Test Remote Marker**: "Send til Markør" → indtast DGU nummer → gem
 - [ ] **Test Push Notification**: Verificer grøn feedback "Push besked sendt til markør"
 - [ ] **Test Notification Receipt**: Check Mit Golf app for notification
@@ -893,10 +1017,10 @@ Bruger **Provider** pattern med tre hovedproviders:
 - [ ] **Test Marker Rejection**: Afvis med begrundelse → klik "Luk Scorekort"
 - [ ] **Test Firestore**: Verificer data gemmes korrekt i Firebase Console
 - [ ] **Test Cloud Functions**: Check Cloud Function logs for notification + WHS submission
-- [ ] **Test Cache Management**: Åbn Cache Management screen
-- [ ] **Test Cache Seeding**: Seed cache (~2 min) → verificer i Firebase Console
-- [ ] **Test Cache Loading**: Verificer klub-liste loader instant efter seed
+- [ ] **Test Automated Cache**: Verificer `updateCourseCache` kørselslog
+- [ ] **Test Cache Loading**: Verificer klub-liste loader instant
 - [ ] **Test Cache Fallback**: Ryd cache → verificer API fallback virker
+- [ ] **Check lastUpdated**: Verificer i Firestore metadata (skal være fra nat kl. 02:00)
 
 ### Automated Tests (Future)
 ```bash
