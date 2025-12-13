@@ -275,3 +275,4 @@ Ved fund af bugs, noter:
 ✅ Early finish detection virker
 ✅ UI er responsivt og brugervenligt
 
+

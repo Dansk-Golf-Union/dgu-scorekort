@@ -205,3 +205,4 @@ Din app er nu live på **https://dgu-scorekort.web.app**
 Marker approval links virker perfekt, og du kan sende dem til hvem som helst! 🚀
 
 
+
