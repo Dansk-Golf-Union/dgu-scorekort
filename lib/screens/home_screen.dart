@@ -36,25 +36,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       appBar: AppBar(
         leading: Builder(
           builder: (context) => IconButton(
-            icon: const Icon(Icons.menu),
+            icon: const Icon(Icons.menu, color: Colors.white),
             tooltip: 'Menu',
             onPressed: () {
               Scaffold.of(context).openDrawer();
             },
           ),
         ),
-        title: const Text('DGU Scorekort'),
+        title: Text(
+          'Hej, ${authProvider.currentPlayer?.name.split(' ').first ?? 'Golfer'}',
+          style: const TextStyle(color: Colors.white),
+        ),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings),
+            icon: const Icon(Icons.settings, color: Colors.white),
             tooltip: 'Indstillinger',
             onPressed: () {
               // TODO: Navigate to settings
             },
           ),
           IconButton(
-            icon: const Icon(Icons.notifications_outlined),
+            icon: const Icon(Icons.notifications_outlined, color: Colors.white),
             tooltip: 'Notifikationer',
             onPressed: () {
               // TODO: Show notifications
@@ -63,6 +66,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ],
         bottom: TabBar(
           controller: _tabController,
+          indicatorColor: Colors.white,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
           tabs: const [
             Tab(icon: Icon(Icons.home), text: 'Hjem'),
             Tab(icon: Icon(Icons.people), text: 'Venner'),
