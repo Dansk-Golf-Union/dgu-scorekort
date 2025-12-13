@@ -15,6 +15,7 @@ import 'screens/login_screen.dart';
 import 'screens/simple_login_screen.dart';
 import 'screens/marker_approval_from_url_screen.dart';
 import 'screens/match_play_screen.dart';
+import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
 
 // TODO: Switch to OAuth when redirect URI is ready
@@ -64,9 +65,10 @@ class _AppRouter extends StatelessWidget {
       refreshListenable: authProvider, // Listen to auth changes!
       redirect: (context, state) {
         final isMarkerApproval = state.matchedLocation.startsWith('/marker-approval');
+        final isMatchPlay = state.matchedLocation.startsWith('/match-play');
         
-        // Allow marker approval pages without auth
-        if (isMarkerApproval) {
+        // Allow marker approval and match play pages without auth
+        if (isMarkerApproval || isMatchPlay) {
           return null;
         }
         
@@ -90,6 +92,10 @@ class _AppRouter extends StatelessWidget {
       routes: [
         GoRoute(
           path: '/',
+          builder: (context, state) => const HomeScreen(),
+        ),
+        GoRoute(
+          path: '/setup-round',
           builder: (context, state) => const SetupRoundScreen(),
         ),
         GoRoute(
