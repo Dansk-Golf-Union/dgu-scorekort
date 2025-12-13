@@ -4,8 +4,8 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 
-/// Home Screen med tab navigation for v2.0 Extended POC
-/// 4 tabs: Hjem, Venner, Feed, Tops
+/// Home Screen med bottom navigation for v2.0 Extended POC
+/// Bottom navigation: Hjem, Venner, Feed, Tops, Menu
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -13,76 +13,55 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 4, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+class _HomeScreenState extends State<HomeScreen> {
+  int _selectedIndex = 0;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
 
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu, color: Colors.white),
-            tooltip: 'Menu',
-            onPressed: () {
-              Scaffold.of(context).openDrawer();
-            },
-          ),
-        ),
-        title: Text(
-          'Hej, ${authProvider.currentPlayer?.name.split(' ').first ?? 'Golfer'}',
-          style: const TextStyle(color: Colors.white),
-        ),
+        backgroundColor: Colors.white,
+        elevation: 2,
         centerTitle: true,
+        title: Image.asset(
+          'assets/images/dgu_logo.png',
+          height: 32,
+          fit: BoxFit.contain,
+        ),
+        iconTheme: const IconThemeData(color: AppTheme.dguGreen),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white),
+            icon: const Icon(Icons.settings_outlined, color: AppTheme.dguGreen),
             tooltip: 'Indstillinger',
             onPressed: () {
               // TODO: Navigate to settings
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Indstillinger coming soon!')),
+              );
             },
           ),
           IconButton(
-            icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+            icon: const Icon(Icons.notifications_outlined, color: AppTheme.dguGreen),
             tooltip: 'Notifikationer',
             onPressed: () {
               // TODO: Show notifications
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Notifikationer coming soon!')),
+              );
             },
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: const [
-            Tab(icon: Icon(Icons.home), text: 'Hjem'),
-            Tab(icon: Icon(Icons.people), text: 'Venner'),
-            Tab(icon: Icon(Icons.feed), text: 'Feed'),
-            Tab(icon: Icon(Icons.emoji_events), text: 'Tops'),
-          ],
-        ),
       ),
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
             DrawerHeader(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppTheme.dguGreen,
               ),
               child: Column(
@@ -149,13 +128,49 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: IndexedStack(
+        index: _selectedIndex == 4 ? 0 : _selectedIndex, // If Menu tapped, show Hjem
         children: const [
           _HjemTab(),
           _VennerTab(),
           _FeedTab(),
           _TopsTab(),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex == 4 ? 0 : _selectedIndex, // Don't highlight Menu
+        onTap: (index) {
+          if (index == 4) {
+            // Menu tapped - open drawer without changing selected index
+            _scaffoldKey.currentState?.openDrawer();
+          } else {
+            setState(() => _selectedIndex = index);
+          }
+        },
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: AppTheme.dguGreen,
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Hjem',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.people),
+            label: 'Venner',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.feed),
+            label: 'Feed',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.emoji_events),
+            label: 'Tops',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.menu),
+            label: 'Menu',
+          ),
         ],
       ),
     );
@@ -178,17 +193,104 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 }
 
-/// Hjem Tab - Dashboard med quick actions og previews
+/// Hjem Tab - Dashboard med player card, quick actions og previews
 class _HjemTab extends StatelessWidget {
   const _HjemTab();
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+    final player = authProvider.currentPlayer;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Player Info Card (Mit Golf style)
+          if (player != null) ...[
+            Card(
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    const Icon(Icons.account_circle, size: 48, color: AppTheme.dguGreen),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            player.name,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              const Icon(Icons.home, size: 16, color: Colors.grey),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  player.homeClubName ?? 'Ingen klub',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '# ${player.lifetimeId ?? player.memberNo}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.dguGreen,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        children: [
+                          const Text(
+                            'HCP',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            player.hcp.toStringAsFixed(1),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+
           // Quick Actions
           const Text(
             '🏌️ Quick Actions',
@@ -498,4 +600,3 @@ class _TopsTab extends StatelessWidget {
     );
   }
 }
-
