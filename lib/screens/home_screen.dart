@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
+import '../models/score_record_model.dart';
+import '../services/whs_statistik_service.dart';
 
 /// Home Screen med bottom navigation for v2.0 Extended POC
 /// Bottom navigation: Hjem, Venner, Feed, Tops, Menu
@@ -507,44 +509,142 @@ class _AktivitetPreviewCard extends StatelessWidget {
   }
 }
 
-/// Scores Preview Card (Placeholder - vil blive erstattet med WHS API data)
-class _ScoresPreviewCard extends StatelessWidget {
+/// Scores Preview Card - Shows last 3 scores from WHS API
+class _ScoresPreviewCard extends StatefulWidget {
   const _ScoresPreviewCard();
+
+  @override
+  State<_ScoresPreviewCard> createState() => _ScoresPreviewCardState();
+}
+
+class _ScoresPreviewCardState extends State<_ScoresPreviewCard> {
+  final _whsService = WhsStatistikService();
+  Future<List<ScoreRecord>>? _scoresFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadScores();
+  }
+
+  void _loadScores() {
+    final authProvider = context.read<AuthProvider>();
+    final player = authProvider.currentPlayer;
+
+    if (player != null && player.unionId != null) {
+      setState(() {
+        _scoresFuture = _whsService.getPlayerScores(
+          unionId: player.unionId!,
+          limit: 3,
+        );
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            const ListTile(
-              leading: Icon(Icons.golf_course, color: AppTheme.dguGreen),
-              title: Text('Nordvestjysk GC'),
-              subtitle: Text('42 points • 10. Dec 2024'),
-              trailing: Icon(Icons.check_circle, color: Colors.green),
-            ),
-            const Divider(),
-            const ListTile(
-              leading: Icon(Icons.golf_course, color: AppTheme.dguGreen),
-              title: Text('Aarhus GC'),
-              subtitle: Text('39 points • 5. Dec 2024'),
-              trailing: Icon(Icons.check_circle, color: Colors.green),
-            ),
-            const Divider(),
-            const ListTile(
-              leading: Icon(Icons.golf_course, color: AppTheme.dguGreen),
-              title: Text('Outrup Golfklub'),
-              subtitle: Text('38 points • 1. Dec 2024'),
-              trailing: Icon(Icons.check_circle, color: Colors.green),
-            ),
-            TextButton(
-              onPressed: () {
-                // TODO: Navigate to score arkiv
-              },
-              child: const Text('Se arkiv →'),
-            ),
-          ],
+        child: FutureBuilder<List<ScoreRecord>>(
+          future: _scoresFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: CircularProgressIndicator(
+                    color: AppTheme.dguGreen,
+                  ),
+                ),
+              );
+            }
+
+            if (snapshot.hasError) {
+              return Column(
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Kunne ikke hente scores',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    snapshot.error.toString().replaceAll('Exception: ', ''),
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton.icon(
+                    onPressed: _loadScores,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Prøv igen'),
+                  ),
+                ],
+              );
+            }
+
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return Column(
+                children: [
+                  const Icon(Icons.golf_course, size: 48, color: Colors.grey),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Ingen runder endnu',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Dine godkendte runder vil dukke op her',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              );
+            }
+
+            final scores = snapshot.data!;
+            return Column(
+              children: [
+                ...scores.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final score = entry.value;
+                  return Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(
+                          Icons.golf_course,
+                          color: AppTheme.dguGreen,
+                        ),
+                        title: Text(
+                          score.courseName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Text(
+                          '${score.totalPoints} points • ${score.formattedDate}',
+                        ),
+                        trailing: Icon(
+                          score.isQualifying
+                              ? Icons.check_circle
+                              : Icons.cancel,
+                          color: score.isQualifying ? Colors.green : Colors.orange,
+                        ),
+                      ),
+                      if (index < scores.length - 1) const Divider(),
+                    ],
+                  );
+                }),
+                TextButton(
+                  onPressed: () {
+                    context.push('/score-archive');
+                  },
+                  child: const Text('Se arkiv →'),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

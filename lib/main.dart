@@ -16,6 +16,7 @@ import 'screens/simple_login_screen.dart';
 import 'screens/marker_approval_from_url_screen.dart';
 import 'screens/match_play_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/score_archive_screen.dart';
 import 'theme/app_theme.dart';
 
 // TODO: Switch to OAuth when redirect URI is ready
@@ -114,6 +115,10 @@ class _AppRouter extends StatelessWidget {
             final documentId = state.pathParameters['documentId']!;
             return MarkerApprovalFromUrlScreen(documentId: documentId);
           },
+        ),
+        GoRoute(
+          path: '/score-archive',
+          builder: (context, state) => const ScoreArchiveScreen(),
         ),
       ],
     );
