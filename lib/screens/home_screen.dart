@@ -114,6 +114,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
             ),
             ListTile(
+              leading: const Icon(Icons.people, color: AppTheme.dguGreen),
+              title: const Text('Match Play / Hulspil'),
+              onTap: () {
+                Navigator.pop(context);
+                context.go('/match-play');
+              },
+            ),
+            const Divider(),
+            ListTile(
               leading: const Icon(Icons.settings),
               title: const Text('Indstillinger'),
               onTap: () {
@@ -195,31 +204,19 @@ class _HjemTab extends StatelessWidget {
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _QuickActionCard(
-                  icon: Icons.golf_course,
-                  title: 'Start Ny\nRunde',
-                  color: AppTheme.dguGreen,
-                  onTap: () {
-                    // Navigate to scorecard setup screen
-                    context.push('/setup-round');
-                  },
-                ),
+          Center(
+            child: SizedBox(
+              width: double.infinity,
+              child: _QuickActionCard(
+                icon: Icons.golf_course,
+                title: 'Start Ny Runde',
+                color: AppTheme.dguGreen,
+                onTap: () {
+                  // Navigate to scorecard setup screen
+                  context.push('/setup-round');
+                },
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _QuickActionCard(
-                  icon: Icons.people,
-                  title: 'Match Play',
-                  color: AppTheme.dguGreen.withOpacity(0.8),
-                  onTap: () {
-                    context.go('/match-play');
-                  },
-                ),
-              ),
-            ],
+            ),
           ),
           const SizedBox(height: 24),
 

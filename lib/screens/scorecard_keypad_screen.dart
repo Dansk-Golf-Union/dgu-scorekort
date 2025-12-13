@@ -59,8 +59,38 @@ class _ScorecardKeypadScreenState extends State<ScorecardKeypadScreen> {
         return Scaffold(
           backgroundColor: const Color(0xFFF5F5F5),
           appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              tooltip: 'Tilbage',
+              onPressed: () async {
+                final shouldPop = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Afbryd scorekort?'),
+                    content: const Text('Dine indtastede scores vil gå tabt.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Annuller'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.red,
+                        ),
+                        child: const Text('Ja, afbryd'),
+                      ),
+                    ],
+                  ),
+                );
+                if (shouldPop == true && context.mounted) {
+                  Navigator.pop(context);
+                }
+              },
+            ),
             title: Text(
               'Hul ${provider.currentHoleIndex + 1}/${scorecard.holeScores.length}',
+              style: const TextStyle(color: Colors.white),
             ),
             actions: [
               Padding(

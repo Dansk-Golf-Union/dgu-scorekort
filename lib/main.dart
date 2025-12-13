@@ -161,17 +161,47 @@ class _SetupRoundScreenState extends State<SetupRoundScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.people),
-          tooltip: 'Match Play / Hulspil',
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          tooltip: 'Tilbage',
           onPressed: () {
-            context.push('/match-play');
+            // Show confirmation dialog before going back
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Tilbage til forsiden?'),
+                content: const Text('Dine valg vil gå tabt.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Annuller'),
+                  ),
+                  FilledButton(
+                    onPressed: () {
+                      Navigator.pop(context); // Close dialog
+                      context.go('/'); // Go back to home
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppTheme.dguGreen,
+                    ),
+                    child: const Text('Ja, gå tilbage'),
+                  ),
+                ],
+              ),
+            );
           },
         ),
-        title: const Text('DGU Scorekort'),
+        title: const Text('DGU Scorekort', style: TextStyle(color: Colors.white)),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.people, color: Colors.white),
+            tooltip: 'Match Play / Hulspil',
+            onPressed: () {
+              context.push('/match-play');
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
             tooltip: 'Log ud',
             onPressed: () async {
               await authProvider.logout();

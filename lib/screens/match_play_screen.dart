@@ -43,7 +43,12 @@ class _MatchPlayScreenState extends State<MatchPlayScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Match Play / Hulspil'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          tooltip: 'Tilbage',
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text('Match Play / Hulspil', style: TextStyle(color: Colors.white)),
         centerTitle: true,
       ),
       body: Consumer<MatchPlayProvider>(
