@@ -861,10 +861,11 @@ exports.getWhsScores = functions
       const limitedScores = apiResponse.slice(0, limit);
       console.log(`  📦 Returning ${limitedScores.length} scores (limit: ${limit})`);
       
+      // Explicitly convert to web-safe types (avoid Int64 for dart2js)
       return {
         success: true,
         scores: limitedScores,
-        count: limitedScores.length
+        count: Number(limitedScores.length) // Explicit Number() for dart2js compatibility
       };
       
     } catch (error) {

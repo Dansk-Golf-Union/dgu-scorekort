@@ -61,11 +61,17 @@ class ScoreRecord {
     final hcpInt = int.tryParse(hcpStr) ?? 0;
     final handicap = hcpInt / 10000.0;
     
-    // Parse result
-    final result = json['Result'] as Map<String, dynamic>? ?? {};
+    // Parse result (web-safe: handle Map<Object?, Object?> from dart2js)
+    final resultRaw = json['Result'];
+    final result = resultRaw is Map<String, dynamic> 
+        ? resultRaw 
+        : (resultRaw != null ? Map<String, dynamic>.from(resultRaw as Map) : <String, dynamic>{});
+    
     final isQualifying = result['IsQualifying'] as bool? ?? false;
-    final totalPoints = result['TotalPoints'] as int? ?? 0;
-    final totalStrokes = result['TotalStrokes'] as int? ?? 0;
+    
+    // Web-safe int parsing (dart2js might send as double)
+    final totalPoints = _safeParseInt(result['TotalPoints']);
+    final totalStrokes = _safeParseInt(result['TotalStrokes']);
     
     // Parse score differential (format: "246000" = 24.6)
     final sgdStr = result['SGD'] as String?;
@@ -77,16 +83,24 @@ class ScoreRecord {
       }
     }
     
-    // Parse round info
-    final round = json['Round'] as Map<String, dynamic>? ?? {};
+    // Parse round info (web-safe)
+    final roundRaw = json['Round'];
+    final round = roundRaw is Map<String, dynamic> 
+        ? roundRaw 
+        : (roundRaw != null ? Map<String, dynamic>.from(roundRaw as Map) : <String, dynamic>{});
+    
     final startTimeStr = round['StartTime'] as String? ?? '';
     final roundDate = _parseApiDate(startTimeStr);
-    final holesPlayed = round['HolesPlayed'] as int? ?? 18;
+    final holesPlayed = _safeParseInt(round['HolesPlayed']) ?? 18;
     
-    // Parse course info
-    final course = json['Course'] as Map<String, dynamic>? ?? {};
+    // Parse course info (web-safe)
+    final courseRaw = json['Course'];
+    final course = courseRaw is Map<String, dynamic> 
+        ? courseRaw 
+        : (courseRaw != null ? Map<String, dynamic>.from(courseRaw as Map) : <String, dynamic>{});
+    
     final courseName = course['Name'] as String? ?? 'Ukendt bane';
-    final teePar = course['TeePar'] as int?;
+    final teePar = _safeParseInt(course['TeePar']);
     
     // Parse tee rating (format: "725000" = 72.5)
     final teeRatingStr = course['TeeRating'];
@@ -102,12 +116,12 @@ class ScoreRecord {
       }
     }
     
-    final teeSlope = course['TeeSlope'] as int?;
+    final teeSlope = _safeParseInt(course['TeeSlope']);
     
     return ScoreRecord(
       courseName: courseName,
-      totalPoints: totalPoints,
-      totalStrokes: totalStrokes,
+      totalPoints: totalPoints ?? 0,
+      totalStrokes: totalStrokes ?? 0,
       isQualifying: isQualifying,
       roundDate: roundDate,
       holesPlayed: holesPlayed,
@@ -117,6 +131,18 @@ class ScoreRecord {
       teeRating: teeRating,
       teeSlope: teeSlope,
     );
+  }
+  
+  /// Web-safe int parser (handles dart2js type variations)
+  /// 
+  /// dart2js might send integers as doubles or other numeric types.
+  /// This ensures we get an int or null.
+  static int? _safeParseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
   }
   
   /// Parse API date format ("20240724T110000") to DateTime

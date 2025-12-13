@@ -44,13 +44,19 @@ class WhsStatistikService {
         'dateTo': toStr,
       });
       
-      // Parse response
-      final data = result.data as Map<String, dynamic>;
-      final scoresJson = data['scores'] as List<dynamic>;
+      // Parse response with explicit type handling for web (dart2js)
+      final data = result.data;
+      
+      // Handle both Map<String, dynamic> and Map<Object?, Object?> (web platform variation)
+      final Map<String, dynamic> responseMap = data is Map<String, dynamic> 
+          ? data 
+          : Map<String, dynamic>.from(data as Map);
+      
+      final scoresJson = responseMap['scores'] as List<dynamic>;
       
       // Convert to ScoreRecord objects
       final scores = scoresJson
-          .map((json) => ScoreRecord.fromJson(json as Map<String, dynamic>))
+          .map((json) => ScoreRecord.fromJson(Map<String, dynamic>.from(json as Map)))
           .toList();
       
       return scores;
