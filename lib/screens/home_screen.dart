@@ -23,11 +23,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       key: _scaffoldKey,
+      backgroundColor: const Color(0xFFF5F5F5), // Light grey background
       appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 2,
+        surfaceTintColor: Colors.white,
+        elevation: 0,
         centerTitle: true,
-        automaticallyImplyLeading: false, // Remove hamburger menu
+        automaticallyImplyLeading: false,
         title: Image.asset(
           'assets/images/dgu_logo.png',
           height: 40,
@@ -36,22 +38,11 @@ class _HomeScreenState extends State<HomeScreen> {
         iconTheme: const IconThemeData(color: AppTheme.dguGreen),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_outlined, color: AppTheme.dguGreen),
-            tooltip: 'Indstillinger',
+            icon: const Icon(Icons.mail_outline, color: AppTheme.dguGreen),
+            tooltip: 'Beskeder',
             onPressed: () {
-              // TODO: Navigate to settings
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Indstillinger coming soon!')),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined, color: AppTheme.dguGreen),
-            tooltip: 'Notifikationer',
-            onPressed: () {
-              // TODO: Show notifications
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Notifikationer coming soon!')),
+                const SnackBar(content: Text('Beskeder coming soon!')),
               );
             },
           ),
@@ -93,12 +84,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+            const Divider(height: 1),
             ListTile(
-              leading: const Icon(Icons.settings),
+              leading: const Icon(Icons.settings, color: AppTheme.dguGreen),
               title: const Text('Indstillinger'),
               onTap: () {
                 Navigator.pop(context);
                 // TODO: Navigate to settings
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Indstillinger coming soon!')),
+                );
               },
             ),
             ListTile(
@@ -138,41 +133,63 @@ class _HomeScreenState extends State<HomeScreen> {
           _TopsTab(),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex == 4 ? 0 : _selectedIndex, // Don't highlight Menu
-        onTap: (index) {
-          if (index == 4) {
-            // Menu tapped - open drawer without changing selected index
-            _scaffoldKey.currentState?.openDrawer();
-          } else {
-            setState(() => _selectedIndex = index);
-          }
-        },
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppTheme.dguGreen,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Hjem',
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Container(
+            height: 72, // Højere navigation bar
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: BottomNavigationBar(
+              currentIndex: _selectedIndex == 4 ? 0 : _selectedIndex,
+              onTap: (index) {
+                if (index == 4) {
+                  _scaffoldKey.currentState?.openDrawer();
+                } else {
+                  setState(() => _selectedIndex = index);
+                }
+              },
+              type: BottomNavigationBarType.fixed,
+              selectedItemColor: AppTheme.dguGreen,
+              unselectedItemColor: Colors.grey,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              selectedFontSize: 12,
+              unselectedFontSize: 11,
+              iconSize: 28,
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.home),
+                  label: 'Hjem',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.people),
+                  label: 'Venner',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.feed),
+                  label: 'Feed',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.emoji_events),
+                  label: 'Tops',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.menu),
+                  label: 'Menu',
+                ),
+              ],
+            ),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people),
-            label: 'Venner',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.feed),
-            label: 'Feed',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.emoji_events),
-            label: 'Tops',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.menu),
-            label: 'Menu',
-          ),
-        ],
+        ),
       ),
     );
   }
