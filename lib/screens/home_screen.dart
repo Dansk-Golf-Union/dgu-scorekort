@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // For kIsWeb and kDebugMode
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -851,6 +852,11 @@ class _NewsPreviewCardState extends State<_NewsPreviewCard> {
                 ...news.asMap().entries.map((entry) {
                   final index = entry.key;
                   final article = entry.value;
+                  // Proxy image URLs through corsproxy.io for web production to avoid CORS
+                  final imageUrl = kIsWeb && !kDebugMode
+                      ? 'https://corsproxy.io/?${Uri.encodeComponent(article.image)}'
+                      : article.image;
+                  
                   return Column(
                     children: [
                       InkWell(
@@ -863,7 +869,7 @@ class _NewsPreviewCardState extends State<_NewsPreviewCard> {
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
                                 child: Image.network(
-                                  article.image,
+                                  imageUrl,
                                   width: 80,
                                   height: 80,
                                   fit: BoxFit.cover,
