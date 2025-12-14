@@ -5,7 +5,7 @@ import '../models/score_record_model.dart';
 /// Service for fetching WHS scores from DGU Basen Statistik API
 /// 
 /// Uses same pattern as DguService:
-/// - Token from GitHub Gist (SAME token as DGU Basen!)
+/// - DIFFERENT token from GitHub Gist (Statistik token, not DGU Basen!)
 /// - CORS proxy (corsproxy.io)
 /// - Direct HTTP calls
 /// 
@@ -14,16 +14,19 @@ class WhsStatistikService {
   static const String baseUrl =
       'https://corsproxy.io/?https://dgubasen.api.union.golfbox.io';
   
-  // Token fetched from GitHub Gist (SAME as DGU Basen API)
+  // STATISTIK token from GitHub Gist (DIFFERENT from DGU Basen token!)
   static const String _tokenUrl =
-      'https://gist.githubusercontent.com/nhuttel/a907dd7d60bf417b584333dfd5fff74a/raw/9b743740c4a7476c79d6a03c726e0d32b4034ec6/dgu_token.txt';
+      'https://gist.githubusercontent.com/nhuttel/36871c0145d83c3111174b5c87542ee8/raw/17bee0485c5420d473310de8deeaeccd58e3b9cc/statistik%2520token';
   
   // Cache token in memory to avoid fetching on every request
   static String? _cachedToken;
   
   /// Fetches the authentication token from GitHub Gist
   /// Caches the token to avoid repeated fetches
-  /// SAME token as DGU Basen API!
+  /// STATISTIK token (different from DGU Basen!)
+  /// 
+  /// Token format in Gist: "basic c3RhdGlzdGlrOk5pY2swMDA3"
+  /// Converted to HTTP header: "Basic c3RhdGlzdGlrOk5pY2swMDA3"
   Future<String> _getAuthToken() async {
     if (_cachedToken != null) {
       return _cachedToken!;
@@ -32,7 +35,15 @@ class WhsStatistikService {
     try {
       final response = await http.get(Uri.parse(_tokenUrl));
       if (response.statusCode == 200) {
-        _cachedToken = response.body.trim();
+        // Token format: "basic c3RhdGlzdGlrOk5pY2swMDA3"
+        // Extract and format as "Basic <credentials>"
+        final tokenLine = response.body.trim();
+        if (tokenLine.toLowerCase().startsWith('basic ')) {
+          final credentials = tokenLine.substring(6);
+          _cachedToken = 'Basic $credentials';
+        } else {
+          _cachedToken = tokenLine;
+        }
         return _cachedToken!;
       } else {
         throw Exception('Failed to load auth token: ${response.statusCode}');
