@@ -531,12 +531,18 @@ class _ScoresPreviewCardState extends State<_ScoresPreviewCard> {
     final authProvider = context.read<AuthProvider>();
     final player = authProvider.currentPlayer;
 
-    if (player != null && player.unionId != null) {
+    if (player != null && player.unionId != null && player.homeClubId != null) {
       setState(() {
         _scoresFuture = _whsService.getPlayerScores(
           unionId: player.unionId!,
+          clubId: player.homeClubId!,
           limit: 3,
         );
+      });
+    } else {
+      // Missing required data
+      setState(() {
+        _scoresFuture = Future.error('Mangler spillerinfo (unionId eller homeClubId)');
       });
     }
   }

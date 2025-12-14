@@ -45,9 +45,14 @@ class _ScoreArchiveScreenState extends State<ScoreArchiveScreen> {
       if (player == null || player.unionId == null) {
         throw Exception('Ingen spiller logget ind');
       }
+      
+      if (player.homeClubId == null) {
+        throw Exception('Mangler hjemmeklub info');
+      }
 
       final scores = await _whsService.getPlayerScores(
         unionId: player.unionId!,
+        clubId: player.homeClubId!,
         limit: 20,
       );
 
