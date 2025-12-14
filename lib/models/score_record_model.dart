@@ -174,13 +174,13 @@ class ScoreRecord {
   
   /// Format date for display (Danish format: "10. Dec 2024")
   String get formattedDate {
-    final formatter = DateFormat('d. MMM yyyy', 'da_DK');
+    final formatter = DateFormat('d. MMM yyyy');
     return formatter.format(roundDate);
   }
   
   /// Format date for display (short: "10. Dec")
   String get formattedDateShort {
-    final formatter = DateFormat('d. MMM', 'da_DK');
+    final formatter = DateFormat('d. MMM');
     return formatter.format(roundDate);
   }
   
