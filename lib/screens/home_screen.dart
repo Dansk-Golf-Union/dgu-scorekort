@@ -4,7 +4,10 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../models/score_record_model.dart';
+import '../models/news_article_model.dart';
 import '../services/whs_statistik_service.dart';
+import '../services/golfdk_news_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Home Screen med bottom navigation for v2.0 Extended POC
 /// Bottom navigation: Hjem, Venner, Feed, Tops, Menu
@@ -374,6 +377,15 @@ class _HjemTab extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const _ScoresPreviewCard(),
+          const SizedBox(height: 24),
+
+          // Seneste Nyheder
+          const Text(
+            '🗞️ Seneste Nyheder',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          const _NewsPreviewCard(),
         ],
       ),
     );
@@ -736,6 +748,178 @@ class _TopsTab extends StatelessWidget {
             style: TextStyle(color: Colors.grey),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// News Preview Card - Shows latest 3 articles from Golf.dk
+class _NewsPreviewCard extends StatefulWidget {
+  const _NewsPreviewCard();
+
+  @override
+  State<_NewsPreviewCard> createState() => _NewsPreviewCardState();
+}
+
+class _NewsPreviewCardState extends State<_NewsPreviewCard> {
+  final _newsService = GolfDkNewsService();
+  Future<List<NewsArticle>>? _newsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNews();
+  }
+
+  void _loadNews() {
+    setState(() {
+      _newsFuture = _newsService.getLatestNews(limit: 3);
+    });
+  }
+
+  Future<void> _launchUrl(String urlString) async {
+    final url = Uri.parse(urlString);
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Kunne ikke åbne link: $urlString')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: FutureBuilder<List<NewsArticle>>(
+          future: _newsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: CircularProgressIndicator(
+                    color: AppTheme.dguGreen,
+                  ),
+                ),
+              );
+            }
+
+            if (snapshot.hasError) {
+              return Column(
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Kunne ikke hente nyheder',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    snapshot.error.toString().replaceAll('Exception: ', ''),
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton.icon(
+                    onPressed: _loadNews,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Prøv igen'),
+                  ),
+                ],
+              );
+            }
+
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return Column(
+                children: [
+                  const Icon(Icons.article, size: 48, color: Colors.grey),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Ingen nyheder',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ],
+              );
+            }
+
+            final news = snapshot.data!;
+            return Column(
+              children: [
+                ...news.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final article = entry.value;
+                  return Column(
+                    children: [
+                      InkWell(
+                        onTap: () => _launchUrl(article.url),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  article.image,
+                                  width: 80,
+                                  height: 80,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      width: 80,
+                                      height: 80,
+                                      color: Colors.grey[300],
+                                      child: const Icon(Icons.image_not_supported),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      article.title,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      article.manchet,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (index < news.length - 1) const Divider(),
+                    ],
+                  );
+                }),
+                TextButton(
+                  onPressed: () => _launchUrl('https://www.golf.dk'),
+                  child: const Text('Se flere nyheder på Golf.dk →'),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

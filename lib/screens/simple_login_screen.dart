@@ -89,7 +89,7 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
 
               // App title
               const Text(
-                'DGU Scorekort',
+                'DGU App 2.0 POC',
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
@@ -98,7 +98,7 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Digital scorekort til danske golfspillere',
+                'Test af features i kommende version',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.black54,
