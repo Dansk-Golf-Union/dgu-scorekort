@@ -58,6 +58,17 @@
 
 **Foundation for Phase 2 social features!**
 
+### 🗞️ Golf.dk News Feed - NEW!
+- ✅ **Latest News**: Fetch 3 seneste artikler fra Golf.dk API
+- ✅ **Article Preview**: Image, title, og manchet (teaser)
+- ✅ **External Links**: Åbn artikler i browser via url_launcher
+- ✅ **CORS Handling**: corsproxy.io for web production builds
+- ✅ **Error States**: Retry button ved fejl
+- ✅ **Pull-to-Refresh**: Opdater news feed
+- ✅ **Seamless UX**: Loading states og fallback messages
+
+**Placering:** Nederst på Hjem tab, under Mine Seneste Scores
+
 ### 🎨 Mit Golf Design Language - NEW!
 - ✅ **White Header**: DGU logo centered (matches Mit Golf app)
 - ✅ **Bottom Navigation**: 5 tabs (Hjem, Venner, Feed, Tops, Menu)
@@ -66,6 +77,11 @@
 - ✅ **Taller Bottom Nav**: Better touch targets (72px height)
 - ✅ **Light Grey Background**: Clean, modern look
 - ✅ **Simplified Menu**: Settings, privacy, om app, log ud
+
+### 🏷️ POC Branding - NEW!
+- ✅ **Login Screen**: Updated title "DGU App 2.0 POC"
+- ✅ **Subtitle**: "Test af features i kommende version"
+- ✅ **Clear POC Messaging**: Tydeligt at det er test-version
 
 ---
 
@@ -216,7 +232,7 @@ functions/
 ## 🔥 Firebase Setup
 
 ### Project
-**Project ID**: `dgu-scorekort`
+**Project ID**: `dgu-scorekort`  
 **Regions**: `europe-west1` (Frankfurt)
 
 ### Multi-Site Hosting
