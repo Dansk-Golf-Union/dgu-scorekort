@@ -63,8 +63,11 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+    // Force light theme for login screen (always visible, no dark mode)
+    return Theme(
+      data: AppTheme.lightTheme,
+      child: Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -205,6 +208,7 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 }

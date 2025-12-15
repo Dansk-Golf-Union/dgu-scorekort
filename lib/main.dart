@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'config/firebase_options.dart';
 import 'providers/match_setup_provider.dart';
 import 'providers/scorecard_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/match_play_provider.dart';
+import 'providers/theme_provider.dart';
+import 'providers/friends_provider.dart';
 import 'models/club_model.dart';
 import 'models/course_model.dart';
 import 'screens/scorecard_keypad_screen.dart';
@@ -17,6 +20,7 @@ import 'screens/marker_approval_from_url_screen.dart';
 import 'screens/match_play_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/score_archive_screen.dart';
+import 'screens/friend_request_from_url_screen.dart';
 import 'theme/app_theme.dart';
 
 // TODO: Switch to OAuth when redirect URI is ready
@@ -25,6 +29,9 @@ const bool useSimpleLogin = true;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Use path-based URLs instead of hash URLs (#/)
+  usePathUrlStrategy();
   
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -43,6 +50,8 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()..initialize()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()..initialize()),
+        ChangeNotifierProvider(create: (_) => FriendsProvider()),
         ChangeNotifierProvider(create: (_) => MatchSetupProvider()),
         ChangeNotifierProvider(create: (_) => ScorecardProvider()),
         ChangeNotifierProvider(create: (_) => MatchPlayProvider()),
@@ -58,6 +67,7 @@ class _AppRouter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
+    final themeProvider = context.watch<ThemeProvider>();
     
     // Setup router with auth state
     final router = GoRouter(
@@ -65,29 +75,54 @@ class _AppRouter extends StatelessWidget {
       debugLogDiagnostics: true,
       refreshListenable: authProvider, // Listen to auth changes!
       redirect: (context, state) {
+        print('🔍 REDIRECT: location=${state.matchedLocation}, auth=${authProvider.isAuthenticated}');
+        
         final isMarkerApproval = state.matchedLocation.startsWith('/marker-approval');
         final isMatchPlay = state.matchedLocation.startsWith('/match-play');
         
-        // Allow marker approval and match play pages without auth
+        // Allow marker approval and match play without auth
         if (isMarkerApproval || isMatchPlay) {
+          print('🔍 REDIRECT: Allowing public route');
           return null;
         }
         
         // Show loading screen while initializing
         if (authProvider.isLoading) {
+          print('🔍 REDIRECT: Loading...');
           return null; // Stay on current route while loading
         }
         
-        // Redirect to login if not authenticated
+        // Redirect to login if not authenticated (preserve intended destination)
         if (!authProvider.isAuthenticated && state.matchedLocation != '/login') {
-          return '/login';
+          final loginUrl = '/login?from=${Uri.encodeComponent(state.matchedLocation)}';
+          print('🔍 REDIRECT: Not authenticated → $loginUrl');
+          return loginUrl;
         }
         
-        // Redirect to home if authenticated and on login page
-        if (authProvider.isAuthenticated && state.matchedLocation == '/login') {
-          return '/';
+        // Redirect to intended destination after login
+        if (authProvider.isAuthenticated && 
+            (state.matchedLocation == '/login' || state.matchedLocation.startsWith('/login'))) {
+          final from = state.uri.queryParameters['from'];
+          if (from != null && from.isNotEmpty) {
+            print('🔍 REDIRECT: After login → $from');
+            return from;
+          }
         }
         
+        // If authenticated and on home, check if there's a stored destination
+        if (authProvider.isAuthenticated && state.matchedLocation == '/') {
+          // Check if we came from login with a destination
+          final fullLocation = state.uri.toString();
+          if (fullLocation.contains('from=')) {
+            final from = state.uri.queryParameters['from'];
+            if (from != null && from.isNotEmpty) {
+              print('🔍 REDIRECT: From home to intended → $from');
+              return from;
+            }
+          }
+        }
+        
+        print('🔍 REDIRECT: No redirect needed');
         return null;
       },
       routes: [
@@ -117,6 +152,13 @@ class _AppRouter extends StatelessWidget {
           },
         ),
         GoRoute(
+          path: '/friend-request/:requestId',
+          builder: (context, state) {
+            final requestId = state.pathParameters['requestId']!;
+            return FriendRequestFromUrlScreen(requestId: requestId);
+          },
+        ),
+        GoRoute(
           path: '/score-archive',
           builder: (context, state) => const ScoreArchiveScreen(),
         ),
@@ -126,6 +168,8 @@ class _AppRouter extends StatelessWidget {
     return MaterialApp.router(
       title: 'DGU Scorekort',
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );
@@ -302,7 +346,6 @@ class _SetupRoundScreenState extends State<SetupRoundScreen> {
                           ),
                           style: FilledButton.styleFrom(
                             backgroundColor: AppTheme.dguGreen,
-                            disabledBackgroundColor: Colors.grey.shade400,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
                         ),
@@ -321,7 +364,6 @@ class _SetupRoundScreenState extends State<SetupRoundScreen> {
                           ),
                           style: FilledButton.styleFrom(
                             backgroundColor: AppTheme.dguGreen,
-                            disabledBackgroundColor: Colors.grey.shade400,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
                         ),
@@ -508,7 +550,6 @@ class _SetupRoundScreenState extends State<SetupRoundScreen> {
       BuildContext context, MatchSetupProvider provider) {
     return Card(
       elevation: 2,
-      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -556,7 +597,6 @@ class _SetupRoundScreenState extends State<SetupRoundScreen> {
                               showDialog(
                                 context: context,
                                 builder: (context) => AlertDialog(
-                                  backgroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),

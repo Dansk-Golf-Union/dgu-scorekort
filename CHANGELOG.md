@@ -2,6 +2,48 @@
 
 Alle væsentlige ændringer til dette projekt dokumenteres i denne fil.
 
+## [1.7.0-dev] - 2025-12-15 (In Progress)
+
+### 🎨 UI/UX Features
+- **Tilføjet**: Dark Mode med manual toggle i Drawer
+- **Tilføjet**: Golf.dk News Feed integration på Home screen (3 seneste artikler)
+- **Tilføjet**: Scorearkiv med live fetch fra WHS/Statistik API
+- **Opdateret**: Bottom navigation bar (Hjem, Venner, Feed, Tops, Menu)
+- **Opdateret**: White header med DGU logo
+- **Opdateret**: Login screen title: "DGU App 2.0 POC"
+
+### 👥 Friends System (Data Layer - In Progress)
+- **Tilføjet**: `Friendship`, `FriendRequest`, `FriendProfile`, `HandicapTrend` models
+- **Tilføjet**: `FriendsService` med Firestore CRUD operations
+- **Tilføjet**: `FriendsProvider` for state management
+- **Tilføjet**: Firestore security rules for `friendships` og `friend_requests`
+- **Tilføjet**: Cloud Function extended: `sendNotification` støtter friend requests
+- **Tilføjet**: Deep link route: `/friend-request/:requestId`
+- **Tilføjet**: `FriendRequestFromUrlScreen` med consent flow
+- **Tilføjet**: Test dialog: "TEST: Tilføj Ven" knap i Drawer
+- **Testet**: Friend request flow (notification sendt, modtaget, consent screen virker)
+- **Note**: Login redirect efter friend request accept har timing issues (parked)
+
+### 🔐 OAuth Infrastructure
+- **Modtaget**: OAuth callback URL fra GolfBox: `https://europe-west1-dgu-scorekort.cloudfunctions.net/golfboxCallback`
+- **Klar**: `golfboxCallback` Cloud Function deployed og verificeret
+- **Pending**: Skift fra simple login til rigtig OAuth implementation
+
+### 🔧 Tekniske Forbedringer
+- **Tilføjet**: Path-based URL strategy (fjernet hash routing)
+- **Tilføjet**: `ThemeProvider` for Dark Mode state management
+- **Tilføjet**: `shared_preferences` for theme persistence
+- **Tilføjet**: `fl_chart` dependency for handicap trend graphs
+- **Tilføjet**: `flutter_web_plugins` for URL strategy
+- **Opdateret**: `corsproxy.io` for Golf.dk news images i production
+- **Opdateret**: Firebase multi-site hosting (dgu-app-poc.web.app)
+
+### 📦 Dependencies
+- **Tilføjet**: `shared_preferences: ^2.2.2`
+- **Tilføjet**: `fl_chart: ^0.65.0`
+- **Tilføjet**: `flutter_web_plugins: ^0.0.1`
+- **Tilføjet**: `url_launcher: ^6.2.2`
+
 ## [1.5.0] - 2025-12-12
 
 ### 🔔 Push Notifications

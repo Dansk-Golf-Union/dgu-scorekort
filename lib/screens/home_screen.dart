@@ -3,7 +3,9 @@ import 'package:flutter/foundation.dart'; // For kIsWeb and kDebugMode
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/add_friend_dialog.dart';
 import '../models/score_record_model.dart';
 import '../models/news_article_model.dart';
 import '../services/whs_statistik_service.dart';
@@ -119,11 +121,32 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             ListTile(
+              title: const Text('Dark Mode'),
+              trailing: Switch(
+                value: context.watch<ThemeProvider>().isDarkMode,
+                onChanged: (value) {
+                  context.read<ThemeProvider>().setDarkMode(value);
+                },
+                activeColor: AppTheme.dguGreen,
+              ),
+            ),
+            ListTile(
               leading: const Icon(Icons.privacy_tip),
               title: const Text('Privacy'),
               onTap: () {
                 Navigator.pop(context);
                 // TODO: Navigate to privacy settings
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.person_add, color: AppTheme.dguGreen),
+              title: const Text('🧪 TEST: Tilføj Ven'),
+              onTap: () {
+                Navigator.pop(context);
+                showDialog(
+                  context: context,
+                  builder: (context) => const AddFriendDialog(),
+                );
               },
             ),
             ListTile(

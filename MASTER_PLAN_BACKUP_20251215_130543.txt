@@ -1,0 +1,1380 @@
+---
+name: DGU App v2.0 Extended POC
+overview: "Complete implementation plan for DGU Scorekort v2.0 Extended Version with handicap-focused social features. Includes navigation structure (tab-based), Git branching strategy (feature/extended-version), Firebase multi-site deployment (dgu-app-poc.web.app), WHS API integration, and prioritized feature roadmap. Timeline: 8-10 uger fra setup til production-ready POC."
+todos:
+  - id: phase0-git-branch
+    content: Create Git branch feature/extended-version og push til GitHub
+    status: completed
+  - id: phase0-firebase-multisite
+    content: Setup Firebase multi-site hosting (dgu-app-poc.web.app) og opdater firebase.json
+    status: completed
+  - id: phase0-statistik-token
+    content: Opret GitHub Gist med WHS/Statistik API token og noter gist ID
+    status: completed
+  - id: phase0-test-deploy
+    content: Test deploy til dgu-app-poc.web.app og verificer URL virker
+    status: completed
+  - id: phase1-home-screen
+    content: "Implement Home screen structure med TabController (4 tabs: Hjem, Venner, Feed, Tops)"
+    status: completed
+    dependencies:
+      - phase0-test-deploy
+  - id: phase1-hjem-tab
+    content: Build Hjem tab med Quick Actions (Start Runde, Match Play) og preview sections
+    status: completed
+    dependencies:
+      - phase1-home-screen
+  - id: phase1-scorearkiv
+    content: Implement Scorearkiv view med WHS/Statistik API integration (sidste 5 runder)
+    status: completed
+    dependencies:
+      - phase1-hjem-tab
+      - phase0-statistik-token
+  - id: phase1-news-feed
+    content: Implement Golf.dk news feed (latest 3 articles on Home screen)
+    status: completed
+    dependencies:
+      - phase1-hjem-tab
+  - id: phase1-dark-mode
+    content: Implement Dark Mode theme (system-based + manual toggle)
+    status: completed
+    dependencies:
+      - phase1-home-screen
+  - id: phase2-friends-system
+    content: Implement Friends System (list, add friend, requests, handicap dashboard)
+    status: pending
+    dependencies:
+      - phase1-scorearkiv
+  - id: phase2-friend-detail
+    content: Implement Friend detail view med handicap trend graf (plot HCP from WHS API)
+    status: pending
+    dependencies:
+      - phase2-friends-system
+  - id: phase2-activity-feed
+    content: Implement Activity Feed med handicap milestone detection (Cloud Function)
+    status: pending
+    dependencies:
+      - phase2-friends-system
+  - id: phase2-feed-interaction
+    content: Implement Feed interaction (likes, comments, push notifications)
+    status: pending
+    dependencies:
+      - phase2-activity-feed
+  - id: phase2-leaderboards
+    content: "Implement Leaderboards (handicap rankings: lowest, biggest improvement)"
+    status: pending
+    dependencies:
+      - phase2-friends-system
+  - id: phase2-leaderboard-cloud-function
+    content: Implement Cloud Function calculateLeaderboards (daily kl. 03:00)
+    status: pending
+    dependencies:
+      - phase2-leaderboards
+  - id: phase3-flight-mode
+    content: Implement Flight Mode (multi-player scoring for 2-4 personer)
+    status: pending
+  - id: phase3-user-testing
+    content: Conduct user testing med 20+ users og collect metrics (friends, feed, leaderboards)
+    status: pending
+    dependencies:
+      - phase2-friends-system
+      - phase2-activity-feed
+      - phase2-leaderboards
+  - id: phase3-error-handling
+    content: Implement error handling, Sentry integration, og analytics events
+    status: pending
+  - id: phase3-gdpr
+    content: Ensure GDPR compliance (privacy toggles, data export/delete)
+    status: pending
+  - id: phase4-merge
+    content: Code review, final QA, og merge feature/extended-version til main
+    status: pending
+    dependencies:
+      - phase3-user-testing
+      - phase3-error-handling
+      - phase3-gdpr
+  - id: phase4-production-deploy
+    content: Deploy v2.0 til production URL (dgu-scorekort.web.app) og bestem URL strategi
+    status: pending
+    dependencies:
+      - phase4-merge
+---
+
+# DGU Scorekort v2.0 - Extended POC Implementation Plan
+
+**Version:** 2.0 Extended (Social Features)
+
+**Branch:** `feature/extended-version`
+
+**POC URL:** `dgu-app-poc.web.app`
+
+**Production URL:** `dgu-scorekort.web.app` (v1.6 stable)
+
+**Timeline:** 8-10 uger
+
+---
+
+## Table of Contents
+
+1. [Strategic Context](#strategic-context)
+2. [What's New in v2.0](#whats-new-in-v20)
+3. [App Navigation Structure](#app-navigation-structure)
+4. [Git & Deployment Strategy](#git--deployment-strategy)
+5. [API Integration](#api-integration)
+6. [Implementation Roadmap](#implementation-roadmap)
+7. [Technical Architecture](#technical-architecture)
+8. [Success Metrics](#success-metrics)
+
+---
+
+## Strategic Context
+
+### What is This Project?
+
+**DGU Scorekort v2.0** er en extended Proof of Concept (POC) der bygger videre på v1.6 (stable scorecard app) med **handicap-focused social features**.
+
+**POC Purpose:**
+
+- ✅ Bevise at native Flutter UI >> GolfBox webview
+- ✅ Demonstrate at **social features (især handicap tracking) driver engagement**
+- ✅ Production-ready code til integration i **DGU Mit Golf app**
+
+### Current Status: v1.6 (Production Ready)
+
+**Deployed at:** `dgu-scorekort.web.app`
+
+**Features:**
+
+- ✅ WHS scorekort indtastning (2 metoder: Plus/Minus + Keypad)
+- ✅ Match Play / Hulspil (opponent lookup, stroke distribution, live scoring)
+- ✅ Remote marker approval (URL-based, push notifications)
+- ✅ Automated WHS submission ved godkendelse
+- ✅ Firebase backend (Firestore + Cloud Functions + Hosting)
+- ✅ Automated cache updates (nightly kl. 02:00)
+
+### Nick's Vision for v2.0
+
+> "Friends system og activity feed - det er faktisk dem som jeg tror mest på!"
+
+> "Det mest centrale man gerne vil følge med i er sine venners handicap. Handicappet er lige som det ultimative mål (konkurrenceparameter) for hvor godt det går."
+
+**Key Insight:** Social features skal fokusere på **handicap tracking**, ikke bare scores!
+
+---
+
+## What's New in v2.0
+
+### New Navigation Structure
+
+**From:** Single page scorecard app
+
+**To:** Multi-tab app med Home dashboard
+
+**4 Main Tabs:**
+
+1. 🏠 **Hjem** - Dashboard med quick actions + previews
+2. 👥 **Venner** - Handicap tracking for friends (PRIMARY FEATURE!)
+3. 📰 **Feed** - Activity feed med handicap milestones
+4. 🏆 **Tops** - Leaderboards (handicap rankings + scores)
+
+### New Social Features
+
+#### 1. Friends System (HANDICAP-FOCUSED!)
+
+- Add friends via DGU nummer
+- **Handicap dashboard** - Se venners aktuelle handicap
+- **Handicap trend graphs** - Udvikling over tid (3/6/12 måneder)
+- **Handicap changes** - "Jonas: 12.8 → 12.0 📉 (-0.8 denne måned)"
+- Challenge friend til match play
+
+#### 2. Activity Feed (MILESTONE-FOCUSED!)
+
+- **Auto-detect handicap milestones:**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Handicap improvements: "Jonas sænkede handicap til 12.0!"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Major milestones: "Peter nåede single-digit handicap! 🏆"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Personal bests: "Nick's nye laveste handicap: 4.2!"
+- Score highlights (eagles, match play wins)
+- Like & comment system
+- Push notifications
+
+#### 3. Leaderboards (HANDICAP FIRST!)
+
+- **Handicap Rankings:**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Lowest Handicap (Friends)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Biggest Improvement (Month/Year)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Consistency Challenge (most qualifying rounds)
+- **Score Rankings:**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Weekly/Monthly best scores
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Course records
+
+#### 4. Score History (From WHS API)
+
+- Display seneste 5-20 runder (fetched from WHS API)
+- No permanent Firestore storage (WHS = single source of truth)
+- Link til detailed scorecard view
+
+### New Polish Features
+
+- ✅ **Dark Mode** (system-based + manual toggle)
+- ✅ **Flight Mode** (multi-player scoring for 2-4 personer)
+- ✅ **Offline Mode** (future - offline-first architecture)
+
+---
+
+## App Navigation Structure
+
+### Tab Navigation Design
+
+```
+┌────────────────────────────────┐
+│ [☰] DGU Scorekort    [⚙️] [🔔] │ ← AppBar (persistent)
+├────────────────────────────────┤
+│ [Hjem] [Venner] [Feed] [Tops]  │ ← Top Tabs
+├────────────────────────────────┤
+│                                │
+│ TAB CONTENT                    │
+│                                │
+└────────────────────────────────┘
+```
+
+**AppBar Elements:**
+
+- Venstre: Hamburger menu (☰) → Settings, Privacy, Om, Log ud
+- Center: "DGU Scorekort"
+- Højre: Settings (⚙️), Notifications (🔔)
+
+---
+
+### TAB 1: 🏠 HJEM (Dashboard)
+
+**Priority:** Quick Actions, Friends Preview, Activity Preview
+
+```
+┌────────────────────────────────┐
+│ 🏌️ Quick Actions:              │
+│ ┌─────────────┬─────────────┐ │
+│ │ Start Ny    │ Match Play  │ │
+│ │ Runde 🏌️    │ ⚔️          │ │
+│ └─────────────┴─────────────┘ │
+│                                │
+│ 👥 Venner (top 3):             │
+│ • Jonas: 12.0 📉 -0.8          │
+│ • Peter: 9.8 🏆 Single-digit!  │
+│ • Anne: 15.2 → Stabil          │
+│ [Se alle venner →]             │
+│                                │
+│ 📰 Aktivitet (seneste):        │
+│ • Jonas sænkede handicap!      │
+│ • Peter nåede single-digit     │
+│ • Nick vandt match 3/2         │
+│ [Se aktivitet feed →]          │
+│                                │
+│ 📜 Mine Seneste Scores:        │
+│ • Nordvestjysk GC - 42 pts     │
+│ • Aarhus GC - 39 pts           │
+│ [Se arkiv →]                   │
+└────────────────────────────────┘
+```
+
+**Quick Actions:**
+
+- "Start Ny Runde" → Eksisterende scorecard setup flow
+- "Match Play" → Eksisterende match play screen
+
+**Match Play Access:** Både Home quick action + AppBar menu (☰)
+
+---
+
+### TAB 2: 👥 VENNER (Handicap Dashboard)
+
+**Focus:** Handicap tracking som primær feature!
+
+```
+┌────────────────────────────────┐
+│ 👥 Venner                      │
+│ [Handicap ▼] [Aktivitet] [Alle]│
+├────────────────────────────────┤
+│ ┌─ Jonas Meyer ──────────────┐│
+│ │ Handicap: 12.0  📉 -0.8    ││
+│ │ Trend: ●──●──●──●──●↓       │
+│ │ Forbedret 0.8 denne måned  ││
+│ │ [👀 Se udvikling]           │
+│ └────────────────────────────┘│
+│                                │
+│ ┌─ Peter Hansen ─────────────┐│
+│ │ Handicap: 8.7   📈 +0.2    ││
+│ │ Trend: ●──●──●──●──●↑       │
+│ │ [👀 Se udvikling]           │
+│ └────────────────────────────┘│
+│                                │
+│ [+ Tilføj ven] (FAB)           │
+└────────────────────────────────┘
+```
+
+**Tap Friend Card → Detail View:**
+
+```
+┌────────────────────────────────┐
+│ ← Jonas Meyer                  │
+├────────────────────────────────┤
+│ Mit handicap: 12.0             │
+│                                │
+│ [3 mdr] [6 mdr] [1 år] [Alt]  │
+│                                │
+│ ┌─ Handicap Graf ────────────┐│
+│ │      13.5 ●                ││
+│ │           │\               ││
+│ │      13.0 │ ●──●           ││
+│ │           │     \          ││
+│ │      12.5 │      ●         ││
+│ │           │       \        ││
+│ │      12.0 │        ●──●──●─││
+│ │           Aug Sep Okt Nov  ││
+│ └────────────────────────────┘│
+│                                │
+│ 📊 Statistik:                  │
+│  • Forbedring: -1.2 (3 mdr)   │
+│  • Bedste: 12.0 (15. Nov)     │
+│  • Antal runder: 18           │
+│                                │
+│ 🏌️ Seneste scores:            │
+│ • Nordvestjysk GC - 42 pts    │
+│ • Aarhus GC - 39 pts          │
+│                                │
+│ [⚔️ Udfordr til match play]    │
+└────────────────────────────────┘
+```
+
+**Features:**
+
+- Friend list (sorted by handicap eller seneste ændring)
+- Add friend (floating action button) → Søg DGU nummer
+- Friend requests (badge hvis pending)
+- Friend detail: Handicap trend graf (plot HCP fra WHS API)
+- Challenge to match play
+
+---
+
+### TAB 3: 📰 FEED (Activity Feed)
+
+**Focus:** Handicap milestones som primær content!
+
+```
+┌────────────────────────────────┐
+│ 📰 Aktivitet                   │
+│ [Alle] [Handicap] [Scores]     │
+├────────────────────────────────┤
+│ ┌─ Jonas Meyer ──────────────┐│
+│ │ 📉 Handicap forbedret!      ││
+│ │ 12.8 → 12.0 (-0.8)         ││
+│ │ Nordvestjysk GC • I dag    ││
+│ │ ❤️ 23   💬 5   [Tillykke!] │
+│ └────────────────────────────┘│
+│                                │
+│ ┌─ Peter Hansen ─────────────┐│
+│ │ 🏆 Single-digit handicap!   ││
+│ │ 10.3 → 9.8 🎉              ││
+│ │ Aarhus GC • 2 timer siden  ││
+│ │ ❤️ 42   💬 12               │
+│ └────────────────────────────┘│
+│                                │
+│ ┌─ Nick Hüttel ──────────────┐│
+│ │ ⚔️ Vandt match 3/2          ││
+│ │ vs Jonas Meyer             ││
+│ │ ❤️ 15   💬 3                │
+│ └────────────────────────────┘│
+└────────────────────────────────┘
+```
+
+**Filter Tabs:**
+
+- **Alle**: All activity types
+- **Handicap**: Only handicap milestones
+- **Scores**: Only score highlights (eagles, match wins)
+
+**Post Types (prioriteret):**
+
+1. Handicap changes (auto-generated)
+2. Major milestones (single-digit, scratch, personal best)
+3. Eagles/albatrosses (opt-in)
+4. Match play results
+
+**Social Features:**
+
+- Like system
+- Comments
+- Push notifications: "Jonas sænkede sit handicap til 12.0!"
+
+---
+
+### TAB 4: 🏆 TOPS (Leaderboards)
+
+**Focus:** Handicap rankings first, then scores!
+
+```
+┌────────────────────────────────┐
+│ 🏆 Leaderboards                │
+│ [Handicap] [Scores] [Records]  │
+├────────────────────────────────┤
+│ Laveste Handicap (Venner)      │
+│                                │
+│ 1. 🥇 Nick Hüttel     | 4.5    │
+│    Outrup GC                   │
+│                                │
+│ 2. 🥈 Peter Hansen    | 8.7    │
+│    Aarhus GC                   │
+│                                │
+│ 3. 🥉 Jonas Meyer     | 12.0   │
+│    Nordvestjysk GC             │
+│                                │
+│ ──────────────────────────────│
+│                                │
+│ Størst Forbedring (Måned)      │
+│                                │
+│ 1. 🥇 Jonas Meyer     | -0.8   │
+│    12.8 → 12.0 📉              │
+│                                │
+│ 2. 🥈 Peter Hansen    | -0.5   │
+│    9.3 → 8.8 📉                │
+└────────────────────────────────┘
+```
+
+**Leaderboard Types:**
+
+**Handicap Tab:**
+
+- Lowest Handicap (Friends)
+- Biggest Improvement (Month)
+- Biggest Improvement (Year)
+- Consistency Challenge (most qualifying rounds)
+
+**Scores Tab:**
+
+- Weekly Best Scores
+- Monthly Best Scores
+- Friends Leaderboard
+
+**Records Tab:**
+
+- Course Records (best score ever on specific courses)
+
+---
+
+### Complete Site Tree
+
+```
+Login Screen
+│
+└── Main App (TabController)
+    │
+    ├── AppBar (persistent)
+    │   ├── Hamburger menu → Drawer
+    │   │   ├── Settings
+    │   │   ├── Privacy
+    │   │   ├── Om app
+    │   │   └── Log ud
+    │   └── Notifications badge
+    │
+    ├── TAB 1: 🏠 HJEM
+    │   ├── Quick Actions
+    │   │   ├── Start Ny Runde → Scorecard Setup → Scoring
+    │   │   └── Match Play → Match Play Screen
+    │   ├── Venner Preview → Venner Tab
+    │   ├── Activity Preview → Feed Tab
+    │   └── Seneste Scores → Score Arkiv View
+    │
+    ├── TAB 2: 👥 VENNER
+    │   ├── Friend List (handicap dashboard)
+    │   │   └── Tap → Friend Detail (trend graf)
+    │   ├── Friend Requests
+    │   └── Add Friend (FAB) → Søg DGU nummer
+    │
+    ├── TAB 3: 📰 FEED
+    │   ├── Activity Feed (infinite scroll)
+    │   ├── Filter: Alle | Handicap | Scores
+    │   └── Tap post → Post Detail (comments, likes)
+    │
+    └── TAB 4: 🏆 TOPS
+        ├── Handicap Leaderboards
+        ├── Score Leaderboards
+        └── Course Records
+```
+
+---
+
+## Git & Deployment Strategy
+
+### Git Branching
+
+**Two Parallel Branches:**
+
+```
+main (v1.6 - stable)
+│   Deployed to: dgu-scorekort.web.app
+│   Features: Scorecard + Match Play + Marker Approval
+│
+└── feature/extended-version (v2.0 - extended POC)
+    Deployed to: dgu-app-poc.web.app
+    Features: v1.6 + Home/Tabs + Social Features
+```
+
+**Setup Commands:**
+
+```bash
+# 1. Create branch
+git checkout -b feature/extended-version
+git push -u origin feature/extended-version
+
+# 2. Verify
+git branch
+# Output:
+# * feature/extended-version
+#   main
+
+# 3. Work on this branch
+# ... develop, commit, push ...
+
+# 4. When ready to merge:
+git checkout main
+git merge feature/extended-version
+git push origin main
+```
+
+**Why This Strategy:**
+
+- ✅ v1.6 remains stable during development
+- ✅ Easy rollback if issues
+- ✅ Separate testing URL for POC
+- ✅ Clean merge when ready
+
+---
+
+### Firebase Multi-Site Hosting
+
+**Two URLs, Same Firebase Project:**
+
+| URL | Version | Branch | Purpose |
+
+|-----|---------|--------|---------|
+
+| `dgu-scorekort.web.app` | v1.6 | `main` | Production (stable) |
+
+| `dgu-app-poc.web.app` | v2.0 | `feature/extended-version` | POC Testing |
+
+**Both Share:**
+
+- ✅ Same Firestore database
+- ✅ Same Cloud Functions
+- ✅ Same Firebase Auth
+- ✅ Same course cache
+
+**Setup Steps:**
+
+```bash
+# 1. Create new hosting site
+firebase hosting:sites:create dgu-app-poc
+
+# 2. Verify sites
+firebase hosting:sites:list
+# Output:
+# - dgu-scorekort (default)
+# - dgu-app-poc (new!)
+```
+
+**3. Update `firebase.json`:**
+
+```json
+{
+  "hosting": [
+    {
+      "site": "dgu-scorekort",
+      "public": "build/web",
+      "target": "production",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    },
+    {
+      "site": "dgu-app-poc",
+      "public": "build/web",
+      "target": "poc",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    }
+  ],
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": ["node_modules", ".git", "firebase-debug.log"]
+    }
+  ]
+}
+```
+
+**Deploy Commands:**
+
+```bash
+# Build Flutter web
+flutter build web --release
+
+# Deploy v1.6 to production (from main branch)
+git checkout main
+firebase deploy --only hosting:production
+
+# Deploy v2.0 to POC (from feature branch)
+git checkout feature/extended-version
+firebase deploy --only hosting:poc
+
+# Deploy functions (shared between both)
+firebase deploy --only functions
+
+# Deploy everything
+firebase deploy
+```
+
+**Test Deployment:**
+
+```bash
+# After first setup, test POC URL:
+flutter build web --release
+firebase deploy --only hosting:poc
+
+# Visit: https://dgu-app-poc.web.app
+# Verify: App loads correctly
+```
+
+---
+
+## API Integration
+
+### API 1: GetPlayer (Current Handicap) ✅ ALREADY IMPLEMENTED
+
+**Endpoint:**
+
+```
+GET /clubs/golfer?unionid={unionId}
+```
+
+**Auth:** Basic Auth (DGU Basen token via GitHub Gist)
+
+**Response Example:**
+
+```json
+{
+  "UnionID": "177-2813",
+  "FullName": "Nick Hüttel",
+  "Handicap": 15.8,
+  "Gender": "M",
+  "HomeClub": "Outrup Golfklub"
+}
+```
+
+**Usage in v2.0:**
+
+- ✅ Current handicap for friend dashboard
+- ✅ Handicap for leaderboards
+- ✅ Match play opponent lookup
+
+**Cache:** In-memory only (refresh on each lookup)
+
+---
+
+### API 2: WHS/Statistik (Score History) 🆕 NEW FOR SOCIAL FEATURES
+
+**Endpoint:**
+
+```
+GET /statistik/clubs/{clubId}/members/{unionId}/scorecards
+```
+
+**Query Params:**
+
+- `RoundDateFrom`: "20240101T000000" (optional)
+- `RoundDateTo`: "20251231T235959" (optional)
+
+**Auth:** Basic Auth (SEPARATE statistik token - new GitHub Gist needed!)
+
+**Response:** Array of scorecards
+
+**Key Fields:**
+
+```json
+{
+  "HCP": "139000",          // ÷ 10000 = 13.9 (handicap BEFORE round)
+  "AfterHCP": null,         // Not populated in API response
+  "Result": {
+    "IsQualifying": true,   // Counts towards handicap?
+    "SGD": "246000",        // Score Differential ÷ 1000
+    "TotalPoints": 23,
+    "TotalStrokes": 95
+  },
+  "Round": {
+    "StartTime": "20240724T110000",  // Date
+    "HolesPlayed": 18
+  },
+  "Course": {
+    "Name": "Nordvestjysk Golfklub 18 huller"
+  }
+}
+```
+
+**Usage in v2.0:**
+
+- ✅ Scorearkiv view (last 5-20 rounds)
+- ✅ **Handicap trend graphs** (plot HCP field over time)
+- ✅ Friend score history
+- ✅ Activity feed (detect eagles, achievements)
+- ✅ Leaderboards
+
+**Handicap Tracking Logic:**
+
+```dart
+// 1. Fetch player's scores from WHS API (sorted by date DESC)
+// 2. Extract HCP field from each score
+// 3. Plot HCP over time to show trend
+// 4. For current handicap, use GetPlayer API (always up-to-date)
+// 5. Calculate delta: current HCP - HCP from 30 days ago = improvement
+```
+
+**Cache Strategy:**
+
+- **Option A (Start):** No cache - direct API calls on demand
+- **Option B (Future):** Cache in Firestore (TTL: 24 hours, refresh on pull-to-refresh)
+
+**Rate Limits:** TBD - monitor in production
+
+---
+
+### API 3: WHS Submission (Existing) ✅
+
+**Endpoint:**
+
+```
+POST /DGUScorkortAapp/ScorecardExchange
+```
+
+**Usage:** Automatic submission when marker approves (already implemented in v1.6)
+
+---
+
+### Token Management
+
+**Tokens in GitHub Gists:**
+
+1. ✅ **DGU Basen token** (clubs, courses, getPlayer) - Existing
+2. 🆕 **Statistik API token** - NEW GIST REQUIRED!
+3. ✅ **Notification token** (push to Mit Golf) - Existing
+
+**TODO:** Create new GitHub Gist with statistik API token before starting social features
+
+---
+
+## Implementation Roadmap
+
+### Phase 0: Setup (30-60 min) 🛠️
+
+**BEFORE starting any features!**
+
+**1. Git Branch:**
+
+```bash
+git checkout -b feature/extended-version
+git push -u origin feature/extended-version
+```
+
+**2. Firebase Multi-Site:**
+
+```bash
+firebase hosting:sites:create dgu-app-poc
+firebase hosting:sites:list
+```
+
+**3. Update `firebase.json`** (see Git & Deployment section above)
+
+**4. Test Deploy:**
+
+```bash
+flutter build web --release
+firebase deploy --only hosting:poc
+# Visit: https://dgu-app-poc.web.app
+```
+
+**5. Create Statistik API Token Gist:**
+
+- Create new GitHub Gist
+- Add statistik API token
+- Note gist ID for code
+
+**Deliverable:** Branch created, POC URL live, tokens ready
+
+---
+
+### Phase 1: Navigation Foundation (Uge 1-2) 📱
+
+**Goal:** Build new Home/Dashboard screen with tab navigation
+
+**1. Home Screen Structure**
+
+- Create `lib/screens/home_screen.dart`
+- Setup TabController (4 tabs: Hjem, Venner, Feed, Tops)
+- AppBar with hamburger menu + notifications icon
+- Basic tab scaffolding
+
+**2. Hjem Tab (MVP)**
+
+- Quick Actions cards:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - "Start Ny Runde" button → Link to existing scorecard setup
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - "Match Play" button → Link to existing match play screen
+- Placeholder sections:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Venner preview (static mockup)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Activity preview (static mockup)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Seneste scores (static mockup)
+
+**3. Other Tabs (Empty Placeholders)**
+
+- Venner tab: "Coming soon" placeholder
+- Feed tab: "Coming soon" placeholder
+- Tops tab: "Coming soon" placeholder
+
+**4. Scorearkiv View**
+
+- Create `lib/screens/score_archive_screen.dart`
+- Fetch last 5 rounds from WHS/Statistik API
+- Display in list format
+- Show on Hjem tab (replace static mockup)
+- "Se arkiv" button → Full list view
+
+**5. Dark Mode**
+
+- Update `lib/theme/app_theme.dart`
+- Add dark theme
+- System-based detection
+- Manual toggle in settings
+
+**Effort:** 5-7 dage
+
+**Deliverable:**
+
+- Navigable app structure
+- Home screen functional
+- Score history displayed
+- Dark mode working
+- Deployed to `dgu-app-poc.web.app`
+
+---
+
+### Phase 2: Social Features - Handicap Focus (Uge 3-6) 👥
+
+**Goal:** Implement handicap-focused social features
+
+#### 2.1 Friend System (1.5-2 uger)
+
+**Files to Create:**
+
+- `lib/screens/friends_screen.dart`
+- `lib/screens/friend_detail_screen.dart`
+- `lib/screens/add_friend_screen.dart`
+- `lib/providers/friends_provider.dart`
+- `lib/models/friendship_model.dart`
+- `lib/services/friends_service.dart`
+
+**Firestore Collections:**
+
+- `friendships`: { userId1, userId2, status, createdAt }
+- `friend_requests`: { from, to, status, timestamp }
+
+**Features:**
+
+1. **Friend List (Venner Tab)**
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Fetch user's friends from Firestore
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - For each friend: Fetch current handicap (GetPlayer API)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Display in list with handicap + change indicator
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Sort by: handicap, recent change, or alphabetical
+
+2. **Add Friend**
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Floating action button on Venner tab
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Input: DGU nummer (unionId)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Validate: Call GetPlayer API to verify player exists
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Create friend request in Firestore
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Send push notification to friend
+
+3. **Friend Requests**
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Badge on Venner tab if pending requests
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - List of incoming requests
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Accept → Create friendship document
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Decline → Delete request
+
+4. **Friend Detail View**
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Tap friend card → Navigate to detail screen
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - **Handicap Trend Graph:**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Fetch friend's scores from WHS/Statistik API
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Extract HCP field from each score
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Plot line chart (3 mdr, 6 mdr, 1 år, Alt filters)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Use fl_chart package for visualization
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Display stats: Forbedring, bedste handicap, antal runder
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Show recent scores (last 3-5)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - "Udfordr til match play" button → Navigate to match play with opponent pre-filled
+
+5. **Privacy Settings**
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Toggle: "Del mit handicap med venner" (default: ON)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - If OFF: Only show to user themselves
+
+**Effort:** 7-10 dage
+
+---
+
+#### 2.2 Activity Feed (1.5 uger)
+
+**Files to Create:**
+
+- `lib/screens/activity_feed_screen.dart`
+- `lib/screens/post_detail_screen.dart`
+- `lib/providers/activity_provider.dart`
+- `lib/models/activity_post_model.dart`
+- `lib/services/activity_service.dart`
+
+**Firestore Collections:**
+
+- `activity_feed`: { type, userId, data, likes, comments, timestamp }
+- `activity_likes`: { activityId, userId, timestamp }
+- `activity_comments`: { activityId, userId, text, timestamp }
+
+**Features:**
+
+1. **Milestone Detection (Cloud Function)**
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Trigger: When scorecard submitted & WHS updated
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Logic:
+     ```dart
+     // Fetch old handicap (from last WHS score HCP field)
+     // Fetch new handicap (from GetPlayer API)
+     // Calculate delta = old - new
+     // If delta != 0:
+     //   - Create activity post (type: "handicap_change")
+     //   - Check milestones:
+     //     - Single digit (crossed 10.0)
+     //     - Scratch golfer (reached 0.0)
+     //     - New personal best
+     //   - Send push notification to friends
+     ```
+
+
+2. **Feed Display (Feed Tab)**
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Fetch activity posts for user's friends
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Filter tabs: [Alle] [Handicap] [Scores]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Infinite scroll (pagination)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Display post cards with:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - User avatar
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Post content (handicap change, eagle, match win, etc.)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Timestamp
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Like count + comment count
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Like button (heart icon)
+
+3. **Post Interaction**
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Tap post → Navigate to detail screen
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Like: Toggle like status in Firestore
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Comment: Text input, submit to Firestore
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Display all comments on post detail
+
+4. **Post Types (Auto-Generated):**
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - **handicap_change**: "Jonas: 12.8 → 12.0 📉 Sænket 0.8!"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - **milestone**: "Peter nåede single-digit handicap! 🏆"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - **eagle**: "Jonas scored eagle på hul 12! 🦅" (opt-in)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - **match_result**: "Nick vandt match 3/2 mod Jonas ⚔️"
+
+5. **Push Notifications**
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - When friend posts handicap milestone
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Use existing Mit Golf notification system
+
+**Cloud Function:**
+
+```javascript
+exports.detectHandicapMilestone = functions.firestore
+  .document('scorecards/{scorecardId}')
+  .onUpdate(async (change, context) => {
+    // 1. Get scorecard data
+    // 2. Fetch player's previous handicap (last WHS score)
+    // 3. Fetch player's current handicap (GetPlayer API)
+    // 4. Calculate delta
+    // 5. If delta != 0: Create activity post
+    // 6. Check major milestones
+    // 7. Send notifications to friends
+  });
+```
+
+**Effort:** 7-10 dage
+
+---
+
+#### 2.3 Leaderboards (1.5 uger)
+
+**Files to Create:**
+
+- `lib/screens/leaderboards_screen.dart`
+- `lib/providers/leaderboard_provider.dart`
+- `lib/models/leaderboard_model.dart`
+
+**Firestore Collections:**
+
+- `leaderboards`: { type, period, scope, rankings, lastUpdated }
+
+**Features:**
+
+1. **Handicap Leaderboards (PRIMARY!)**
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - **Lowest Handicap (Friends):**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Fetch all friends
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Get current handicap for each (GetPlayer API)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Sort ascending
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Display top 10 (or all)
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - **Biggest Improvement (Month):**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - For each friend:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Current handicap (GetPlayer API)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Handicap from 30 days ago (fetch WHS scores, get HCP field from score ~30 days ago)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Calculate delta
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Sort by delta (most negative = biggest improvement)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Display top 10
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - **Biggest Improvement (Year):**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Same logic, but compare to 365 days ago
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - **Consistency Challenge:**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Count qualifying rounds in last 30 days
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Sort descending
+
+2. **Score Leaderboards (Secondary)**
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - **Weekly Best Scores:**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Fetch friends' scores from last 7 days (WHS API)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Sort by TotalPoints descending
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - **Monthly Best Scores:**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Fetch friends' scores from last 30 days
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Sort by TotalPoints descending
+
+3. **Cloud Function: Calculate Leaderboards**
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Scheduled: Daily kl. 03:00 (after course cache update)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - For each user:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Fetch their friends
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Calculate all leaderboards
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Write to Firestore
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Notifications: "Du er #2 på 'Størst forbedring'!"
+```javascript
+exports.calculateLeaderboards = functions.pubsub
+  .schedule('0 3 * * *')
+  .timeZone('Europe/Copenhagen')
+  .onRun(async (context) => {
+    // 1. Fetch all users
+    // 2. For each user:
+    //    - Fetch friends
+    //    - Calculate handicap rankings
+    //    - Calculate score rankings
+    //    - Write to Firestore leaderboards collection
+    // 3. Send notifications for top positions
+  });
+```
+
+
+**Effort:** 7-10 dage
+
+---
+
+### Phase 3: Polish & Testing (Uge 7-8) ✨
+
+#### 3.1 Flight Mode (1 uge)
+
+**Goal:** Score for 2-4 spillere samtidig
+
+**Files to Create:**
+
+- Update `lib/screens/scorecard_screen.dart` to support multiple players
+- `lib/models/flight_scorecard_model.dart`
+
+**Features:**
+
+- Add players (2-4 personer)
+- Score for all simultaneously
+- Separate results per player
+- Individual WHS submission for each
+
+**Effort:** 5-7 dage
+
+---
+
+#### 3.2 User Testing & Iteration (3-5 dage)
+
+**Goals:**
+
+- Test with 20+ users
+- Collect feedback
+- Measure metrics:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Friend connections (target: avg 3+ friends)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Feed engagement (target: 50%+ check daily)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Leaderboard views (target: 70%+ check weekly)
+
+**Iterate based on feedback**
+
+---
+
+#### 3.3 Error Handling & Monitoring (2-3 dage)
+
+- Sentry integration for error tracking
+- Analytics events (Firebase Analytics)
+- Performance monitoring
+
+---
+
+#### 3.4 GDPR Compliance (1-2 dage)
+
+- Privacy toggles working
+- Data export functionality
+- Data deletion functionality
+
+---
+
+### Phase 4: Merge & Promote (Når Ready) 🚀
+
+**Steps:**
+
+1. **Final QA on POC URL**
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Test all features
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Performance testing
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Cross-browser testing
+
+2. **Code Review**
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Review all changes
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Ensure code quality
+
+3. **Merge to Main**
+   ```bash
+   git checkout main
+   git merge feature/extended-version
+   git push origin main
+   ```
+
+4. **Deploy to Production**
+   ```bash
+   firebase deploy --only hosting:production
+   ```
+
+5. **Decision Point:**
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Keep both URLs (staging + production)?
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Redirect `dgu-scorekort.web.app` to `dgu-app-poc.web.app`?
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - Rename POC URL to something permanent?
+
+---
+
+## Technical Architecture
+
+### Database Schema (Firestore)
+
+**Collections:**
+
+```
+friendships/
+├─ {userId1_userId2}
+   ├─ status: "accepted" | "pending"
+   ├─ requestedBy: userId
+   ├─ createdAt: timestamp
+
+friend_requests/
+├─ {requestId}
+   ├─ from: userId
+   ├─ to: userId
+   ├─ status: "pending" | "accepted" | "declined"
+   ├─ timestamp: timestamp
+
+activity_feed/
+├─ {activityId}
+   ├─ type: "handicap_change" | "milestone" | "eagle" | "match_result"
+   ├─ userId: string
+   ├─ userName: string
+   ├─ data: object (varies by type)
+   ├─ likes: number
+   ├─ timestamp: timestamp
+   ├─ visibility: "friends" | "public"
+
+activity_likes/
+├─ {likeId}
+   ├─ activityId: string
+   ├─ userId: string
+   ├─ timestamp: timestamp
+
+activity_comments/
+├─ {commentId}
+   ├─ activityId: string
+   ├─ userId: string
+   ├─ text: string
+   ├─ timestamp: timestamp
+
+leaderboards/
+├─ {leaderboardId}
+   ├─ type: "handicap_lowest" | "handicap_improvement_month" | "score_weekly" | etc.
+   ├─ period: "2024-12" | "2024-W50" | etc.
+   ├─ scope: "friends" | "club" | "global"
+   ├─ userId: string (for friend-specific leaderboards)
+   ├─ rankings: array of {rank, userId, userName, value, ...}
+   ├─ lastUpdated: timestamp
+
+user_privacy/
+├─ {userId}
+   ├─ shareHandicap: boolean (default: true)
+   ├─ allowFriendRequests: boolean (default: true)
+   ├─ autoShareHandicapChanges: boolean (default: true)
+   ├─ autoShareEagles: boolean (default: false)
+```
+
+### Data Flow
+
+**Scorecard Submission → Handicap Milestone Detection:**
+
+```
+1. User submits scorecard (existing flow)
+2. Marker approves → WHS submission (existing)
+3. Cloud Function triggered (onUpdate scorecard document)
+4. Function fetches:
+   - Old handicap (from last WHS score HCP field)
+   - New handicap (from GetPlayer API)
+5. Calculate delta = old - new
+6. If delta != 0:
+   a. Create activity_feed post (type: "handicap_change")
+   b. Check major milestones (single-digit, scratch, etc.)
+   c. Send push notifications to friends
+7. Update user's cached handicap (if using cache)
+```
+
+**Friend Handicap Trend:**
+
+```
+1. User taps friend card in Venner tab
+2. Navigate to friend_detail_screen
+3. Fetch friend's scores from WHS/Statistik API (last 12 months)
+4. Extract HCP field from each score
+5. Plot line chart with date on X-axis, handicap on Y-axis
+6. Display stats: improvement, best handicap, antal runder
+```
+
+**Leaderboard Calculation:**
+
+```
+1. Cloud Function runs daily kl. 03:00
+2. For each user:
+   a. Fetch user's friends from Firestore
+   b. For each friend:
+      - Fetch current handicap (GetPlayer API)
+      - Fetch scores from last 30/365 days (WHS API)
+      - Calculate improvements
+   c. Sort friends by various criteria
+   d. Write leaderboard documents to Firestore
+3. Send notifications for top positions
+```
+
+---
+
+## Success Metrics
+
+### KPIs for Social Features
+
+**1. Friend Connections**
+
+- Target: Avg 5+ friends per active user
+- Measure: Friendship acceptance rate, avg friends count
+
+**2. Handicap Feed Engagement**
+
+- Target: 50%+ daily active users check feed
+- Measure: Feed opens per day, posts viewed
+
+**3. Leaderboard Views**
+
+- Target: 70%+ users check leaderboards weekly
+- Measure: Leaderboard page views, time spent
+
+**4. Viral Growth**
+
+- Target: 20% new users from friend invites
+- Measure: Referral source tracking
+
+**5. Retention Impact**
+
+- Target: 2x retention vs solo users
+- Measure: Day-7, Day-30 retention (social vs non-social)
+
+### POC Success Criteria (After 8-10 uger)
+
+- ✅ 20+ test users with social features enabled
+- ✅ Avg 3+ friends per user
+- ✅ 50+ activity feed posts (majority handicap milestones!)
+- ✅ Positive user feedback: "Dette er fremtiden!"
+- ✅ Metrics show social features increase engagement
+
+---
+
+## Timeline Summary
+
+| Phase | Duration | Deliverable |
+
+|-------|----------|-------------|
+
+| **Phase 0: Setup** | 30-60 min | Git branch, Firebase multi-site, tokens ready |
+
+| **Phase 1: Navigation** | Uge 1-2 | Home screen, tabs, score history, dark mode |
+
+| **Phase 2: Social Features** | Uge 3-6 | Friends system, activity feed, leaderboards |
+
+| **Phase 3: Polish** | Uge 7-8 | Flight mode, user testing, error handling |
+
+| **Phase 4: Merge** | When ready | Production deployment |
+
+**Total:** 8-10 uger fra setup til production-ready POC
+
+---
+
+## Next Steps - When Ready to Start
+
+**1. Say "go" and I'll execute Phase 0:**
+
+- Create Git branch `feature/extended-version`
+- Setup Firebase multi-site `dgu-app-poc.web.app`
+- Update `firebase.json`
+- Test deployment
+
+**2. Then Phase 1:**
+
+- Implement Home screen with tab navigation
+- Build scorearkiv view (WHS API integration)
+- Add dark mode
+
+**3. Continue with social features...**
+
+---
+
+**PLAN COMPLETE! Ready for implementation! 🚀**

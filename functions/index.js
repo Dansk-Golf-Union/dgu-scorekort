@@ -194,6 +194,10 @@ exports.forceFullReseed = functions
  * Callable Cloud Function that acts as a CORS-free proxy for sending
  * push notifications to DGU's notification service.
  * 
+ * Supports two notification types:
+ * 1. MARKER_APPROVAL: Scorecard marker approval request
+ * 2. FRIEND_REQUEST: Friend request with consent
+ * 
  * This function:
  * 1. Receives notification payload from Flutter app
  * 2. Fetches notification token from GitHub Gist
@@ -208,43 +212,98 @@ exports.sendNotification = functions
     console.log('📤 Push notification request received');
     
     try {
-      // 1. Validate input
-      const { markerUnionId, playerName, approvalUrl } = data;
+      // 1. Validate notification type
+      const notificationType = data.type || 'MARKER_APPROVAL'; // Default to marker approval
+      console.log(`  Type: ${notificationType}`);
       
-      if (!markerUnionId || !playerName || !approvalUrl) {
+      // 2. Build payload based on type
+      let payload;
+      
+      if (notificationType === 'MARKER_APPROVAL') {
+        // Marker approval notification
+        const { markerUnionId, playerName, approvalUrl } = data;
+        
+        if (!markerUnionId || !playerName || !approvalUrl) {
+          throw new functions.https.HttpsError(
+            'invalid-argument',
+            'Missing required fields for MARKER_APPROVAL: markerUnionId, playerName, or approvalUrl'
+          );
+        }
+        
+        console.log(`  Marker: ${markerUnionId}`);
+        console.log(`  Player: ${playerName}`);
+        
+        // Fetch notification token
+        console.log('  Fetching notification token...');
+        const notificationToken = await fetchNotificationToken();
+        
+        // Build payload
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 7);
+        const expiryString = formatNotificationDate(expiryDate);
+        
+        payload = {
+          data: {
+            recipients: [markerUnionId],
+            title: 'Nyt scorekort afventer din godkendelse',
+            message: `${playerName} har sendt et scorekort til godkendelse.\r\n\r\nGå til godkendelse af scorekort herunder.`,
+            message_type: 'DGUMessage',
+            message_link: approvalUrl,
+            expire_at: expiryString,
+            token: notificationToken
+          }
+        };
+        
+      } else if (notificationType === 'FRIEND_REQUEST') {
+        // Friend request notification
+        const { toUnionId, fromUserName, requestId } = data;
+        
+        if (!toUnionId || !fromUserName || !requestId) {
+          throw new functions.https.HttpsError(
+            'invalid-argument',
+            'Missing required fields for FRIEND_REQUEST: toUnionId, fromUserName, or requestId'
+          );
+        }
+        
+        console.log(`  To: ${toUnionId}`);
+        console.log(`  From: ${fromUserName}`);
+        console.log(`  RequestId: ${requestId}`);
+        
+        // Build deep link URL
+        const requestUrl = `https://dgu-app-poc.web.app/friend-request/${requestId}`;
+        console.log(`  Deep link: ${requestUrl}`);
+        
+        // Fetch notification token
+        console.log('  Fetching notification token...');
+        const notificationToken = await fetchNotificationToken();
+        
+        // Build payload
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 30); // 30 days for friend requests
+        const expiryString = formatNotificationDate(expiryDate);
+        
+        payload = {
+          data: {
+            recipients: [toUnionId],
+            title: 'Ny venneanmodning',
+            message: `${fromUserName} vil gerne være venner med dig og følge dit handicap.`,
+            message_type: 'DGUMessage',
+            message_link: requestUrl,
+            expire_at: expiryString,
+            token: notificationToken
+          }
+        };
+        
+      } else {
         throw new functions.https.HttpsError(
           'invalid-argument',
-          'Missing required fields: markerUnionId, playerName, or approvalUrl'
+          `Unknown notification type: ${notificationType}`
         );
       }
       
-      console.log(`  Marker: ${markerUnionId}`);
-      console.log(`  Player: ${playerName}`);
-      
-      // 2. Fetch notification token
-      console.log('  Fetching notification token...');
-      const notificationToken = await fetchNotificationToken();
-      
-      // 3. Build notification payload
-      const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + 7);
-      const expiryString = formatNotificationDate(expiryDate);
-      
-      const payload = {
-        data: {
-          recipients: [markerUnionId],
-          title: 'Nyt scorekort afventer din godkendelse',
-          message: `${playerName} har sendt et scorekort til godkendelse.\r\n\r\nGå til godkendelse af scorekort herunder.`,
-          message_type: 'DGUMessage',
-          message_link: approvalUrl,
-          expire_at: expiryString,
-          token: notificationToken
-        }
-      };
-      
       console.log('  Payload prepared');
       
-      // 4. Send to DGU notification API
+      // 3. Send to DGU notification API
       console.log('  Sending to DGU notification API...');
       const result = await sendNotificationRequest(payload);
       

@@ -83,6 +83,15 @@
 - ✅ **Subtitle**: "Test af features i kommende version"
 - ✅ **Clear POC Messaging**: Tydeligt at det er test-version
 
+### 🌙 Dark Mode - NEW!
+- ✅ **Manual Toggle**: Simple on/off switch i Drawer menu
+- ✅ **Persistent Settings**: Gemmes i SharedPreferences
+- ✅ **Dark Theme**: Material 3 dark theme med DGU branding
+- ✅ **Instant Switch**: Skift tema uden reload
+- ✅ **All Screens**: Konsistent dark mode på alle sider
+
+**Placering:** ☰ Menu → "Dark Mode" med Switch (ingen ikon)
+
 ---
 
 ## ✨ Features from v1.6 (Included in v2.0)

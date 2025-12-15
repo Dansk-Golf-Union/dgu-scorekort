@@ -70,8 +70,8 @@ class ScoreRecord {
     final isQualifying = result['IsQualifying'] as bool? ?? false;
     
     // Web-safe int parsing (dart2js might send as double)
-    final totalPoints = _safeParseInt(result['TotalPoints']);
-    final totalStrokes = _safeParseInt(result['TotalStrokes']);
+    final totalPoints = _safeParseInt(result['TotalPoints']) ?? 0;
+    final totalStrokes = _safeParseInt(result['TotalStrokes']) ?? 0;
     
     // Parse score differential (format: "246000" = 24.6)
     final sgdStr = result['SGD'] as String?;
@@ -120,8 +120,8 @@ class ScoreRecord {
     
     return ScoreRecord(
       courseName: courseName,
-      totalPoints: totalPoints ?? 0,
-      totalStrokes: totalStrokes ?? 0,
+      totalPoints: totalPoints,
+      totalStrokes: totalStrokes,
       isQualifying: isQualifying,
       roundDate: roundDate,
       holesPlayed: holesPlayed,
