@@ -10,22 +10,28 @@ import '../models/score_record_model.dart';
 ///
 /// Used for displaying friend cards and friend detail views.
 class FriendProfile {
+  final String friendshipId;
   final String unionId;
   final String name;
   final String? homeClubName;
+  final String? homeClubId;
   final double currentHandicap;
   final HandicapTrend trend;
   final List<ScoreRecord> recentScores;
   final DateTime lastUpdated;
+  final DateTime? createdAt;
 
   FriendProfile({
+    required this.friendshipId,
     required this.unionId,
     required this.name,
     this.homeClubName,
+    this.homeClubId,
     required this.currentHandicap,
     required this.trend,
     required this.recentScores,
     required this.lastUpdated,
+    this.createdAt,
   });
 
   /// Get display name (fallback to "Ukendt" if name is empty)

@@ -41,6 +41,16 @@ class HandicapTrend {
     required this.historyPoints,
   });
 
+  /// Create an empty trend (no data available)
+  factory HandicapTrend.empty({required double currentHcp}) {
+    return HandicapTrend(
+      currentHcp: currentHcp,
+      totalRounds: 0,
+      trendDirection: 'stable',
+      historyPoints: [],
+    );
+  }
+
   /// Calculate trend from score history and current handicap
   ///
   /// [currentHcp] - Current handicap from GetPlayer API

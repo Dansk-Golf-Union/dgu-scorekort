@@ -337,6 +337,112 @@ exports.sendNotification = functions
  * 
  * Security: Only allows redirects to pre-approved domains (allowlist)
  */
+/**
+ * sendNotificationHttp - HTTP endpoint version of sendNotification
+ * 
+ * Accepts POST requests with JSON body containing notification data.
+ * This is a workaround for Flutter Web, where the cloud_functions package
+ * doesn't work reliably in production builds.
+ * 
+ * Usage from Flutter:
+ *   POST https://europe-west1-dgu-scorekort.cloudfunctions.net/sendNotificationHttp
+ *   Headers: Content-Type: application/json
+ *   Body: { type: 'FRIEND_REQUEST', fromUserName: '...', toUnionId: '...', requestId: '...' }
+ */
+exports.sendNotificationHttp = functions
+  .region('europe-west1')
+  .https.onRequest(async (req, res) => {
+    // Enable CORS
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+    
+    // Handle preflight
+    if (req.method === 'OPTIONS') {
+      res.status(204).send('');
+      return;
+    }
+    
+    // Only allow POST
+    if (req.method !== 'POST') {
+      res.status(405).send('Method Not Allowed');
+      return;
+    }
+    
+    console.log('📤 Push notification HTTP request received');
+    
+    try {
+      const data = req.body;
+      
+      // Validate notification type
+      const notificationType = data.type || 'MARKER_APPROVAL';
+      console.log(`  Type: ${notificationType}`);
+      
+      // Build payload based on type
+      let payload;
+      
+      if (notificationType === 'FRIEND_REQUEST') {
+        const { toUnionId, fromUserName, requestId } = data;
+        
+        if (!toUnionId || !fromUserName || !requestId) {
+          res.status(400).json({
+            error: 'Missing required fields: toUnionId, fromUserName, or requestId'
+          });
+          return;
+        }
+        
+        console.log(`  To: ${toUnionId}`);
+        console.log(`  From: ${fromUserName}`);
+        console.log(`  RequestId: ${requestId}`);
+        
+        // Build deep link URL
+        const requestUrl = `https://dgu-app-poc.web.app/friend-request/${requestId}`;
+        console.log(`  Deep link: ${requestUrl}`);
+        
+        // Fetch notification token
+        console.log('  Fetching notification token...');
+        const notificationToken = await fetchNotificationToken();
+        
+        // Build payload
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 30);
+        const expiryString = formatNotificationDate(expiryDate);
+        
+        payload = {
+          data: {
+            recipients: [toUnionId],
+            title: 'Ny venneanmodning',
+            message: `${fromUserName} vil gerne være venner med dig og følge dit handicap.`,
+            message_type: 'DGUMessage',
+            message_link: requestUrl,
+            expire_at: expiryString,
+            token: notificationToken
+          }
+        };
+      } else {
+        res.status(400).json({ error: 'Unsupported notification type' });
+        return;
+      }
+      
+      // Send to DGU notification API using shared helper function
+      console.log('  Sending to DGU notification API...');
+      const result = await sendNotificationRequest(payload);
+      
+      console.log('  ✅ Notification sent successfully!');
+      res.status(200).json({ 
+        success: true,
+        message: 'Notification sent',
+        result: result
+      });
+      
+    } catch (error) {
+      console.error('❌ Error:', error.message);
+      res.status(500).json({ 
+        error: error.message 
+      });
+    }
+  });
+
 exports.golfboxCallback = functions
   .region('europe-west1')
   .https.onRequest((req, res) => {

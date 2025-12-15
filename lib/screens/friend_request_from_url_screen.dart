@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/friends_provider.dart';
 import '../services/friends_service.dart';
 import '../theme/app_theme.dart';
+import 'friend_request_success_screen.dart';
 
 /// Screen for accepting/declining friend requests via deep link
 ///
@@ -43,6 +44,8 @@ class _FriendRequestFromUrlScreenState
   }
 
   Future<void> _loadRequest() async {
+    if (!mounted) return;
+    
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -50,6 +53,8 @@ class _FriendRequestFromUrlScreenState
 
     try {
       final request = await _friendsService.getFriendRequest(widget.requestId);
+
+      if (!mounted) return;
 
       if (request == null) {
         setState(() {
@@ -61,6 +66,7 @@ class _FriendRequestFromUrlScreenState
 
       // Check if already processed
       if (request.status != 'pending') {
+        if (!mounted) return;
         setState(() {
           _errorMessage = 'Denne anmodning er allerede ${request.status == 'accepted' ? 'accepteret' : 'afvist'}';
           _isLoading = false;
@@ -68,6 +74,7 @@ class _FriendRequestFromUrlScreenState
         return;
       }
 
+      if (!mounted) return;
       setState(() {
         _requestData = {
           'id': request.id,
@@ -82,6 +89,7 @@ class _FriendRequestFromUrlScreenState
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'Fejl ved hentning af anmodning: ${e.toString()}';
         _isLoading = false;
@@ -91,6 +99,7 @@ class _FriendRequestFromUrlScreenState
 
   Future<void> _handleAccept() async {
     if (_isProcessing) return;
+    if (!mounted) return;
 
     setState(() {
       _isProcessing = true;
@@ -102,21 +111,17 @@ class _FriendRequestFromUrlScreenState
       await friendsProvider.acceptFriendRequest(widget.requestId);
 
       if (mounted) {
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Du er nu venner med ${_requestData!['fromUserName']}! 🎉',
+        // Show success screen (not snackbar)
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => FriendRequestSuccessScreen(
+              friendName: _requestData!['fromUserName'],
             ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
           ),
         );
-
-        // Navigate back to home/friends tab
-        Navigator.of(context).pop();
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'Fejl ved accept: ${e.toString()}';
         _isProcessing = false;
@@ -126,6 +131,7 @@ class _FriendRequestFromUrlScreenState
 
   Future<void> _handleDecline() async {
     if (_isProcessing) return;
+    if (!mounted) return;
 
     // Show confirmation dialog
     final confirmed = await showDialog<bool>(
@@ -152,6 +158,7 @@ class _FriendRequestFromUrlScreenState
     );
 
     if (confirmed != true) return;
+    if (!mounted) return;
 
     setState(() {
       _isProcessing = true;
@@ -163,16 +170,38 @@ class _FriendRequestFromUrlScreenState
       await friendsProvider.declineFriendRequest(widget.requestId);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Venneanmodning afvist'),
-            duration: Duration(seconds: 2),
+        // Show simple info screen
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => Scaffold(
+              backgroundColor: Colors.white,
+              body: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.info_outline, size: 80, color: Colors.grey),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Anmodning afvist',
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 48),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Luk'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         );
-
-        Navigator.of(context).pop();
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'Fejl ved afvisning: ${e.toString()}';
         _isProcessing = false;

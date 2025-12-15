@@ -10,6 +10,8 @@ import '../models/score_record_model.dart';
 import '../models/news_article_model.dart';
 import '../services/whs_statistik_service.dart';
 import '../services/golfdk_news_service.dart';
+import '../screens/friends_list_screen.dart';
+import '../screens/privacy_settings_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Home Screen med bottom navigation for v2.0 Extended POC
@@ -131,11 +133,14 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.privacy_tip),
-              title: const Text('Privacy'),
+              leading: const Icon(Icons.privacy_tip, color: AppTheme.dguGreen),
+              title: const Text('Privacy & Samtykke'),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Navigate to privacy settings
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PrivacySettingsScreen()),
+                );
               },
             ),
             ListTile(
@@ -173,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
         index: _selectedIndex == 4 ? 0 : _selectedIndex, // If Menu tapped, show Hjem
         children: const [
           _HjemTab(),
-          _VennerTab(),
+          FriendsListScreen(),
           _FeedTab(),
           _TopsTab(),
         ],
@@ -688,34 +693,6 @@ class _ScoresPreviewCardState extends State<_ScoresPreviewCard> {
             );
           },
         ),
-      ),
-    );
-  }
-}
-
-/// Venner Tab (Placeholder)
-class _VennerTab extends StatelessWidget {
-  const _VennerTab();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.people, size: 80, color: Colors.grey),
-          SizedBox(height: 20),
-          Text(
-            'Venner',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 10),
-          Text(
-            'Handicap tracking for dine venner\n\nComing soon in Phase 2!',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey),
-          ),
-        ],
       ),
     );
   }

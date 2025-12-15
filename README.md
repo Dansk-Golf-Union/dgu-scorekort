@@ -92,6 +92,26 @@
 
 **Placering:** ☰ Menu → "Dark Mode" med Switch (ingen ikon)
 
+### 👥 Friends System - NEW!
+- ✅ **Add Friends**: Via DGU nummer med validation
+- ✅ **Friend Request Notifications**: Push til Mit Golf app
+- ✅ **Consent Flow**: Explicit samtykke ved accept
+- ✅ **Friends List**: Oversigt over venner med HCP badges
+- ✅ **Friend Detail Screen**: Detaljeret profil med stats
+- ✅ **Handicap Trend Chart**: Visual graf med fl_chart
+- ✅ **Period Filters**: 3 mdr, 6 mdr, 1 år
+- ✅ **Trend Statistics**: Tendens, bedste HCP, udvikling/måned
+- ✅ **Recent Scores**: Se venners seneste runder
+- ✅ **Privacy & Samtykke**: GDPR-compliant data sharing
+- ✅ **Remove Friend**: Fjern venskab + træk samtykke tilbage
+
+**Highlights:**
+- Real WHS data integration (score history)
+- Smart caching (1 hour freshness)
+- Pull-to-refresh for live updates
+- Loading states & error handling
+- Deep linking for friend requests
+
 ---
 
 ## ✨ Features from v1.6 (Included in v2.0)
@@ -129,16 +149,17 @@
 
 ---
 
-## 🚀 Coming in Phase 2: Social Features
+## 🚀 Social Features Status
 
-### 👥 Friends System (HANDICAP-FOCUSED!)
-- **Add Friends**: Via DGU nummer
-- **Handicap Dashboard**: Se venners aktuelle handicap
-- **Handicap Trends**: Graf over udvikling (3/6/12 mdr)
-- **Handicap Changes**: "Jonas: 12.8 → 12.0 📉 (-0.8)"
-- **Challenge Friend**: Link til match play
+### ✅ Phase 2A: Friends System (COMPLETED!)
+- ✅ **Add Friends**: Via DGU nummer
+- ✅ **Handicap Dashboard**: Se venners aktuelle handicap
+- ✅ **Handicap Trends**: Graf over udvikling (3/6/12 mdr)
+- ✅ **Friend Detail View**: Comprehensive stats & charts
+- ✅ **Privacy & Consent**: GDPR-compliant samtykke flow
+- ⏳ **Challenge Friend**: Link til match play (pending)
 
-### 📰 Activity Feed (MILESTONE-FOCUSED!)
+### 📰 Phase 2B: Activity Feed (NEXT!)
 - **Auto-detect Milestones**:
   - Handicap improvements
   - Major milestones (single-digit, scratch)
@@ -147,7 +168,7 @@
 - **Like & Comment**: Social interaction
 - **Push Notifications**: Stay updated
 
-### 🏆 Leaderboards (HANDICAP FIRST!)
+### 🏆 Phase 2C: Leaderboards (NEXT!)
 - **Handicap Rankings**: Lowest, biggest improvement
 - **Score Rankings**: Best rounds, most consistent
 - **Friend Circles**: Compete with friends
@@ -180,6 +201,8 @@
 - **Crypto 3.0.3** - OAuth PKCE
 - **SharedPreferences 2.2.2** - Storage
 - **Signature 5.5.0** - Digital signatures
+- **fl_chart 0.65.0** - Handicap trend charts
+- **url_launcher 6.2.2** - External links (news)
 
 ---
 
@@ -197,12 +220,19 @@ lib/
 │   ├── club_model.dart                    # Club, Course, Tee, Hole
 │   ├── player_model.dart                  # Player (OAuth + gender)
 │   ├── scorecard_model.dart               # Scorecard, HoleScore
-│   └── score_record_model.dart            # WHS score record (NEW v2.0)
+│   ├── score_record_model.dart            # WHS score record (NEW v2.0)
+│   ├── friendship_model.dart              # Friendship (NEW v2.0)
+│   ├── friend_request_model.dart          # Friend requests (NEW v2.0)
+│   ├── friend_profile_model.dart          # Friend profiles (NEW v2.0)
+│   ├── handicap_trend_model.dart          # Trend analysis (NEW v2.0)
+│   └── news_article_model.dart            # Golf.dk news (NEW v2.0)
 ├── providers/
 │   ├── auth_provider.dart                 # Auth state
 │   ├── match_setup_provider.dart          # Club/course/tee selection
 │   ├── scorecard_provider.dart            # Scorecard state
-│   └── match_play_provider.dart           # Match play state
+│   ├── match_play_provider.dart           # Match play state
+│   ├── theme_provider.dart                # Dark mode (NEW v2.0)
+│   └── friends_provider.dart              # Friends & trends (NEW v2.0)
 ├── services/
 │   ├── auth_service.dart                  # OAuth 2.0 PKCE
 │   ├── dgu_service.dart                   # DGU Basen API
@@ -211,7 +241,9 @@ lib/
 │   ├── scorecard_storage_service.dart     # Firestore scorecards
 │   ├── notification_service.dart          # Push notifications
 │   ├── whs_submission_service.dart        # WHS submission
-│   └── whs_statistik_service.dart         # WHS scores (NEW v2.0)
+│   ├── whs_statistik_service.dart         # WHS scores (NEW v2.0)
+│   ├── friends_service.dart               # Friends CRUD (NEW v2.0)
+│   └── golfdk_news_service.dart           # Golf.dk news (NEW v2.0)
 ├── utils/
 │   ├── handicap_calculator.dart           # WHS calculations
 │   ├── stroke_allocator.dart              # Stroke allocation
@@ -219,6 +251,11 @@ lib/
 └── screens/
     ├── home_screen.dart                   # Home dashboard (NEW v2.0)
     ├── score_archive_screen.dart          # Score archive (NEW v2.0)
+    ├── friends_list_screen.dart           # Friends list (NEW v2.0)
+    ├── friend_detail_screen.dart          # Friend profile + trends (NEW v2.0)
+    ├── privacy_settings_screen.dart       # Privacy & samtykke (NEW v2.0)
+    ├── friend_request_from_url_screen.dart # Friend consent (NEW v2.0)
+    ├── friend_request_success_screen.dart # Success confirmation (NEW v2.0)
     ├── login_screen.dart                  # OAuth login
     ├── simple_login_screen.dart           # Union ID login
     ├── scorecard_keypad_screen.dart       # Keypad input
@@ -284,6 +321,15 @@ functions/
 
 #### `scorecards`
 Scorekort med marker approval
+
+#### `friendships` - NEW v2.0!
+Active friendships (user1Id, user2Id, createdAt)
+
+#### `friend_requests` - NEW v2.0!
+Pending friend requests (fromUserId, toUserId, status, consentMessage)
+
+#### `user_privacy_settings` - NEW v2.0!
+Privacy toggles per user (shareHandicapWithFriends)
 
 #### `course-cache-metadata`
 Cache metadata (lastUpdated, club list)
@@ -352,8 +398,9 @@ Cached course data per club
 - `/` - Home (requires auth)
 - `/setup-round` - Scorecard setup (requires auth)
 - `/score-archive` - Score history (requires auth) - NEW v2.0!
-- `/match-play` - Match play (no auth required)
-- `/marker-approval/:id` - Remote approval (no auth required)
+- `/friend-request/:id` - Friend consent (public) - NEW v2.0!
+- `/match-play` - Match play (public)
+- `/marker-approval/:id` - Remote approval (public)
 - `/login` - Login screen
 
 ### Backend
@@ -525,15 +572,32 @@ Example: 14.5 / 2 = 7.25 → 7.3
 - [x] Home screen structure (tab navigation)
 - [x] Mit Golf design implementation
 - [x] Scorearkiv view (WHS API integration)
-- [ ] Dark mode (pending)
+- [x] Dark mode
+- [x] Golf.dk news feed
 
-### 🔄 Phase 2: Social Features (IN PROGRESS)
-- [ ] Friends System
-- [ ] Friend detail (handicap trends)
-- [ ] Activity Feed
-- [ ] Feed interaction (likes, comments)
-- [ ] Leaderboards
-- [ ] Cloud Function: calculateLeaderboards
+### ✅ Phase 2A: Friends System (DONE)
+- [x] Friends data models (Friendship, FriendRequest, FriendProfile)
+- [x] FriendsService + FriendsProvider
+- [x] Friend request notifications (push to Mit Golf)
+- [x] Consent flow (deep linking + authentication)
+- [x] Friends list UI (FriendsListScreen + FriendCard)
+- [x] Friend detail screen (comprehensive stats)
+- [x] Handicap trend chart (fl_chart with 3/6/12 month filters)
+- [x] Privacy & Samtykke screen (GDPR compliance)
+- [x] Remove friend + withdraw consent
+
+### 🔄 Phase 2B: Activity Feed (NEXT)
+- [ ] Feed data models
+- [ ] Milestone detection Cloud Function
+- [ ] Feed UI (activity cards)
+- [ ] Like & comment functionality
+- [ ] Activity notifications
+
+### 📅 Phase 2C: Leaderboards (NEXT)
+- [ ] Leaderboard data models
+- [ ] calculateLeaderboards Cloud Function
+- [ ] Leaderboard UI (rankings)
+- [ ] Friend circles
 
 ### 📅 Phase 3: Polish & Testing
 - [ ] Flight Mode (multi-player)
@@ -707,6 +771,6 @@ Dette er et POC projekt for DGU. Pull requests velkomne!
 
 **Bygget med ❤️, Flutter og Firebase**
 
-**Version:** 2.0 Extended POC (In Development)
+**Version:** 2.0 Extended POC - Phase 2A Complete
 
-**Last Updated:** December 2024
+**Last Updated:** December 15, 2024

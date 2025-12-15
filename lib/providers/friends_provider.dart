@@ -21,6 +21,7 @@ class FriendsProvider extends ChangeNotifier {
 
   List<Friendship> _friendships = [];
   List<FriendRequest> _pendingRequests = [];
+  List<FriendProfile> _friends = []; // List of friend profiles
   Map<String, FriendProfile> _friendProfiles = {}; // Cache
   bool _isLoading = false;
   String? _errorMessage;
@@ -28,6 +29,7 @@ class FriendsProvider extends ChangeNotifier {
 
   // Getters
   List<Friendship> get friendships => _friendships;
+  List<FriendProfile> get friends => _friends;
   List<FriendRequest> get pendingRequests => _pendingRequests;
   Map<String, FriendProfile> get friendProfiles => _friendProfiles;
   bool get isLoading => _isLoading;
@@ -53,6 +55,59 @@ class FriendsProvider extends ChangeNotifier {
     }
   }
 
+  /// Load friends with basic info for list view
+  ///
+  /// Fetches friendships and creates FriendProfile objects with:
+  /// - Player info from GetPlayer API
+  /// - Current handicap
+  /// - Basic trend data (delta from last score if available)
+  Future<void> loadFriends(String userId) async {
+    _isLoading = true;
+    notifyListeners();
+    
+    try {
+      _friendships = await _friendsService.getFriendships(userId);
+      
+      // Build friend profiles list
+      _friends.clear();
+      for (var friendship in _friendships) {
+        try {
+          // Get friend's union ID
+          final friendId = friendship.getFriendId(userId);
+          
+          // Fetch player info
+          final player = await _playerService.fetchPlayerByUnionId(friendId);
+          
+          // Create basic profile (without full trend calculation for performance)
+          final profile = FriendProfile(
+            friendshipId: friendship.id,
+            unionId: friendId,
+            name: player.name,
+            homeClubName: player.homeClubName,
+            homeClubId: player.homeClubId,
+            currentHandicap: player.hcp,
+            trend: HandicapTrend.empty(currentHcp: player.hcp), // Empty trend for now
+            recentScores: const [],
+            lastUpdated: DateTime.now(),
+            createdAt: friendship.createdAt,
+          );
+          
+          _friends.add(profile);
+        } catch (e) {
+          print('Failed to fetch friend $e');
+          // Continue with other friends even if one fails
+        }
+      }
+      
+      _errorMessage = null;
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   /// Load pending friend requests for current user
   Future<void> loadPendingRequests(String userId) async {
     try {
@@ -74,6 +129,7 @@ class FriendsProvider extends ChangeNotifier {
   ///
   /// Results are cached in _friendProfiles
   Future<FriendProfile> loadFriendProfile(
+    String friendshipId,
     String friendUnionId,
     String friendHomeClubId, {
     bool forceRefresh = false,
@@ -109,9 +165,11 @@ class FriendsProvider extends ChangeNotifier {
 
       // Create profile
       final profile = FriendProfile(
+        friendshipId: friendshipId,
         unionId: friendUnionId,
         name: player.name,
         homeClubName: player.homeClubName,
+        homeClubId: player.homeClubId,
         currentHandicap: player.hcp,
         trend: trend,
         recentScores: recentScores,
@@ -131,25 +189,40 @@ class FriendsProvider extends ChangeNotifier {
   /// Send friend request
   ///
   /// Validates friend via GetPlayer API, then creates request
+  /// Supports both old signature (toUnionId) and new signature (toUserId, toUserName)
   Future<void> sendFriendRequest({
     required String fromUserId,
     required String fromUserName,
-    required String toUnionId,
+    String? toUnionId, // Old signature for backward compatibility
+    String? toUserId, // New signature
+    String? toUserName, // New signature
   }) async {
     try {
       _isLoading = true;
       _errorMessage = null;
       notifyListeners();
 
-      // Validate toUnionId via GetPlayer API
-      final toPlayer = await _playerService.fetchPlayerByUnionId(toUnionId);
+      // Support both old and new signatures
+      final targetUnionId = toUserId ?? toUnionId;
+      if (targetUnionId == null) {
+        throw Exception('toUserId or toUnionId must be provided');
+      }
+
+      // If toUserName not provided, fetch from API
+      String targetUserName;
+      if (toUserName != null) {
+        targetUserName = toUserName;
+      } else {
+        final toPlayer = await _playerService.fetchPlayerByUnionId(targetUnionId);
+        targetUserName = toPlayer.name;
+      }
 
       // Send request
       await _friendsService.sendFriendRequest(
         fromUserId: fromUserId,
         fromUserName: fromUserName,
-        toUserId: toUnionId,
-        toUserName: toPlayer.name,
+        toUserId: targetUnionId,
+        toUserName: targetUserName,
       );
 
       _isLoading = false;
@@ -291,6 +364,7 @@ class FriendsProvider extends ChangeNotifier {
   /// Clear all data (on logout)
   void clear() {
     _friendships.clear();
+    _friends.clear();
     _pendingRequests.clear();
     _friendProfiles.clear();
     _isLoading = false;

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../models/friendship_model.dart';
 import '../models/friend_request_model.dart';
 
@@ -58,10 +59,25 @@ class FriendsService {
   /// Get a specific friend request by ID
   Future<FriendRequest?> getFriendRequest(String requestId) async {
     try {
+      print('🔍 FIRESTORE: Fetching friend request: $requestId');
+      print('🔍 FIRESTORE: Collection path: ${_friendRequestsRef.path}');
+      
       final doc = await _friendRequestsRef.doc(requestId).get();
+      
+      print('🔍 FIRESTORE: Document exists: ${doc.exists}');
+      if (doc.exists) {
+        print('🔍 FIRESTORE: Document data: ${doc.data()}');
+      } else {
+        print('❌ FIRESTORE: Document NOT found');
+      }
+      
       if (!doc.exists) return null;
-      return FriendRequest.fromFirestore(doc);
+      
+      final request = FriendRequest.fromFirestore(doc);
+      print('✅ FIRESTORE: Request loaded successfully');
+      return request;
     } catch (e) {
+      print('❌ FIRESTORE ERROR: $e');
       throw Exception('Failed to fetch friend request: $e');
     }
   }
@@ -117,18 +133,33 @@ class FriendsService {
 
       final docRef = await _friendRequestsRef.add(request.toFirestore());
 
-      // Send push notification via Cloud Function
+      // Send push notification via Cloud Function HTTP endpoint
+      // NOTE: Using HTTP endpoint instead of callable function because cloud_functions
+      //       package doesn't work reliably in Flutter Web production builds
       try {
-        final callable = FirebaseFunctions.instanceFor(region: 'europe-west1')
-            .httpsCallable('sendNotification');
+        final url = Uri.parse(
+          'https://europe-west1-dgu-scorekort.cloudfunctions.net/sendNotificationHttp',
+        );
+        
+        final response = await http.post(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: json.encode({
+            'type': 'FRIEND_REQUEST',
+            'fromUserName': fromUserName,
+            'toUnionId': toUserId,
+            'requestId': docRef.id,
+          }),
+        );
 
-        await callable.call({
-          'type': 'FRIEND_REQUEST',
-          'fromUserName': fromUserName,
-          'toUnionId': toUserId,
-          'requestId': docRef.id,
-        });
-        print('✅ Friend request notification sent to $toUserId');
+        if (response.statusCode == 200) {
+          print('✅ Friend request notification sent to $toUserId');
+        } else {
+          print('⚠️ Notification failed with status: ${response.statusCode}');
+          print('   Response: ${response.body}');
+        }
       } catch (e) {
         print('⚠️ Failed to send notification: $e');
         // Don't throw - Firestore write succeeded, notification is optional

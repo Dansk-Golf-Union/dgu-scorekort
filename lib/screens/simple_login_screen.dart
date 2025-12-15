@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 
@@ -50,7 +51,19 @@ class _SimpleLoginScreenState extends State<SimpleLoginScreen> {
       final authProvider = context.read<AuthProvider>();
       await authProvider.loginWithUnionId(unionId);
 
-      // Navigation handled by main.dart Consumer
+      // Check for 'from' query parameter to redirect back to intended destination
+      if (mounted) {
+        final uri = GoRouterState.of(context).uri;
+        final from = uri.queryParameters['from'];
+        
+        if (from != null && from.isNotEmpty) {
+          // Redirect to intended destination (e.g., /friend-request/xxx)
+          context.go(from);
+        } else {
+          // Default: redirect to home
+          context.go('/');
+        }
+      }
     } catch (e) {
       if (mounted) {
         setState(() {

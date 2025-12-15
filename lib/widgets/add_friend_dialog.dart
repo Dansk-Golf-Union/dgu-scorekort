@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/friends_provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/player_service.dart';
+import '../models/player_model.dart';
 import '../theme/app_theme.dart';
 
 /// Dialog for adding a new friend by DGU number
@@ -23,9 +25,11 @@ class AddFriendDialog extends StatefulWidget {
 
 class _AddFriendDialogState extends State<AddFriendDialog> {
   final TextEditingController _dguNumberController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-  bool _isProcessing = false;
+  final _playerService = PlayerService();
+  
+  bool _isLoading = false;
   String? _errorMessage;
+  Player? _previewPlayer;
 
   @override
   void dispose() {
@@ -33,55 +37,66 @@ class _AddFriendDialogState extends State<AddFriendDialog> {
     super.dispose();
   }
 
-  /// Validates DGU number format (XXX-XXXXXX)
-  bool _isValidDguNumber(String input) {
-    final regex = RegExp(r'^\d{1,3}-\d{1,6}$');
-    return regex.hasMatch(input.trim());
-  }
-
-  Future<void> _handleSendRequest() async {
-    if (!_formKey.currentState!.validate()) return;
-
+  Future<void> _validateAndPreview() async {
     final dguNumber = _dguNumberController.text.trim();
-
+    
+    // Validate format
+    if (!RegExp(r'^\d{1,3}-\d{1,6}$').hasMatch(dguNumber)) {
+      setState(() => _errorMessage = 'Ugyldigt format (XXX-XXXXXX)');
+      return;
+    }
+    
     setState(() {
-      _isProcessing = true;
+      _isLoading = true;
       _errorMessage = null;
     });
-
+    
     try {
-      final authProvider = context.read<AuthProvider>();
-      final friendsProvider = context.read<FriendsProvider>();
+      final player = await _playerService.fetchPlayerByUnionId(dguNumber);
+      setState(() {
+        _previewPlayer = player;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Kunne ikke finde spiller';
+        _isLoading = false;
+      });
+    }
+  }
 
-      final currentUser = authProvider.currentPlayer;
-      if (currentUser == null) {
+  Future<void> _sendFriendRequest() async {
+    final authProvider = context.read<AuthProvider>();
+    final friendsProvider = context.read<FriendsProvider>();
+    
+    setState(() => _isLoading = true);
+    
+    try {
+      final unionId = authProvider.currentPlayer?.unionId;
+      if (unionId == null) {
         throw Exception('Ikke logget ind');
       }
-
-      // Send friend request
+      
       await friendsProvider.sendFriendRequest(
-        fromUserId: currentUser.unionId!,
-        fromUserName: currentUser.name,
-        toUnionId: dguNumber,
+        fromUserId: unionId,
+        fromUserName: authProvider.currentPlayer!.name,
+        toUserId: _previewPlayer!.unionId,
+        toUserName: _previewPlayer!.name,
       );
-
+      
       if (mounted) {
-        // Show success message
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Venneanmodning sendt! 🎉'),
+          SnackBar(
+            content: Text('Venneanmodning sendt til ${_previewPlayer!.name}'),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
           ),
         );
-
-        // Close dialog
-        Navigator.of(context).pop(true); // Return true to indicate success
       }
     } catch (e) {
       setState(() {
-        _errorMessage = e.toString().replaceAll('Exception: ', '');
-        _isProcessing = false;
+        _errorMessage = 'Kunne ikke sende anmodning: $e';
+        _isLoading = false;
       });
     }
   }
@@ -100,95 +115,61 @@ class _AddFriendDialogState extends State<AddFriendDialog> {
           const Text('Tilføj Ven'),
         ],
       ),
-      content: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Indtast DGU nummer på den spiller du vil tilføje som ven.',
-              style: TextStyle(fontSize: 14),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _dguNumberController,
+            decoration: InputDecoration(
+              labelText: 'DGU Nummer',
+              hintText: '123-4567',
+              errorText: _errorMessage,
+              border: const OutlineInputBorder(),
             ),
-            const SizedBox(height: 20),
-            TextFormField(
-              controller: _dguNumberController,
-              decoration: const InputDecoration(
-                labelText: 'DGU Nummer',
-                hintText: 'F.eks. 72-4197',
-                helperText: 'Format: XXX-XXXXXX',
-                prefixIcon: Icon(Icons.badge),
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.text,
-              textInputAction: TextInputAction.done,
-              enabled: !_isProcessing,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Indtast DGU nummer';
-                }
-                if (!_isValidDguNumber(value)) {
-                  return 'Ugyldigt format. Brug: XXX-XXXXXX';
-                }
-                return null;
-              },
-              onFieldSubmitted: (_) => _handleSendRequest(),
-            ),
-            if (_errorMessage != null) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.error_outline,
-                        color: Colors.red.shade700, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _errorMessage!,
-                        style: TextStyle(
-                          color: Colors.red.shade700,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            onChanged: (_) => setState(() {
+              _errorMessage = null;
+              _previewPlayer = null;
+            }),
+          ),
+          if (_isLoading) ...[
+            const SizedBox(height: 16),
+            const Center(child: CircularProgressIndicator()),
           ],
-        ),
+          if (_previewPlayer != null) ...[
+            const SizedBox(height: 16),
+            _buildPreview(),
+          ],
+        ],
       ),
       actions: [
         TextButton(
-          onPressed: _isProcessing ? null : () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.pop(context),
           child: const Text('Annuller'),
         ),
-        FilledButton.icon(
-          onPressed: _isProcessing ? null : _handleSendRequest,
-          icon: _isProcessing
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Icon(Icons.send),
-          label: Text(_isProcessing ? 'Sender...' : 'Send Anmodning'),
-          style: FilledButton.styleFrom(
-            backgroundColor: AppTheme.dguGreen,
+        if (_previewPlayer == null)
+          ElevatedButton(
+            onPressed: _isLoading ? null : _validateAndPreview,
+            child: const Text('Søg'),
+          )
+        else
+          ElevatedButton(
+            onPressed: _sendFriendRequest,
+            child: const Text('Send Anmodning'),
           ),
-        ),
       ],
     );
   }
+
+  Widget _buildPreview() {
+    return Card(
+      child: ListTile(
+        leading: CircleAvatar(
+          child: Text(_previewPlayer!.name[0]),
+        ),
+        title: Text(_previewPlayer!.name),
+        subtitle: Text('HCP ${_previewPlayer!.hcp.toStringAsFixed(1)}'),
+      ),
+    );
+  }
 }
-
-

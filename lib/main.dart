@@ -1,3 +1,4 @@
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -71,31 +72,42 @@ class _AppRouter extends StatelessWidget {
     
     // Setup router with auth state
     final router = GoRouter(
-      initialLocation: '/',
-      debugLogDiagnostics: true,
+      // initialLocation removed to allow deep links to work from external sources
+      debugLogDiagnostics: false,
       refreshListenable: authProvider, // Listen to auth changes!
       redirect: (context, state) {
-        print('🔍 REDIRECT: location=${state.matchedLocation}, auth=${authProvider.isAuthenticated}');
+        // NUCLEAR OPTION: Check actual browser URL first (bypasses GoRouter state issues)
+        final browserUrl = html.window.location.href;
         
+        // If browser URL contains public routes, allow immediate access
+        if (browserUrl.contains('/friend-request/')) {
+          return null;
+        }
+        if (browserUrl.contains('/marker-approval/')) {
+          return null;
+        }
+        if (browserUrl.contains('/match-play')) {
+          return null;
+        }
+        
+        // Fallback: Check GoRouter state (for normal navigation within app)
         final isMarkerApproval = state.matchedLocation.startsWith('/marker-approval');
         final isMatchPlay = state.matchedLocation.startsWith('/match-play');
+        final isFriendRequest = state.matchedLocation.startsWith('/friend-request');
         
-        // Allow marker approval and match play without auth
-        if (isMarkerApproval || isMatchPlay) {
-          print('🔍 REDIRECT: Allowing public route');
+        // Allow marker approval, match play, and friend requests without auth
+        if (isMarkerApproval || isMatchPlay || isFriendRequest) {
           return null;
         }
         
         // Show loading screen while initializing
         if (authProvider.isLoading) {
-          print('🔍 REDIRECT: Loading...');
           return null; // Stay on current route while loading
         }
         
         // Redirect to login if not authenticated (preserve intended destination)
         if (!authProvider.isAuthenticated && state.matchedLocation != '/login') {
           final loginUrl = '/login?from=${Uri.encodeComponent(state.matchedLocation)}';
-          print('🔍 REDIRECT: Not authenticated → $loginUrl');
           return loginUrl;
         }
         
@@ -104,7 +116,6 @@ class _AppRouter extends StatelessWidget {
             (state.matchedLocation == '/login' || state.matchedLocation.startsWith('/login'))) {
           final from = state.uri.queryParameters['from'];
           if (from != null && from.isNotEmpty) {
-            print('🔍 REDIRECT: After login → $from');
             return from;
           }
         }
@@ -116,13 +127,11 @@ class _AppRouter extends StatelessWidget {
           if (fullLocation.contains('from=')) {
             final from = state.uri.queryParameters['from'];
             if (from != null && from.isNotEmpty) {
-              print('🔍 REDIRECT: From home to intended → $from');
               return from;
             }
           }
         }
         
-        print('🔍 REDIRECT: No redirect needed');
         return null;
       },
       routes: [
