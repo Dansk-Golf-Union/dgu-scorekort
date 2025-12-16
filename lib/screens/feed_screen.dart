@@ -28,6 +28,14 @@ class _FeedScreenState extends State<FeedScreen> {
     friendIds.add(authProvider.currentPlayer?.unionId ?? '');
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Aktivitetsfeed', style: TextStyle(color: Colors.white)),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       body: Column(
         children: [
           // Filter chips

@@ -2,24 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // For kIsWeb and kDebugMode
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
+import '../providers/friends_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_friend_dialog.dart';
 import '../widgets/birdie_bonus_bar.dart';
 import '../models/score_record_model.dart';
 import '../models/news_article_model.dart';
 import '../models/birdie_bonus_model.dart';
+import '../models/activity_item_model.dart';
 import '../services/whs_statistik_service.dart';
 import '../services/golfdk_news_service.dart';
 import '../services/birdie_bonus_service.dart';
-import '../screens/friends_list_screen.dart';
 import '../screens/privacy_settings_screen.dart';
-import '../screens/feed_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// Home Screen med bottom navigation for v2.0 Extended POC
-/// Bottom navigation: Hjem, Venner, Feed, Tops, Menu
+/// Home Screen - Single-page dashboard (no bottom nav)
+/// Dashboard with widgets linking to full-screen views
+/// Navigation: Widgets → Full-screen → Back to dashboard
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -28,7 +30,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
@@ -183,73 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      body: IndexedStack(
-        index: _selectedIndex == 4 ? 0 : _selectedIndex, // If Menu tapped, show Hjem
-        children: const [
-          _HjemTab(),
-          FriendsListScreen(),
-          FeedScreen(),
-          _TopsTab(),
-        ],
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          top: false, // Don't add padding at top
-          child: Container(
-            padding: const EdgeInsets.only(bottom: 8), // Only bottom padding
-            child: BottomNavigationBar(
-              currentIndex: _selectedIndex == 4 ? 0 : _selectedIndex,
-              onTap: (index) {
-                if (index == 4) {
-                  _scaffoldKey.currentState?.openDrawer();
-                } else {
-                  setState(() => _selectedIndex = index);
-                }
-              },
-              type: BottomNavigationBarType.fixed,
-              selectedItemColor: AppTheme.dguGreen,
-              unselectedItemColor: Colors.grey,
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              selectedFontSize: 12,
-              unselectedFontSize: 11,
-              iconSize: 28,
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.home),
-                  label: 'Hjem',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.people),
-                  label: 'Venner',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.feed),
-                  label: 'Feed',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.emoji_events),
-                  label: 'Tops',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.menu),
-                  label: 'Menu',
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      body: const _HjemTab(), // Single-page dashboard (no tabs, no bottom nav)
     );
   }
 
@@ -283,10 +218,11 @@ class _HjemTabState extends State<_HjemTab> {
   BirdieBonusData? _birdieBonusData;
   bool _isBirdieBonusParticipant = false;
   
-  // CRITICAL FIX: Flag to ensure data loads only once
+  // CRITICAL FIX: Flags to ensure data loads only once
   // Without this, didChangeDependencies() would trigger multiple times
   // (whenever Provider data changes) causing redundant API calls
   bool _hasLoadedBirdieBonus = false;
+  bool _hasLoadedFriends = false;
 
   @override
   void initState() {
@@ -313,14 +249,23 @@ class _HjemTabState extends State<_HjemTab> {
     //    (didChangeDependencies can be called multiple times during widget lifecycle)
     //
     // This pattern is necessary when loading data that depends on Provider state.
-    if (!_hasLoadedBirdieBonus) {
+    if (!_hasLoadedBirdieBonus || !_hasLoadedFriends) {
       final authProvider = context.read<AuthProvider>();
       final player = authProvider.currentPlayer;
       
-      // Check if player is fully loaded before attempting Birdie Bonus fetch
+      // Check if player is fully loaded before attempting data fetch
       if (player != null && player.unionId != null && player.unionId!.isNotEmpty) {
-        _hasLoadedBirdieBonus = true; // Prevent re-loading on future calls
-        _loadBirdieBonusData();
+        // Load Birdie Bonus data
+        if (!_hasLoadedBirdieBonus) {
+          _hasLoadedBirdieBonus = true; // Prevent re-loading on future calls
+          _loadBirdieBonusData();
+        }
+        
+        // Load friends data
+        if (!_hasLoadedFriends) {
+          _hasLoadedFriends = true; // Prevent re-loading on future calls
+          context.read<FriendsProvider>().loadFriends(player.unionId!);
+        }
       }
     }
   }
@@ -524,40 +469,89 @@ class _HjemTabState extends State<_HjemTab> {
           ),
           const SizedBox(height: 24),
 
-          // Aktivitet Preview
+          // Seneste Nyheder (Golf.dk) - KEEP THIS! 🚨
           const Text(
-            '📰 Aktivitet',
+            '🗞️ Nyheder fra Golf.dk',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          const _AktivitetPreviewCard(),
+          const _NewsPreviewCard(), // EXISTING - DO NOT DELETE
           const SizedBox(height: 24),
 
-          // Venner Preview
-          const Text(
-            '👥 Venner',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          // Mine Venner - NEW Widget (summary)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                '👥 Mine Venner',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              TextButton(
+                onPressed: () => context.push('/venner'),
+                child: const Text('Se alle →'),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          const _VennerPreviewCard(),
+          const _MineVennerWidget(),
           const SizedBox(height: 24),
 
-          // Mine Seneste Scores Preview
-          const Text(
-            '📜 Mine Seneste Scores',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          // Seneste Aktivitet - NEW Widget (2 items)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                '📰 Seneste Aktivitet',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              TextButton(
+                onPressed: () => context.push('/feed'),
+                child: const Text('Se alle →'),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          const _ScoresPreviewCard(),
+          const _SenesteAktivitetWidget(),
           const SizedBox(height: 24),
 
-          // Seneste Nyheder
-          const Text(
-            '🗞️ Seneste Nyheder',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          // Ugens Bedste - NEW Widget
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                '🏆 Ugens Bedste',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              TextButton(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Leaderboards kommer i Phase 2C!')),
+                  );
+                },
+                child: const Text('Se mere →'),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          const _NewsPreviewCard(),
+          const _UgensBedsteWidget(),
+          const SizedBox(height: 24),
+
+          // Mine Seneste Scores - NEW Widget
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                '📊 Mine Seneste Scores',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              TextButton(
+                onPressed: () => context.push('/score-archive'),
+                child: const Text('Se arkiv →'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const _MineSenesteScoresWidget(),
         ],
       ),
     );
@@ -587,97 +581,272 @@ class _HjemTabState extends State<_HjemTab> {
   }
 }
 
-/// Venner Preview Card (Placeholder)
-class _VennerPreviewCard extends StatelessWidget {
-  const _VennerPreviewCard();
+/// Mine Venner Widget - Shows friend summary with LIVE DATA
+class _MineVennerWidget extends StatelessWidget {
+  const _MineVennerWidget();
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            const ListTile(
-              leading: CircleAvatar(child: Icon(Icons.person)),
-              title: Text('Jonas Meyer'),
-              subtitle: Text('Handicap: 12.0 📉 -0.8'),
-              trailing: Text('Forbedret', style: TextStyle(color: Colors.green)),
+    return Consumer<FriendsProvider>(
+      builder: (context, friendsProvider, child) {
+        final friends = friendsProvider.friends;
+        final friendCount = friends.length;
+
+        return GestureDetector(
+          onTap: () => context.push('/venner'),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Friend count header
+                  Text(
+                    friendCount == 0
+                        ? 'Ingen venner endnu'
+                        : '$friendCount ${friendCount == 1 ? 'ven' : 'venner'}',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Empty state or friend list
+                  if (friendCount == 0)
+                    const ListTile(
+                      leading: Icon(Icons.people_outline, color: Colors.grey, size: 32),
+                      title: Text('Ingen venner endnu'),
+                      subtitle: Text('Klik her for at tilføje venner'),
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                    )
+                  else
+                    // Show first 2-3 friends
+                    ...friends.take(3).map((friend) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: AppTheme.dguGreen,
+                              child: Text(
+                                friend.name.isNotEmpty ? friend.name[0].toUpperCase() : '?',
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    friend.name,
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    'HCP ${friend.currentHandicap.toStringAsFixed(1)} • ${friend.homeClubName ?? "Ingen klub"}',
+                                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Trend indicator (if available)
+                            if (friend.trend.delta != null)
+                              Icon(
+                                friend.trend.delta! < 0 ? Icons.trending_down : Icons.trending_up,
+                                color: friend.trend.delta! < 0 ? Colors.green : Colors.orange,
+                                size: 20,
+                              ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                ],
+              ),
             ),
-            const ListTile(
-              leading: CircleAvatar(child: Icon(Icons.person)),
-              title: Text('Peter Hansen'),
-              subtitle: Text('Handicap: 8.7 🏆 Single-digit!'),
-              trailing: Icon(Icons.emoji_events, color: Colors.amber),
-            ),
-            const ListTile(
-              leading: CircleAvatar(child: Icon(Icons.person)),
-              title: Text('Anne Nielsen'),
-              subtitle: Text('Handicap: 15.2 → Stabil'),
-            ),
-            TextButton(
-              onPressed: () {
-                // TODO: Navigate to Venner tab
-              },
-              child: const Text('Se alle venner →'),
-            ),
-          ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Ugens Bedste Widget - Highlights top achievement this week
+class _UgensBedsteWidget extends StatelessWidget {
+  const _UgensBedsteWidget();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Leaderboards kommer i Phase 2C!')),
+        );
+      },
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: const [
+              Icon(Icons.emoji_events, size: 48, color: Colors.amber),
+              SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Peter - Eagle på Furesø B12',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      '+2 over par → stableford 40',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-
-/// Aktivitet Preview Card (Placeholder)
-class _AktivitetPreviewCard extends StatelessWidget {
-  const _AktivitetPreviewCard();
+/// Seneste Aktivitet Widget - Shows 2 most recent activities (LIVE DATA)
+class _SenesteAktivitetWidget extends StatelessWidget {
+  const _SenesteAktivitetWidget();
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            const ListTile(
-              leading: Icon(Icons.trending_down, color: Colors.green, size: 32),
-              title: Text('Jonas sænkede handicap!'),
-              subtitle: Text('12.8 → 12.0 (-0.8) • I dag'),
-            ),
-            const Divider(),
-            const ListTile(
-              leading: Icon(Icons.emoji_events, color: Colors.amber, size: 32),
-              title: Text('Peter nåede single-digit handicap!'),
-              subtitle: Text('10.3 → 9.8 • I går'),
-            ),
-            const Divider(),
-            const ListTile(
-              leading: Icon(Icons.sports_golf, color: AppTheme.dguGreen, size: 32),
-              title: Text('Nick vandt match 3/2'),
-              subtitle: Text('vs Jonas Meyer • I går'),
-            ),
-            TextButton(
-              onPressed: () {
-                // TODO: Navigate to Feed tab
-              },
-              child: const Text('Se aktivitet feed →'),
-            ),
-          ],
+    final authProvider = context.watch<AuthProvider>();
+    final friendsProvider = context.watch<FriendsProvider>();
+
+    // Get list of friend union IDs + current user
+    final friendIds = friendsProvider.friends.map((f) => f.unionId).toList();
+    friendIds.add(authProvider.currentPlayer?.unionId ?? '');
+
+    return GestureDetector(
+      onTap: () => context.push('/feed'),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('activities')
+                .orderBy('timestamp', descending: true)
+                .limit(2) // Only 2 most recent
+                .snapshots(),
+            builder: (context, snapshot) {
+              // Loading state
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: CircularProgressIndicator(
+                      color: AppTheme.dguGreen,
+                    ),
+                  ),
+                );
+              }
+
+              // Error state
+              if (snapshot.hasError) {
+                return ListTile(
+                  leading: const Icon(Icons.error_outline, color: Colors.red),
+                  title: const Text('Kunne ikke hente aktiviteter'),
+                  subtitle: Text(snapshot.error.toString()),
+                  dense: true,
+                );
+              }
+
+              // Parse activities and filter to friends
+              final activities = snapshot.data!.docs
+                  .map((doc) => ActivityItem.fromFirestore(doc))
+                  .where((activity) => !activity.isDismissed)
+                  .where((activity) => friendIds.contains(activity.userId))
+                  .take(2) // Ensure max 2 items
+                  .toList();
+
+              // Empty state
+              if (activities.isEmpty) {
+                return const ListTile(
+                  leading: Icon(Icons.feed_outlined, color: Colors.grey, size: 32),
+                  title: Text('Ingen aktiviteter endnu'),
+                  subtitle: Text('Følg venner for at se deres fremskridt'),
+                  dense: true,
+                );
+              }
+
+              // Render activities
+              return Column(
+                children: activities.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final activity = entry.value;
+                  
+                  return Column(
+                    children: [
+                      _buildActivityListTile(activity),
+                      if (index < activities.length - 1) const Divider(),
+                    ],
+                  );
+                }).toList(),
+              );
+            },
+          ),
         ),
       ),
     );
   }
+
+  Widget _buildActivityListTile(ActivityItem activity) {
+    // Determine icon and color based on activity type
+    IconData icon;
+    Color color;
+    
+    switch (activity.type) {
+      case ActivityType.improvement:
+        icon = Icons.trending_down;
+        color = Colors.green;
+        break;
+      case ActivityType.milestone:
+        icon = Icons.emoji_events;
+        color = Colors.amber;
+        break;
+      case ActivityType.eagle:
+        icon = Icons.flight;
+        color = Colors.blue;
+        break;
+      case ActivityType.albatross:
+        icon = Icons.flight;
+        color = Colors.purple;
+        break;
+      case ActivityType.personalBest:
+        icon = Icons.star;
+        color = Colors.orange;
+        break;
+    }
+
+    return ListTile(
+      leading: Icon(icon, color: color, size: 32),
+      title: Text(activity.getTitle()),
+      subtitle: Text(activity.getMessage()),
+      dense: true,
+    );
+  }
 }
 
-/// Scores Preview Card - Shows last 3 scores from WHS API
-class _ScoresPreviewCard extends StatefulWidget {
-  const _ScoresPreviewCard();
+/// Mine Seneste Scores Widget - Shows last 2-3 scores from WHS API
+class _MineSenesteScoresWidget extends StatefulWidget {
+  const _MineSenesteScoresWidget();
 
   @override
-  State<_ScoresPreviewCard> createState() => _ScoresPreviewCardState();
+  State<_MineSenesteScoresWidget> createState() => _MineSenesteScoresWidgetState();
 }
 
-class _ScoresPreviewCardState extends State<_ScoresPreviewCard> {
+class _MineSenesteScoresWidgetState extends State<_MineSenesteScoresWidget> {
   final _whsService = WhsStatistikService();
   Future<List<ScoreRecord>>? _scoresFuture;
 
@@ -696,7 +865,7 @@ class _ScoresPreviewCardState extends State<_ScoresPreviewCard> {
         _scoresFuture = _whsService.getPlayerScores(
           unionId: player.unionId!,
           clubId: player.homeClubId!,
-          limit: 3,
+          limit: 2, // Show 2 most recent scores
         );
       });
     } else {
@@ -817,33 +986,6 @@ class _ScoresPreviewCardState extends State<_ScoresPreviewCard> {
   }
 }
 /// Tops Tab (Placeholder)
-class _TopsTab extends StatelessWidget {
-  const _TopsTab();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.emoji_events, size: 80, color: Colors.grey),
-          SizedBox(height: 20),
-          Text(
-            'Leaderboards',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 10),
-          Text(
-            'Handicap rankings og score leaderboards\n\nComing soon in Phase 2!',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// News Preview Card - Shows latest 3 articles from Golf.dk
 class _NewsPreviewCard extends StatefulWidget {
   const _NewsPreviewCard();
