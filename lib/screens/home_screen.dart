@@ -6,10 +6,13 @@ import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_friend_dialog.dart';
+import '../widgets/birdie_bonus_bar.dart';
 import '../models/score_record_model.dart';
 import '../models/news_article_model.dart';
+import '../models/birdie_bonus_model.dart';
 import '../services/whs_statistik_service.dart';
 import '../services/golfdk_news_service.dart';
+import '../services/birdie_bonus_service.dart';
 import '../screens/friends_list_screen.dart';
 import '../screens/privacy_settings_screen.dart';
 import '../screens/feed_screen.dart';
@@ -44,28 +47,33 @@ class _HomeScreenState extends State<HomeScreen> {
           automaticallyImplyLeading: false,
           flexibleSpace: SafeArea(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.end, // Push logo to bottom
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 8), // Small margin from bottom
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                      const Spacer(),
-                      Image.asset(
-                        'assets/images/dgu_logo.png',
-                        height: 40,
-                        fit: BoxFit.contain,
+                      // Logo centered in full width (ignores envelope icon)
+                      Center(
+                        child: Image.asset(
+                          'assets/images/dgu_logo.png',
+                          height: 40,
+                          fit: BoxFit.contain,
+                        ),
                       ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.mail_outline, color: AppTheme.dguGreen),
-                        tooltip: 'Beskeder',
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Beskeder coming soon!')),
-                          );
-                        },
+                      // Envelope icon positioned absolute to the right
+                      Positioned(
+                        right: 8,
+                        child: IconButton(
+                          icon: const Icon(Icons.mail_outline, color: AppTheme.dguGreen),
+                          tooltip: 'Beskeder',
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Beskeder coming soon!')),
+                            );
+                          },
+                        ),
                       ),
                     ],
                   ),
@@ -263,8 +271,55 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 /// Hjem Tab - Dashboard med player card, quick actions og previews
-class _HjemTab extends StatelessWidget {
+class _HjemTab extends StatefulWidget {
   const _HjemTab();
+
+  @override
+  State<_HjemTab> createState() => _HjemTabState();
+}
+
+class _HjemTabState extends State<_HjemTab> {
+  final BirdieBonusService _birdieBonusService = BirdieBonusService();
+  BirdieBonusData? _birdieBonusData;
+  bool _isLoadingBirdieBonus = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBirdieBonusData();
+  }
+
+  Future<void> _loadBirdieBonusData() async {
+    final authProvider = context.read<AuthProvider>();
+    final player = authProvider.currentPlayer;
+
+    if (player == null || player.unionId == null || player.unionId!.isEmpty) {
+      return;
+    }
+
+    try {
+      final data = await _birdieBonusService.getBirdieBonusData(player.unionId!);
+      if (mounted) {
+        setState(() {
+          _birdieBonusData = data;
+          _isLoadingBirdieBonus = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingBirdieBonus = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -357,38 +412,55 @@ class _HjemTab extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 16),
+
+            // Birdie Bonus Bar (NEW!)
+            if (_birdieBonusData != null && _birdieBonusData!.isParticipant)
+              BirdieBonusBar(data: _birdieBonusData!),
+            
             const SizedBox(height: 24),
           ],
 
-          // Quick Actions
-          const Text(
-            '🏌️ Quick Actions',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          Center(
-            child: SizedBox(
-              width: double.infinity,
-              child: _QuickActionCard(
-                icon: Icons.golf_course,
-                title: 'Start Ny Runde',
-                color: AppTheme.dguGreen,
-                onTap: () {
-                  // Navigate to scorecard setup screen
-                  context.push('/setup-round');
-                },
+          // Quick Actions - 4 Buttons in 2x2 Grid (Mit Golf style)
+          Row(
+            children: [
+              Expanded(
+                child: _buildActionButton(
+                  context,
+                  'Bestil tid',
+                  () => _launchUrl('https://www.golf.dk/'),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Venner Preview
-          const Text(
-            '👥 Venner',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildActionButton(
+                  context,
+                  'DGU score',
+                  () => context.push('/setup-round'),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          const _VennerPreviewCard(),
+          Row(
+            children: [
+              Expanded(
+                child: _buildActionButton(
+                  context,
+                  'Indberet',
+                  () => _launchUrl('https://www.golf.dk/'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildActionButton(
+                  context,
+                  'Scorekort',
+                  () => _launchUrl('https://www.golf.dk/'),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 24),
 
           // Aktivitet Preview
@@ -398,6 +470,15 @@ class _HjemTab extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const _AktivitetPreviewCard(),
+          const SizedBox(height: 24),
+
+          // Venner Preview
+          const Text(
+            '👥 Venner',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          const _VennerPreviewCard(),
           const SizedBox(height: 24),
 
           // Mine Seneste Scores Preview
@@ -420,50 +501,26 @@ class _HjemTab extends StatelessWidget {
       ),
     );
   }
-}
 
-/// Quick Action Card Widget
-class _QuickActionCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _QuickActionCard({
-    required this.icon,
-    required this.title,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 4,
-      color: color,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          height: 120,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 40, color: Colors.white),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
+  Widget _buildActionButton(BuildContext context, String label, VoidCallback onTap) {
+    return ElevatedButton(
+      onPressed: onTap,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppTheme.dguGreen,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
         ),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+        textAlign: TextAlign.center,
       ),
     );
   }

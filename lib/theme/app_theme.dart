@@ -7,6 +7,7 @@ class AppTheme {
   static const dguOlive = Color(0xFF9E9D24);
   static const backgroundColor = Color(0xFFF5F5F5);
   static const cardColor = Color(0xFFFFFFFF);
+  static const birdieBonusOrange = Color(0xFFE1A740); // Orange/golden for Birdie Bonus
   
   static ThemeData get lightTheme {
     return ThemeData(
