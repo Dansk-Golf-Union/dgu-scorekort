@@ -13,13 +13,12 @@ import '../models/birdie_bonus_model.dart';
 import '../services/whs_statistik_service.dart';
 import '../services/golfdk_news_service.dart';
 import '../services/birdie_bonus_service.dart';
-import '../screens/friends_list_screen.dart';
 import '../screens/privacy_settings_screen.dart';
-import '../screens/feed_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// Home Screen med bottom navigation for v2.0 Extended POC
-/// Bottom navigation: Hjem, Venner, Feed, Tops, Menu
+/// Home Screen - Single-page dashboard (no bottom nav)
+/// Dashboard with widgets linking to full-screen views
+/// Navigation: Widgets → Full-screen → Back to dashboard
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -28,7 +27,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
@@ -183,73 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      body: IndexedStack(
-        index: _selectedIndex == 4 ? 0 : _selectedIndex, // If Menu tapped, show Hjem
-        children: const [
-          _HjemTab(),
-          FriendsListScreen(),
-          FeedScreen(),
-          _TopsTab(),
-        ],
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          top: false, // Don't add padding at top
-          child: Container(
-            padding: const EdgeInsets.only(bottom: 8), // Only bottom padding
-            child: BottomNavigationBar(
-              currentIndex: _selectedIndex == 4 ? 0 : _selectedIndex,
-              onTap: (index) {
-                if (index == 4) {
-                  _scaffoldKey.currentState?.openDrawer();
-                } else {
-                  setState(() => _selectedIndex = index);
-                }
-              },
-              type: BottomNavigationBarType.fixed,
-              selectedItemColor: AppTheme.dguGreen,
-              unselectedItemColor: Colors.grey,
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              selectedFontSize: 12,
-              unselectedFontSize: 11,
-              iconSize: 28,
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.home),
-                  label: 'Hjem',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.people),
-                  label: 'Venner',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.feed),
-                  label: 'Feed',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.emoji_events),
-                  label: 'Tops',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.menu),
-                  label: 'Menu',
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      body: const _HjemTab(), // Single-page dashboard (no tabs, no bottom nav)
     );
   }
 
@@ -817,33 +749,6 @@ class _ScoresPreviewCardState extends State<_ScoresPreviewCard> {
   }
 }
 /// Tops Tab (Placeholder)
-class _TopsTab extends StatelessWidget {
-  const _TopsTab();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.emoji_events, size: 80, color: Colors.grey),
-          SizedBox(height: 20),
-          Text(
-            'Leaderboards',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 10),
-          Text(
-            'Handicap rankings og score leaderboards\n\nComing soon in Phase 2!',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// News Preview Card - Shows latest 3 articles from Golf.dk
 class _NewsPreviewCard extends StatefulWidget {
   const _NewsPreviewCard();
