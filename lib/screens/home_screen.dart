@@ -478,24 +478,6 @@ class _HjemTabState extends State<_HjemTab> {
           const _NewsPreviewCard(), // EXISTING - DO NOT DELETE
           const SizedBox(height: 24),
 
-          // Seneste Aktivitet - NEW Widget (2 items)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                '📰 Seneste Aktivitet',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              TextButton(
-                onPressed: () => context.push('/feed'),
-                child: const Text('Se alle →'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const _SenesteAktivitetWidget(),
-          const SizedBox(height: 24),
-
           // Mine Venner - NEW Widget (summary)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -512,6 +494,24 @@ class _HjemTabState extends State<_HjemTab> {
           ),
           const SizedBox(height: 12),
           const _MineVennerWidget(),
+          const SizedBox(height: 24),
+
+          // Seneste Aktivitet - NEW Widget (2 items)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                '📰 Seneste Aktivitet',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              TextButton(
+                onPressed: () => context.push('/feed'),
+                child: const Text('Se alle →'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const _SenesteAktivitetWidget(),
           const SizedBox(height: 24),
 
           // Ugens Bedste - NEW Widget
