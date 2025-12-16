@@ -729,6 +729,12 @@ flutter run -d chrome --web-browser-flag "--disable-web-security"
 - **No Dark Mode**: Coming in Phase 1
 - **Social Features**: Coming in Phase 2-3
 
+### Security TODO
+- 🔐 **Token Rotation Needed**: Statistik API token skal roteres (var exposed i git history)
+  - Generer nyt password i DGU/Statistik system
+  - Opdater Gist med nyt token
+  - Test at app virker med nyt token
+
 ### CORS Handling
 - **Local**: `--disable-web-security` flag
 - **Production**: Cloud Functions proxy for all APIs
