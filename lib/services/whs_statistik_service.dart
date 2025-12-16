@@ -25,8 +25,8 @@ class WhsStatistikService {
   /// Caches the token to avoid repeated fetches
   /// STATISTIK token (different from DGU Basen!)
   /// 
-  /// Token format in Gist: "basic c3RhdGlzdGlrOk5pY2swMDA3"
-  /// Converted to HTTP header: "Basic c3RhdGlzdGlrOk5pY2swMDA3"
+  /// Token format in Gist: "basic [base64-encoded-credentials]"
+  /// Converted to HTTP header: "Basic [credentials]"
   Future<String> _getAuthToken() async {
     if (_cachedToken != null) {
       return _cachedToken!;
@@ -35,8 +35,8 @@ class WhsStatistikService {
     try {
       final response = await http.get(Uri.parse(_tokenUrl));
       if (response.statusCode == 200) {
-        // Token format: "basic c3RhdGlzdGlrOk5pY2swMDA3"
-        // Extract and format as "Basic <credentials>"
+        // Token format from Gist: "basic [base64-encoded-credentials]"
+        // Extract and format as "Basic [credentials]"
         final tokenLine = response.body.trim();
         if (tokenLine.toLowerCase().startsWith('basic ')) {
           final credentials = tokenLine.substring(6);

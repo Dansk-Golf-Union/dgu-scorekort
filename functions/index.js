@@ -954,7 +954,7 @@ exports.getWhsScores = functions
         }).on('error', reject);
       });
       
-      // Token format: "basic c3RhdGlzdGlrOk5pY2swMDA3"
+      // Token format from Gist: "basic [base64-encoded-credentials]"
       let authHeader;
       if (tokenResponse.toLowerCase().startsWith('basic ')) {
         const credentials = tokenResponse.substring(6);
@@ -1045,4 +1045,376 @@ exports.getWhsScores = functions
       }
     }
   });
+
+// ==========================================
+// ACTIVITY FEED - NIGHTLY MILESTONE SCAN
+// ==========================================
+
+/**
+ * Scheduled function: Scan for milestones every night at 03:00 CET
+ * 
+ * Workflow:
+ * 1. Get all unique user IDs who have friends (from friendships collection)
+ * 2. For each user, fetch latest WHS scores
+ * 3. Compare with cached scores to detect new rounds
+ * 4. Detect milestones (scratch, single-digit, sub-20, sub-30, improvement, personal best, eagle, albatross)
+ * 5. Create activities in Firestore
+ * 6. Update user_score_cache
+ * 
+ * Similar to updateCourseCache, but for user scores instead of courses.
+ */
+exports.scanForMilestones = functions
+  .region('europe-west1')
+  .runWith({
+    timeoutSeconds: 540, // 9 minutes (same as updateCourseCache)
+    memory: '1GB'
+  })
+  .pubsub.schedule('0 3 * * *') // 03:00 daily (1 hour after course cache)
+  .timeZone('Europe/Copenhagen')
+  .onRun(async (context) => {
+    console.log('🔍 Starting nightly milestone scan...');
+    const startTime = Date.now();
+    const db = admin.firestore();
+    
+    try {
+      // STEP 1: Get all unique user IDs who have friends
+      console.log('📋 Fetching users with friends...');
+      const friendshipsSnapshot = await db.collection('friendships').get();
+      
+      const userIds = new Set();
+      friendshipsSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        userIds.add(data.userId1);
+        userIds.add(data.userId2);
+      });
+      
+      console.log(`✅ Found ${userIds.size} users with friends`);
+      
+      // STEP 2: For each user, check for new scores/milestones
+      const activities = [];
+      let apiCalls = 0;
+      let cacheHits = 0;
+      let errors = 0;
+      
+      // Fetch Statistik token (similar to updateCourseCache fetching DGU token)
+      console.log('📡 Fetching Statistik auth token...');
+      const statistikToken = await fetchStatistikToken();
+      
+      for (const unionId of userIds) {
+        try {
+          // Fetch cached data
+          const cacheDoc = await db.collection('user_score_cache').doc(unionId).get();
+          const cachedData = cacheDoc.exists ? cacheDoc.data() : null;
+          
+          // Skip if no homeClubId (can't fetch scores without it)
+          if (!cachedData?.homeClubId) {
+            console.log(`⚠️  Skipping ${unionId} (no homeClubId)`);
+            continue;
+          }
+          
+          // Fetch fresh scores from WHS API (similar to fetchCoursesFromAPI)
+          console.log(`  [${apiCalls + 1}/${userIds.size}] Fetching scores for ${unionId}...`);
+          apiCalls++;
+          
+          const freshScores = await fetchWhsScoresForUser(
+            unionId, 
+            cachedData.homeClubId, 
+            statistikToken
+          );
+          
+          if (!freshScores || freshScores.length === 0) {
+            console.log(`    → No scores found`);
+            continue;
+          }
+          
+          // Compare with cache to find new scores
+          const latestScore = freshScores[0];
+          const latestScoreDate = new Date(latestScore.Date || latestScore.roundDate);
+          const lastScannedDate = cachedData?.lastScanned?.toDate() || new Date(0);
+          
+          const isNewScore = latestScoreDate > lastScannedDate;
+          
+          if (!isNewScore) {
+            cacheHits++;
+            console.log(`    → No new scores`);
+            continue;
+          }
+          
+          console.log(`    ✨ New score detected!`);
+          
+          // STEP 3: Detect milestones
+          const detectedActivities = await detectMilestonesForScore({
+            unionId,
+            userName: cachedData.userName || latestScore.playerName || 'Ukendt',
+            newHcp: latestScore.HCP || latestScore.handicapAfter || latestScore.handicapBefore,
+            oldHcp: cachedData.currentHcp || latestScore.handicapBefore,
+            bestHcp: cachedData.bestHcp || latestScore.handicapBefore,
+            score: latestScore,
+          });
+          
+          activities.push(...detectedActivities);
+          
+          // STEP 4: Update cache (similar to Firestore batch updates in updateCourseCache)
+          await db.collection('user_score_cache').doc(unionId).set({
+            unionId,
+            userName: cachedData.userName || latestScore.playerName || 'Ukendt',
+            homeClubId: cachedData.homeClubId,
+            currentHcp: latestScore.HCP || latestScore.handicapAfter || latestScore.handicapBefore,
+            lastScanned: admin.firestore.FieldValue.serverTimestamp(),
+            recentScores: freshScores.slice(0, 20), // Keep last 20
+            bestHcp: Math.min(
+              cachedData?.bestHcp || 54,
+              ...freshScores.map(s => s.HCP || s.handicapBefore || 54)
+            ),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          }, { merge: true });
+          
+        } catch (error) {
+          console.error(`❌ Error processing ${unionId}:`, error.message);
+          errors++;
+        }
+      }
+      
+      // STEP 5: Write all activities to Firestore (batch write)
+      if (activities.length > 0) {
+        console.log(`📝 Writing ${activities.length} activities to Firestore...`);
+        const batch = db.batch();
+        const activitiesRef = db.collection('activities');
+        
+        for (const activity of activities) {
+          const docRef = activitiesRef.doc();
+          batch.set(docRef, {
+            ...activity,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        }
+        
+        await batch.commit();
+        console.log(`✅ Created ${activities.length} activities`);
+      }
+      
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      
+      console.log('🎉 Nightly scan complete!');
+      console.log(`  Users scanned: ${userIds.size}`);
+      console.log(`  API calls: ${apiCalls}`);
+      console.log(`  Cache hits: ${cacheHits}`);
+      console.log(`  Activities created: ${activities.length}`);
+      console.log(`  Errors: ${errors}`);
+      console.log(`  Duration: ${duration}s`);
+      
+      return { 
+        success: true, 
+        usersScanned: userIds.size,
+        activitiesCreated: activities.length,
+        duration,
+        errors
+      };
+    } catch (error) {
+      console.error('❌ Scan failed:', error);
+      throw error;
+    }
+  });
+
+/**
+ * Fetch Statistik token from GitHub Gist
+ * Similar to fetchAuthToken() for DGU API
+ */
+async function fetchStatistikToken() {
+  // Use same Gist URL as WhsStatistikService
+  const STATISTIK_TOKEN_URL = 'https://gist.githubusercontent.com/nhuttel/36871c0145d83c3111174b5c87542ee8/raw/17bee0485c5420d473310de8deeaeccd58e3b9cc/statistik%2520token';
+  
+  return new Promise((resolve, reject) => {
+    https.get(STATISTIK_TOKEN_URL, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        // Token format from Gist: "basic [base64-encoded-credentials]"
+        const tokenLine = data.trim();
+        if (tokenLine.toLowerCase().startsWith('basic ')) {
+          const credentials = tokenLine.substring(6);
+          resolve(`Basic ${credentials}`);
+        } else {
+          resolve(tokenLine);
+        }
+      });
+    }).on('error', reject);
+  });
+}
+
+/**
+ * Fetch WHS scores for a user
+ * Similar to WhsStatistikService.getPlayerScores()
+ */
+async function fetchWhsScoresForUser(unionId, clubId, authToken) {
+  const apiUrl = `https://dgubasen.api.union.golfbox.io/statistik/clubs/${clubId}/Memberships/Scorecards?unionid=${unionId}`;
+  
+  return new Promise((resolve, reject) => {
+    https.get(apiUrl, {
+      headers: {
+        'Authorization': authToken,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      }
+    }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          try {
+            const scores = JSON.parse(data);
+            // Sort by date (newest first) - same as Dart service
+            scores.sort((a, b) => {
+              const dateA = new Date(a.Date || a.roundDate);
+              const dateB = new Date(b.Date || b.roundDate);
+              return dateB - dateA;
+            });
+            resolve(scores);
+          } catch (e) {
+            console.error(`JSON parse error for ${unionId}:`, e.message);
+            resolve([]); // Return empty array on parse error
+          }
+        } else {
+          console.error(`API error for ${unionId}: ${res.statusCode}`);
+          resolve([]); // Return empty array on error
+        }
+      });
+    }).on('error', (err) => {
+      console.error(`Network error for ${unionId}:`, err.message);
+      resolve([]); // Return empty array on error
+    });
+  });
+}
+
+/**
+ * Detect milestones from a score
+ * Returns array of activity objects
+ */
+async function detectMilestonesForScore({ unionId, userName, newHcp, oldHcp, bestHcp, score }) {
+  const activities = [];
+  const delta = newHcp - oldHcp;
+  
+  // 1. Major milestones (crossing thresholds)
+  if (newHcp === 0.0 && oldHcp > 0.0) {
+    activities.push({
+      userId: unionId,
+      userName,
+      type: 'milestone',
+      timestamp: new Date(score.Date || score.roundDate),
+      data: { 
+        milestoneType: 'scratch', 
+        newHcp, 
+        oldHcp,
+        courseName: score.CourseName || score.courseName || 'Ukendt bane'
+      },
+      isDismissed: false,
+    });
+  } else if (oldHcp >= 10.0 && newHcp < 10.0) {
+    activities.push({
+      userId: unionId,
+      userName,
+      type: 'milestone',
+      timestamp: new Date(score.Date || score.roundDate),
+      data: { 
+        milestoneType: 'singleDigit', 
+        newHcp, 
+        oldHcp,
+        courseName: score.CourseName || score.courseName || 'Ukendt bane'
+      },
+      isDismissed: false,
+    });
+  } else if (oldHcp >= 20.0 && newHcp < 20.0) {
+    activities.push({
+      userId: unionId,
+      userName,
+      type: 'milestone',
+      timestamp: new Date(score.Date || score.roundDate),
+      data: { 
+        milestoneType: 'sub20', 
+        newHcp, 
+        oldHcp,
+        courseName: score.CourseName || score.courseName || 'Ukendt bane'
+      },
+      isDismissed: false,
+    });
+  } else if (oldHcp >= 30.0 && newHcp < 30.0) {
+    activities.push({
+      userId: unionId,
+      userName,
+      type: 'milestone',
+      timestamp: new Date(score.Date || score.roundDate),
+      data: { 
+        milestoneType: 'sub30', 
+        newHcp, 
+        oldHcp,
+        courseName: score.CourseName || score.courseName || 'Ukendt bane'
+      },
+      isDismissed: false,
+    });
+  }
+  
+  // 2. Significant improvement (≥1.0 slag improvement)
+  if (delta <= -1.0) {
+    activities.push({
+      userId: unionId,
+      userName,
+      type: 'improvement',
+      timestamp: new Date(score.Date || score.roundDate),
+      data: { 
+        newHcp, 
+        oldHcp, 
+        delta: Math.abs(delta),
+        courseName: score.CourseName || score.courseName || 'Ukendt bane'
+      },
+      isDismissed: false,
+    });
+  }
+  
+  // 3. Personal best (new lowest HCP ever)
+  if (newHcp < bestHcp) {
+    activities.push({
+      userId: unionId,
+      userName,
+      type: 'personalBest',
+      timestamp: new Date(score.Date || score.roundDate),
+      data: { 
+        newHcp, 
+        previousBest: bestHcp,
+        courseName: score.CourseName || score.courseName || 'Ukendt bane'
+      },
+      isDismissed: false,
+    });
+  }
+  
+  // 4. Eagles/Albatross (if we have hole data)
+  // Note: WHS API hole structure might vary - adjust as needed
+  if (score.Holes && Array.isArray(score.Holes)) {
+    score.Holes.forEach((hole, index) => {
+      const par = hole.Par || hole.par;
+      const strokes = hole.Strokes || hole.strokes;
+      
+      if (par && strokes) {
+        const scoreToPar = strokes - par;
+        
+        if (scoreToPar <= -2) {
+          activities.push({
+            userId: unionId,
+            userName,
+            type: scoreToPar === -2 ? 'eagle' : 'albatross',
+            timestamp: new Date(score.Date || score.roundDate),
+            data: { 
+              holeNumber: index + 1, 
+              par, 
+              strokes,
+              courseName: score.CourseName || score.courseName || 'Ukendt bane'
+            },
+            isDismissed: false,
+          });
+        }
+      }
+    });
+  }
+  
+  return activities;
+}
 

@@ -159,14 +159,18 @@
 - ✅ **Privacy & Consent**: GDPR-compliant samtykke flow
 - ⏳ **Challenge Friend**: Link til match play (pending)
 
-### 📰 Phase 2B: Activity Feed (NEXT!)
-- **Auto-detect Milestones**:
-  - Handicap improvements
-  - Major milestones (single-digit, scratch)
-  - Personal bests
-- **Score Highlights**: Eagles, match wins
-- **Like & Comment**: Social interaction
-- **Push Notifications**: Stay updated
+### 📰 Phase 2B: Activity Feed (COMPLETED!)
+- ✅ **Auto-detect Milestones**: Scratch, single-digit, sub-20, sub-30
+- ✅ **Improvement Detection**: Significant improvements (≥1.0 slag)
+- ✅ **Personal Best Tracking**: New lowest HCP
+- ✅ **Eagle/Albatross Detection**: Special achievements
+- ✅ **Feed UI**: Activity cards med filter chips
+- ✅ **Real-time Updates**: Firestore stream
+- ✅ **Nightly Scanning**: Cloud Function kører kl. 03:00
+- ⏳ **Like & Comment**: Social interaction (future)
+- ⏳ **Push Notifications**: Notify ved milestones (future)
+- ⏳ **Swipe-to-Dismiss**: Dismiss activities (future)
+- ⏳ **Activity Details**: Tap for full scorecard (future)
 
 ### 🏆 Phase 2C: Leaderboards (NEXT!)
 - **Handicap Rankings**: Lowest, biggest improvement
@@ -530,6 +534,15 @@ const WHS_TOKEN_URL = 'https://gist.githubusercontent.com/nhuttel/.../statistik%
 const NOTIF_TOKEN_URL = 'https://gist.githubusercontent.com/nhuttel/.../notification_token.txt';
 ```
 
+### Security Best Practices
+- ✅ **ALL tokens stored in private GitHub Gists**
+- ✅ **NEVER commit tokens in code or comments**
+- ✅ **Cloud Functions fetch tokens server-side**
+- ✅ **Tokens never exposed to browser**
+- ⚠️ **Avoid example tokens in comments** (triggers security scanners like GitGuardian)
+- 🔄 **Rotate tokens immediately** if accidentally committed
+- 🔒 **Use environment variables** for local development
+
 ---
 
 ## 🧮 Handicap Calculations
@@ -586,12 +599,15 @@ Example: 14.5 / 2 = 7.25 → 7.3
 - [x] Privacy & Samtykke screen (GDPR compliance)
 - [x] Remove friend + withdraw consent
 
-### 🔄 Phase 2B: Activity Feed (NEXT)
-- [ ] Feed data models
-- [ ] Milestone detection Cloud Function
-- [ ] Feed UI (activity cards)
-- [ ] Like & comment functionality
-- [ ] Activity notifications
+### ✅ Phase 2B: Activity Feed (DONE)
+- [x] Feed data models (ActivityItem, ActivityType, MilestoneType)
+- [x] Milestone detection Cloud Function (scanForMilestones, nightly 03:00)
+- [x] Feed UI (activity cards with filter chips)
+- [x] Real-time Firestore stream
+- [x] User score caching
+- [ ] Like & comment functionality (future)
+- [ ] Activity notifications (future)
+- [ ] Swipe-to-dismiss (future)
 
 ### 📅 Phase 2C: Leaderboards (NEXT)
 - [ ] Leaderboard data models
