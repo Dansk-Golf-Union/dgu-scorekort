@@ -936,6 +936,7 @@ flutter run -d chrome --web-browser-flag "--disable-web-security"
 ### Related Files
 - `FIREBASE_FUNCTIONS_V5_UPGRADE_PLAN.md` - Future function upgrades
 - `DEPLOYMENT_GUIDE.md` - Detailed deployment steps
+- `BIRDIE_BONUS_FOR_GOLFBOX.md` - **Birdie Bonus implementation reference for GolfBox** (English)
 - `/Users/nickhuttel/.cursor/plans/dgu_app_v2.0_extended_poc_c6b753fb.plan.md` - Master roadmap
 
 ### External Resources
