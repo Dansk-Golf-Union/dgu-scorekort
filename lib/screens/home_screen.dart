@@ -456,40 +456,89 @@ class _HjemTabState extends State<_HjemTab> {
           ),
           const SizedBox(height: 24),
 
-          // Aktivitet Preview
+          // Seneste Nyheder (Golf.dk) - KEEP THIS! 🚨
           const Text(
-            '📰 Aktivitet',
+            '🗞️ Nyheder fra Golf.dk',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          const _AktivitetPreviewCard(),
+          const _NewsPreviewCard(), // EXISTING - DO NOT DELETE
           const SizedBox(height: 24),
 
-          // Venner Preview
-          const Text(
-            '👥 Venner',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          // Seneste Aktivitet - NEW Widget (2 items)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                '📰 Seneste Aktivitet',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              TextButton(
+                onPressed: () => context.push('/feed'),
+                child: const Text('Se alle →'),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          const _VennerPreviewCard(),
+          const _SenesteAktivitetWidget(),
           const SizedBox(height: 24),
 
-          // Mine Seneste Scores Preview
-          const Text(
-            '📜 Mine Seneste Scores',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          // Mine Venner - NEW Widget (summary)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                '👥 Mine Venner',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              TextButton(
+                onPressed: () => context.push('/venner'),
+                child: const Text('Se alle →'),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          const _ScoresPreviewCard(),
+          const _MineVennerWidget(),
           const SizedBox(height: 24),
 
-          // Seneste Nyheder
-          const Text(
-            '🗞️ Seneste Nyheder',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          // Ugens Bedste - NEW Widget
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                '🏆 Ugens Bedste',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              TextButton(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Leaderboards kommer i Phase 2C!')),
+                  );
+                },
+                child: const Text('Se mere →'),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          const _NewsPreviewCard(),
+          const _UgensBedsteWidget(),
+          const SizedBox(height: 24),
+
+          // Mine Seneste Scores - NEW Widget
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                '📊 Mine Seneste Scores',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              TextButton(
+                onPressed: () => context.push('/score-archive'),
+                child: const Text('Se arkiv →'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const _MineSenesteScoresWidget(),
         ],
       ),
     );
@@ -520,96 +569,155 @@ class _HjemTabState extends State<_HjemTab> {
 }
 
 /// Venner Preview Card (Placeholder)
-class _VennerPreviewCard extends StatelessWidget {
-  const _VennerPreviewCard();
+/// Mine Venner Widget - Shows friend summary (not full list)
+class _MineVennerWidget extends StatelessWidget {
+  const _MineVennerWidget();
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            const ListTile(
-              leading: CircleAvatar(child: Icon(Icons.person)),
-              title: Text('Jonas Meyer'),
-              subtitle: Text('Handicap: 12.0 📉 -0.8'),
-              trailing: Text('Forbedret', style: TextStyle(color: Colors.green)),
-            ),
-            const ListTile(
-              leading: CircleAvatar(child: Icon(Icons.person)),
-              title: Text('Peter Hansen'),
-              subtitle: Text('Handicap: 8.7 🏆 Single-digit!'),
-              trailing: Icon(Icons.emoji_events, color: Colors.amber),
-            ),
-            const ListTile(
-              leading: CircleAvatar(child: Icon(Icons.person)),
-              title: Text('Anne Nielsen'),
-              subtitle: Text('Handicap: 15.2 → Stabil'),
-            ),
-            TextButton(
-              onPressed: () {
-                // TODO: Navigate to Venner tab
-              },
-              child: const Text('Se alle venner →'),
-            ),
-          ],
+    return GestureDetector(
+      onTap: () => context.push('/venner'),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '3 venner • 2 forbedringer i dag',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: const [
+                  CircleAvatar(
+                    child: Icon(Icons.person),
+                    backgroundColor: AppTheme.dguGreen,
+                  ),
+                  SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Jonas Meyer', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text('12.0 📉', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    ],
+                  ),
+                  Spacer(),
+                  Icon(Icons.trending_down, color: Colors.green),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: const [
+                  CircleAvatar(
+                    child: Icon(Icons.person),
+                    backgroundColor: AppTheme.dguGreen,
+                  ),
+                  SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Peter Hansen', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text('8.7 🏆', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    ],
+                  ),
+                  Spacer(),
+                  Icon(Icons.emoji_events, color: Colors.amber),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// Aktivitet Preview Card (Placeholder)
-class _AktivitetPreviewCard extends StatelessWidget {
-  const _AktivitetPreviewCard();
+/// Ugens Bedste Widget - Highlights top achievement this week
+class _UgensBedsteWidget extends StatelessWidget {
+  const _UgensBedsteWidget();
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            const ListTile(
-              leading: Icon(Icons.trending_down, color: Colors.green, size: 32),
-              title: Text('Jonas sænkede handicap!'),
-              subtitle: Text('12.8 → 12.0 (-0.8) • I dag'),
-            ),
-            const Divider(),
-            const ListTile(
-              leading: Icon(Icons.emoji_events, color: Colors.amber, size: 32),
-              title: Text('Peter nåede single-digit handicap!'),
-              subtitle: Text('10.3 → 9.8 • I går'),
-            ),
-            const Divider(),
-            const ListTile(
-              leading: Icon(Icons.sports_golf, color: AppTheme.dguGreen, size: 32),
-              title: Text('Nick vandt match 3/2'),
-              subtitle: Text('vs Jonas Meyer • I går'),
-            ),
-            TextButton(
-              onPressed: () {
-                // TODO: Navigate to Feed tab
-              },
-              child: const Text('Se aktivitet feed →'),
-            ),
-          ],
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Leaderboards kommer i Phase 2C!')),
+        );
+      },
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: const [
+              Icon(Icons.emoji_events, size: 48, color: Colors.amber),
+              SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Peter - Eagle på Furesø B12',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      '+2 over par → stableford 40',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+/// Seneste Aktivitet Widget - Shows 2 most recent activities
+class _SenesteAktivitetWidget extends StatelessWidget {
+  const _SenesteAktivitetWidget();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push('/feed'),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: const [
+              ListTile(
+                leading: Icon(Icons.trending_down, color: Colors.green, size: 32),
+                title: Text('Jonas sænkede handicap!'),
+                subtitle: Text('12.8 → 12.0 (-0.8) • I dag'),
+                dense: true,
+              ),
+              Divider(),
+              ListTile(
+                leading: Icon(Icons.emoji_events, color: Colors.amber, size: 32),
+                title: Text('Peter nåede single-digit handicap!'),
+                subtitle: Text('10.3 → 9.8 • I går'),
+                dense: true,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// Scores Preview Card - Shows last 3 scores from WHS API
-class _ScoresPreviewCard extends StatefulWidget {
-  const _ScoresPreviewCard();
+/// Mine Seneste Scores Widget - Shows last 2-3 scores from WHS API
+class _MineSenesteScoresWidget extends StatefulWidget {
+  const _MineSenesteScoresWidget();
 
   @override
-  State<_ScoresPreviewCard> createState() => _ScoresPreviewCardState();
+  State<_MineSenesteScoresWidget> createState() => _MineSenesteScoresWidgetState();
 }
 
-class _ScoresPreviewCardState extends State<_ScoresPreviewCard> {
+class _MineSenesteScoresWidgetState extends State<_MineSenesteScoresWidget> {
   final _whsService = WhsStatistikService();
   Future<List<ScoreRecord>>? _scoresFuture;
 
@@ -628,7 +736,7 @@ class _ScoresPreviewCardState extends State<_ScoresPreviewCard> {
         _scoresFuture = _whsService.getPlayerScores(
           unionId: player.unionId!,
           clubId: player.homeClubId!,
-          limit: 3,
+          limit: 2, // Show 2 most recent scores
         );
       });
     } else {
