@@ -58,6 +58,26 @@ service cloud.firestore {
     }
     
     // ==========================================
+    // ACTIVITY FEED COLLECTIONS
+    // ==========================================
+    
+    // User score cache - read-only for authenticated users
+    // Only Cloud Functions can write
+    match /user_score_cache/{unionId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only Cloud Functions
+    }
+    
+    // Activities - read for authenticated, update for own activities (dismiss)
+    // Only Cloud Functions can create/delete
+    // TEMP: Open for testing until OAuth is implemented
+    match /activities/{activityId} {
+      allow read: if true; // TEMP: Open for testing
+      allow update: if true; // TEMP: Open for testing
+      allow create, delete: if false; // Only Cloud Functions
+    }
+    
+    // ==========================================
     // DEFAULT DENY ALL
     // ==========================================
     

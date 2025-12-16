@@ -12,6 +12,7 @@ import '../services/whs_statistik_service.dart';
 import '../services/golfdk_news_service.dart';
 import '../screens/friends_list_screen.dart';
 import '../screens/privacy_settings_screen.dart';
+import '../screens/feed_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Home Screen med bottom navigation for v2.0 Extended POC
@@ -179,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: const [
           _HjemTab(),
           FriendsListScreen(),
-          _FeedTab(),
+          FeedScreen(),
           _TopsTab(),
         ],
       ),
@@ -697,35 +698,6 @@ class _ScoresPreviewCardState extends State<_ScoresPreviewCard> {
     );
   }
 }
-
-/// Feed Tab (Placeholder)
-class _FeedTab extends StatelessWidget {
-  const _FeedTab();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.feed, size: 80, color: Colors.grey),
-          SizedBox(height: 20),
-          Text(
-            'Activity Feed',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 10),
-          Text(
-            'Handicap milestones og score highlights\n\nComing soon in Phase 2!',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// Tops Tab (Placeholder)
 class _TopsTab extends StatelessWidget {
   const _TopsTab();
