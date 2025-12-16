@@ -1,94 +1,107 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/birdie_bonus_model.dart';
 
-/// Service for fetching Birdie Bonus data
+/// Service for fetching Birdie Bonus data from Firestore cache
 /// 
-/// Currently uses mock data for development.
-/// Prepared for future API integration with GolfBox Birdie Bonus endpoint.
+/// Data is updated nightly by Cloud Function `cacheBirdieBonusData` at 04:00 CET.
+/// Cache is populated from paginated Birdie Bonus API.
 /// 
-/// API endpoint (when ready):
-/// https://birdie-bonus.api.union.golfbox.dk/api/medlemmar/rating_list/{unionId}
+/// Pattern: Server-side cache (like Course Cache) - no direct API calls from client.
+/// Max 24-hour cache delay is acceptable for leaderboard data.
+///
+/// TODO: Consider removing Source.server workaround
+/// Currently using GetOptions(source: Source.server) to force fresh reads
+/// from Firestore servers, bypassing local cache. This was required because
+/// Flutter's Firestore SDK was showing stale cached data even after manual
+/// Firestore Console updates. Once proper Firebase Auth with custom claims
+/// is implemented, evaluate if default caching behavior is acceptable.
+/// Trade-off: Fresh data vs network latency (~200-500ms per read).
+/// See: README.md "Birdie Bonus Integration: Lessons Learned" for details.
 class BirdieBonusService {
-  // TODO: Replace with actual API endpoint when available
-  // static const String _apiBaseUrl = 'https://birdie-bonus.api.union.golfbox.dk';
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   
-  /// Fetch Birdie Bonus data for a player
+  /// Fetch Birdie Bonus data from Firestore cache
   /// 
-  /// Currently returns mock data.
+  /// Data is updated nightly by Cloud Function at 04:00 CET.
+  /// Max 24-hour cache delay acceptable.
   /// 
   /// [unionId] - Player's DGU union ID (e.g., "147-3270")
   /// 
   /// Returns:
-  /// - BirdieBonusData with mock values if participant
-  /// - BirdieBonusData with isParticipant=false if not enrolled
+  /// - BirdieBonusData with cached values if participant
+  /// - BirdieBonusData with isParticipant=false if not in cache
   Future<BirdieBonusData> getBirdieBonusData(String unionId) async {
-    // Simulate API delay
-    await Future.delayed(const Duration(milliseconds: 300));
-    
-    // TODO: Replace with real API call
-    // return _fetchFromApi(unionId);
-    
-    // For now, return mock data
-    return BirdieBonusData.mock(unionId: unionId);
+    try {
+      // CRITICAL FIX: Force server read (bypass Firestore client-side cache)
+      //
+      // Problem: Flutter's Firestore SDK aggressively caches data locally.
+      // When data is updated in Firestore (manually or via Cloud Function),
+      // the Flutter app continues showing stale cached data indefinitely.
+      //
+      // Solution: GetOptions(source: Source.server) forces a fresh read
+      // directly from Firestore servers, bypassing local cache.
+      //
+      // Without this, users would see outdated Birdie Bonus data or the bar
+      // wouldn't appear even when they're registered as participants.
+      final doc = await _firestore
+          .collection('birdie_bonus_cache')
+          .doc(unionId)
+          .get(const GetOptions(source: Source.server));
+      
+      if (doc.exists) {
+        final data = doc.data()!;
+        return BirdieBonusData(
+          birdieCount: data['birdieCount'] ?? 0,
+          rankingPosition: data['rankingPosition'] ?? 0,
+          isParticipant: data['isParticipant'] ?? false,
+          unionId: unionId,
+        );
+      } else {
+        // Player not found in cache = not participating
+        return BirdieBonusData.notParticipant(unionId: unionId);
+      }
+    } catch (e) {
+      print('Error fetching Birdie Bonus data: $e');
+      // On error, return non-participant state
+      return BirdieBonusData.notParticipant(unionId: unionId);
+    }
   }
 
   /// Check if player is participating in Birdie Bonus
   /// 
-  /// Currently returns true for all users (mock behavior).
-  /// In production, this would check actual participation status.
-  Future<bool> isParticipating(String unionId) async {
-    await Future.delayed(const Duration(milliseconds: 100));
-    
-    // TODO: Replace with real participation check
-    // For testing, return true so bar is always visible
-    return true;
-  }
-
-  // ============================================================================
-  // FUTURE API INTEGRATION (commented out for now)
-  // ============================================================================
-  
-  /*
-  /// Fetch Birdie Bonus data from API
+  /// Returns true ONLY if player exists in cache.
+  /// Used by Home screen to conditionally show/hide Birdie Bonus Bar.
   /// 
-  /// Expected API response structure from GolfBox documentation:
-  /// ```json
-  /// {
-  ///   "BB_participant": 2,
-  ///   "dgUNumber": "147-3270",
-  ///   "BirdieBonusPoints": 294,
-  ///   "regionLabel": "Sjælland",
-  ///   "hcpGroupLabel": "11.5-18.4",
-  ///   "rankInRegionGroup": 125
-  /// }
-  /// ```
-  Future<BirdieBonusData> _fetchFromApi(String unionId) async {
-    final url = Uri.parse('$_apiBaseUrl/api/medlemmar/rating_list/$unionId');
-    
+  /// [unionId] - Player's DGU union ID (e.g., "147-3270")
+  /// 
+  /// Returns:
+  /// - true if player found in cache with isParticipant=true
+  /// - false if not found or error
+  Future<bool> isParticipating(String unionId) async {
     try {
-      final response = await http.get(
-        url,
-        headers: {
-          'Authorization': 'Basic [credentials]', // TODO: Add auth
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      );
+      // CRITICAL FIX: Force server read (bypass Firestore client-side cache)
+      // See detailed explanation in getBirdieBonusData() method above.
+      // Without Source.server, the app would show stale cached data.
+      final doc = await _firestore
+          .collection('birdie_bonus_cache')
+          .doc(unionId)
+          .get(const GetOptions(source: Source.server));
       
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body) as Map<String, dynamic>;
-        return BirdieBonusData.fromJson(jsonData);
-      } else if (response.statusCode == 404) {
-        // Player not found or not participating
-        return BirdieBonusData.notParticipant(unionId: unionId);
-      } else {
-        throw Exception('Failed to load Birdie Bonus data: ${response.statusCode}');
+      print('📊 Firestore doc.exists: ${doc.exists}');
+      if (doc.exists) {
+        final data = doc.data();
+        print('📊 Firestore raw data: $data');
+        final isParticipantValue = data?['isParticipant'];
+        print('📊 isParticipant field value: $isParticipantValue (type: ${isParticipantValue.runtimeType})');
       }
+      
+      // Player must exist in cache to be considered participating
+      return doc.exists && (doc.data()?['isParticipant'] ?? false);
     } catch (e) {
-      // On error, return non-participant state
-      print('Error fetching Birdie Bonus data: $e');
-      return BirdieBonusData.notParticipant(unionId: unionId);
+      print('❌ Error checking participation: $e');
+      // On error, hide bar (graceful degradation)
+      return false;
     }
   }
-  */
 }
 

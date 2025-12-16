@@ -281,34 +281,94 @@ class _HjemTab extends StatefulWidget {
 class _HjemTabState extends State<_HjemTab> {
   final BirdieBonusService _birdieBonusService = BirdieBonusService();
   BirdieBonusData? _birdieBonusData;
-  bool _isLoadingBirdieBonus = true;
+  bool _isBirdieBonusParticipant = false;
+  
+  // CRITICAL FIX: Flag to ensure data loads only once
+  // Without this, didChangeDependencies() would trigger multiple times
+  // (whenever Provider data changes) causing redundant API calls
+  bool _hasLoadedBirdieBonus = false;
 
   @override
   void initState() {
     super.initState();
-    _loadBirdieBonusData();
+    // IMPORTANT: Do NOT load data here!
+    // At this point in the lifecycle, Provider (AuthProvider) has not yet
+    // established dependencies, so context.read<AuthProvider>().currentPlayer
+    // will be null even if user is logged in. This caused the Birdie Bonus
+    // bar to never appear - the load would fail silently in initState().
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // CRITICAL FIX: Load data here instead of initState()
+    // didChangeDependencies() is called AFTER Provider dependencies are established,
+    // ensuring AuthProvider.currentPlayer is available.
+    //
+    // Why this pattern:
+    // 1. initState() runs BEFORE Provider context is ready → player is null
+    // 2. didChangeDependencies() runs AFTER Provider context → player is available
+    // 3. We use _hasLoadedBirdieBonus flag to prevent multiple loads
+    //    (didChangeDependencies can be called multiple times during widget lifecycle)
+    //
+    // This pattern is necessary when loading data that depends on Provider state.
+    if (!_hasLoadedBirdieBonus) {
+      final authProvider = context.read<AuthProvider>();
+      final player = authProvider.currentPlayer;
+      
+      // Check if player is fully loaded before attempting Birdie Bonus fetch
+      if (player != null && player.unionId != null && player.unionId!.isNotEmpty) {
+        _hasLoadedBirdieBonus = true; // Prevent re-loading on future calls
+        _loadBirdieBonusData();
+      }
+    }
   }
 
   Future<void> _loadBirdieBonusData() async {
     final authProvider = context.read<AuthProvider>();
     final player = authProvider.currentPlayer;
 
+    print('🏌️ Loading Birdie Bonus data for unionId: ${player?.unionId}');
+
     if (player == null || player.unionId == null || player.unionId!.isEmpty) {
+      print('⚠️ Player or unionId is null - skipping Birdie Bonus');
+      setState(() {
+        _isBirdieBonusParticipant = false;
+      });
       return;
     }
 
     try {
-      final data = await _birdieBonusService.getBirdieBonusData(player.unionId!);
-      if (mounted) {
-        setState(() {
-          _birdieBonusData = data;
-          _isLoadingBirdieBonus = false;
-        });
+      print('📡 Checking if ${player.unionId} is participating...');
+      // First check if user is participating in Birdie Bonus
+      final isParticipating = await _birdieBonusService.isParticipating(player.unionId!);
+      print('✅ isParticipating result: $isParticipating');
+      
+      if (isParticipating) {
+        print('📊 Fetching Birdie Bonus data...');
+        // Only fetch data if participating
+        final data = await _birdieBonusService.getBirdieBonusData(player.unionId!);
+        print('🎉 Got Birdie Bonus data: $data');
+        if (mounted) {
+          setState(() {
+            _birdieBonusData = data;
+            _isBirdieBonusParticipant = true;
+          });
+        }
+      } else {
+        print('❌ User not participating - hiding bar');
+        if (mounted) {
+          setState(() {
+            _isBirdieBonusParticipant = false;
+          });
+        }
       }
     } catch (e) {
+      print('❌ Error loading Birdie Bonus data: $e');
       if (mounted) {
         setState(() {
-          _isLoadingBirdieBonus = false;
+          _isBirdieBonusParticipant = false;
         });
       }
     }
@@ -371,7 +431,7 @@ class _HjemTabState extends State<_HjemTab> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '# ${player.lifetimeId ?? player.memberNo}',
+                            '# ${player.unionId ?? player.memberNo}',
                             style: const TextStyle(
                               fontSize: 12,
                               color: Colors.grey,
@@ -414,8 +474,9 @@ class _HjemTabState extends State<_HjemTab> {
             ),
             const SizedBox(height: 16),
 
-            // Birdie Bonus Bar (NEW!)
-            if (_birdieBonusData != null && _birdieBonusData!.isParticipant)
+            // Birdie Bonus Bar - ONLY shown if user is participating
+            // Non-participants will not see this bar at all
+            if (_isBirdieBonusParticipant && _birdieBonusData != null)
               BirdieBonusBar(data: _birdieBonusData!),
             
             const SizedBox(height: 24),

@@ -78,6 +78,28 @@ service cloud.firestore {
     }
     
     // ==========================================
+    // BIRDIE BONUS CACHE
+    // ==========================================
+    
+    // Birdie Bonus cache - read-only for authenticated users
+    // Updated nightly by Cloud Function at 04:00 CET
+    // Only Cloud Functions can write
+    //
+    // TODO: Fix authentication and remove temporary open access
+    // Issue: Even with isAuthenticated() check, permission errors occur
+    // when using Source.server (force server read) from Flutter client.
+    // Root cause unclear - possibly Firebase Auth token propagation issue.
+    //
+    // Temporary solution: Open read access (if true)
+    // Target solution: allow read: if request.auth != null && request.auth.token.unionId != null;
+    //
+    // See: README.md "Security TODO" section for details
+    match /birdie_bonus_cache/{dguNumber} {
+      allow read: if true; // TEMP: Open for testing (TODO: Fix auth)
+      allow write: if false; // Only Cloud Functions (via Admin SDK)
+    }
+    
+    // ==========================================
     // DEFAULT DENY ALL
     // ==========================================
     

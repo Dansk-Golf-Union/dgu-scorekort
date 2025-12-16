@@ -1418,3 +1418,178 @@ async function detectMilestonesForScore({ unionId, userName, newHcp, oldHcp, bes
   return activities;
 }
 
+/**
+ * ==============================================================================
+ * BIRDIE BONUS CACHE (NIGHTLY SCHEDULED FUNCTION)
+ * ==============================================================================
+ * Fetches ALL participants from paginated Birdie Bonus API and caches in Firestore.
+ * Runs daily at 04:00 CET (after updateCourseCache and scanForMilestones).
+ */
+
+/**
+ * Fetch Birdie Bonus token from GitHub Gist
+ * Similar to fetchStatistikToken()
+ */
+async function fetchBirdieBonusToken() {
+  const BIRDIE_TOKEN_URL = 'https://gist.githubusercontent.com/nhuttel/10131112fc9ec097d1a0752d3569038e/raw/915ba2bcc9f5eb5774979da745003e1bd73a019a/Birdie%2520bonus%2520deltagere';
+  
+  return new Promise((resolve, reject) => {
+    https.get(BIRDIE_TOKEN_URL, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        // Token format: "basic [base64-credentials]"
+        const tokenLine = data.trim();
+        if (tokenLine.toLowerCase().startsWith('basic ')) {
+          const credentials = tokenLine.substring(6);
+          resolve(`Basic ${credentials}`);
+        } else {
+          resolve(tokenLine);
+        }
+      });
+    }).on('error', reject);
+  });
+}
+
+/**
+ * Fetch single page from Birdie Bonus API
+ * API returns: { "data": [...participants], "next_page": 2 } or { "next_page": null }
+ */
+async function fetchBirdieBonusPage(page, authToken) {
+  const apiUrl = `https://birdie.bonus.sdmdev.dk/api/member/rating_list/${page}`;
+  
+  return new Promise((resolve, reject) => {
+    https.get(apiUrl, {
+      headers: {
+        'Authorization': authToken,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      }
+    }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          try {
+            const response = JSON.parse(data);
+            // API response structure: { "data": [...], "next_page": 2 }
+            resolve({
+              participants: response.data || [],
+              nextPage: response.next_page
+            });
+          } catch (e) {
+            console.error(`Parse error page ${page}:`, e.message);
+            resolve({ participants: [], nextPage: null });
+          }
+        } else {
+          console.error(`API error page ${page}: ${res.statusCode}`);
+          resolve({ participants: [], nextPage: null });
+        }
+      });
+    }).on('error', (err) => {
+      console.error(`Network error page ${page}:`, err.message);
+      resolve({ participants: [], nextPage: null });
+    });
+  });
+}
+
+/**
+ * SCHEDULED FUNCTION: Cache Birdie Bonus Data
+ * Runs daily at 04:00 CET
+ * 
+ * Fetches ALL participants from paginated Birdie Bonus API and caches in Firestore.
+ * Pattern follows updateCourseCache (scheduled PubSub, token fetch, batch writes).
+ */
+exports.cacheBirdieBonusData = functions
+  .region('europe-west1')
+  .runWith({
+    timeoutSeconds: 540, // 9 minutes
+    memory: '512MB'
+  })
+  .pubsub.schedule('0 4 * * *') // 04:00 CET (after other cron jobs)
+  .timeZone('Europe/Copenhagen')
+  .onRun(async (context) => {
+    console.log('🏌️ Starting Birdie Bonus cache update...');
+    const startTime = Date.now();
+    const db = admin.firestore();
+    
+    try {
+      // STEP 1: Fetch auth token
+      console.log('📡 Fetching Birdie Bonus token...');
+      const authToken = await fetchBirdieBonusToken();
+      
+      // STEP 2: Paginate through ALL pages
+      // API returns: { "data": [...], "next_page": 2 } or { "next_page": null }
+      console.log('📡 Fetching paginated data...');
+      const allParticipants = [];
+      let page = 0;
+      let nextPage = 0; // Start at page 0
+      
+      while (nextPage !== null) {
+        console.log(`  Fetching page ${page}...`);
+        const result = await fetchBirdieBonusPage(page, authToken);
+        
+        if (result.participants.length > 0) {
+          allParticipants.push(...result.participants);
+          console.log(`    → Got ${result.participants.length} participants`);
+        }
+        
+        nextPage = result.nextPage;
+        if (nextPage !== null) {
+          page = nextPage;
+        }
+      }
+      
+      console.log(`✅ Fetched ${allParticipants.length} participants from ${page + 1} pages`);
+      
+      // STEP 3: Write to Firestore (batch writes)
+      if (allParticipants.length > 0) {
+        console.log('📝 Writing to Firestore...');
+        
+        // Firestore batch limit: 500 operations
+        const BATCH_SIZE = 500;
+        let written = 0;
+        
+        for (let i = 0; i < allParticipants.length; i += BATCH_SIZE) {
+          const batch = db.batch();
+          const chunk = allParticipants.slice(i, i + BATCH_SIZE);
+          
+          for (const participant of chunk) {
+            const dguNumber = participant.dguNumber;
+            if (!dguNumber) continue;
+            
+            const docRef = db.collection('birdie_bonus_cache').doc(dguNumber);
+            batch.set(docRef, {
+              dguNumber,
+              // Field names from API (case-sensitive, some with spaces):
+              // "BB participant": 2 (with space!)
+              // "Birdiebonuspoints": 78 (lowercase 'p')
+              // "rankInRegionGroup": 159
+              birdieCount: participant.Birdiebonuspoints || 0,
+              rankingPosition: participant.rankInRegionGroup || 0,
+              regionLabel: participant.regionLabel || 'Ukendt',
+              hcpGroupLabel: participant.hcpGroupLabel || 'Ukendt',
+              isParticipant: (participant["BB participant"] || 0) === 2,
+              updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            }, { merge: true });
+            written++;
+          }
+          
+          await batch.commit();
+          console.log(`  ✅ Written ${written}/${allParticipants.length}`);
+        }
+      }
+      
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.log('🎉 Birdie Bonus cache complete!');
+      console.log(`  Pages fetched: ${page + 1}`);
+      console.log(`  Participants: ${allParticipants.length}`);
+      console.log(`  Duration: ${duration}s`);
+      
+      return { success: true, participants: allParticipants.length, duration };
+    } catch (error) {
+      console.error('❌ Cache update failed:', error);
+      throw error;
+    }
+  });
+

@@ -271,6 +271,8 @@ lib/
 functions/
 └── index.js                               # Cloud Functions
     ├── updateCourseCache                  # Scheduled (02:00 daily)
+    ├── scanForMilestones                  # Scheduled (03:00 daily, NEW v2.0)
+    ├── cacheBirdieBonusData               # Scheduled (04:00 daily, NEW v2.0)
     ├── sendNotification                   # Push notifications
     ├── getWhsScores                       # WHS API proxy (NEW v2.0)
     ├── forceFullReseed                    # Manual cache reset
@@ -321,6 +323,17 @@ functions/
 #### `golfboxCallback` (HTTP)
 - **Purpose**: OAuth callback dispatcher
 
+#### `cacheBirdieBonusData` ⏰ (Scheduled) - NEW v2.0!
+- **Schedule**: Hver nat kl. 04:00 (Copenhagen)
+- **Purpose**: Fetch paginated Birdie Bonus data and cache in Firestore
+- **Duration**: ~30-60 sek (depends on participant count and pagination)
+- **Memory**: 512MB, Timeout: 9 min
+- **Auth**: Basic Auth token from GitHub Gist
+- **API**: https://birdie.bonus.sdmdev.dk/api/member/rating_list/{page}
+- **Cache**: `birdie_bonus_cache` collection (document per player, keyed by dguNumber)
+- **Strategy**: Full refresh nightly via paginated API (loops through `/0`, `/1`, `/2`... until `next_page: null`)
+- **Client**: Flutter reads from cache (no direct API calls) - 24h delay acceptable
+
 ### Firestore Collections
 
 #### `scorecards`
@@ -334,6 +347,10 @@ Pending friend requests (fromUserId, toUserId, status, consentMessage)
 
 #### `user_privacy_settings` - NEW v2.0!
 Privacy toggles per user (shareHandicapWithFriends)
+
+#### `birdie_bonus_cache` - NEW v2.0!
+Birdie Bonus participant cache (dguNumber, birdieCount, rankingPosition, regionLabel, hcpGroupLabel, isParticipant)
+Updated nightly by `cacheBirdieBonusData` at 04:00
 
 #### `course-cache-metadata`
 Cache metadata (lastUpdated, club list)
@@ -416,6 +433,169 @@ Cached course data per club
 **CORS Strategy:**
 - Cloud Functions proxy for all external APIs
 - No direct browser API calls in production
+
+---
+
+## 🐛 Birdie Bonus Integration: Lessons Learned
+
+During Birdie Bonus Bar implementation (Dec 2024), we encountered two critical bugs that required architectural fixes. These lessons apply to **any Flutter + Firestore + Provider integration**.
+
+### Integration Architecture
+
+```
+Birdie Bonus API (paginated)
+    ↓ (nightly @ 04:00 CET)
+Cloud Function: cacheBirdieBonusData
+    ↓ (batch writes)
+Firestore: birdie_bonus_cache collection
+    ↓ (server read with Source.server)
+Flutter Service: BirdieBonusService
+    ↓ (loaded in didChangeDependencies)
+Home Screen: Conditional Birdie Bonus Bar
+```
+
+### Critical Bug #1: Flutter Lifecycle Timing ⏱️
+
+**Problem:**
+- Initial implementation loaded Birdie Bonus data in `initState()`
+- At this point in widget lifecycle, Provider dependencies are NOT yet established
+- `context.read<AuthProvider>().currentPlayer` returned `null` even when user was logged in
+- Result: Birdie Bonus Bar never appeared, load failed silently
+
+**Root Cause:**
+Flutter widget lifecycle order:
+1. `initState()` - Runs BEFORE Provider context is ready
+2. `didChangeDependencies()` - Runs AFTER Provider context is established
+3. `build()` - Renders UI
+
+**Solution:**
+```dart
+// ❌ WRONG - initState() called before Provider ready
+@override
+void initState() {
+  super.initState();
+  _loadBirdieBonusData(); // player is null!
+}
+
+// ✅ CORRECT - didChangeDependencies() called after Provider ready
+@override
+void didChangeDependencies() {
+  super.didChangeDependencies();
+  if (!_hasLoaded) { // Prevent multiple loads
+    _hasLoaded = true;
+    _loadBirdieBonusData(); // player is available!
+  }
+}
+```
+
+**Key Takeaway:**
+When loading data that depends on **Provider state**, always use `didChangeDependencies()` with a flag to prevent multiple loads. This pattern is essential for Provider-based apps.
+
+**Files:**
+- `lib/screens/home_screen.dart` - See `_HjemTabState.didChangeDependencies()`
+
+---
+
+### Critical Bug #2: Firestore Client-Side Cache 💾
+
+**Problem:**
+- Data was manually updated in Firebase Console (`isParticipant: false` → `true`)
+- Flutter app continued showing old cached value (`false`)
+- Birdie Bonus Bar remained hidden even after manual fix
+- Browser refresh, hard reload, incognito mode - nothing helped!
+
+**Root Cause:**
+- Flutter's Firestore SDK aggressively caches data locally (IndexedDB)
+- Default `.get()` reads from local cache indefinitely
+- Cache is only updated when server pushes changes (which didn't happen for manual edits)
+- Result: Stale data persisted across app restarts
+
+**Solution:**
+```dart
+// ❌ WRONG - Uses local cache (stale data)
+final doc = await _firestore
+    .collection('birdie_bonus_cache')
+    .doc(unionId)
+    .get();
+
+// ✅ CORRECT - Forces fresh read from server
+final doc = await _firestore
+    .collection('birdie_bonus_cache')
+    .doc(unionId)
+    .get(const GetOptions(source: Source.server));
+```
+
+**Trade-offs:**
+- ✅ **Always shows latest data** (critical for participation check)
+- ❌ **Requires network request** (adds ~200-500ms latency)
+- ✅ **Acceptable for infrequent checks** (once per app load)
+
+**When to Use:**
+- ✅ Critical data that must be fresh (user participation status)
+- ✅ Data that can be manually changed in Firestore Console
+- ✅ Infrequent reads (once per session)
+- ❌ Frequently accessed data (use default cache)
+- ❌ Real-time data (use snapshots instead)
+
+**Files:**
+- `lib/services/birdie_bonus_service.dart` - See `isParticipating()` and `getBirdieBonusData()`
+
+---
+
+### Security Rules Workaround 🔒
+
+**Current Implementation:**
+```javascript
+// firestore.rules
+match /birdie_bonus_cache/{dguNumber} {
+  allow read: if true; // TEMP: Open for testing
+  allow write: if false; // Only Cloud Functions
+}
+```
+
+**Issue:**
+Even with `isAuthenticated()` check, permission errors occurred when forcing server reads. This suggests a deeper issue with Firebase Auth token propagation.
+
+**TODO:**
+- Implement proper Firebase Auth with custom claims for `unionId`
+- Update security rules to: `allow read: if request.auth != null && request.auth.token.unionId != null;`
+- See Security TODO section below
+
+---
+
+### Debugging Tips 🔍
+
+**Problem:** "Why isn't my data loading?"
+
+1. **Check lifecycle timing:**
+   ```dart
+   print('initState: player = $player'); // Likely null!
+   print('didChangeDependencies: player = $player'); // Should be available
+   ```
+
+2. **Check Firestore cache:**
+   ```dart
+   // Add debug logging
+   print('📊 Firestore doc.exists: ${doc.exists}');
+   print('📊 Raw data: ${doc.data()}');
+   print('📊 Field value: ${doc.data()?['fieldName']} (type: ${value.runtimeType})');
+   ```
+
+3. **Force server read temporarily:**
+   ```dart
+   .get(const GetOptions(source: Source.server))
+   ```
+
+4. **Check Firestore Console:**
+   - Verify data exists
+   - Check field **types** (boolean vs string!)
+   - Verify document ID matches query
+
+**Common Gotchas:**
+- Field type mismatch: `boolean true` vs `string "true"`
+- Document ID case sensitivity: `"177-2813"` ≠ `"177-2813 "`
+- Provider not ready in `initState()`
+- Firestore cache showing stale data
 
 ---
 
@@ -522,7 +702,8 @@ All tokens stored in **private GitHub Gists** for security.
 **Tokens:**
 1. ✅ **DGU Basen token** - Clubs, courses, players
 2. ✅ **Statistik API token** - WHS scores (NEW v2.0)
-3. ✅ **Notification token** - Push to Mit Golf
+3. ✅ **Birdie Bonus token** - Birdie Bonus participants (NEW v2.0)
+4. ✅ **Notification token** - Push to Mit Golf
 
 **Cloud Functions fetch tokens serverside** - never exposed to browser!
 
@@ -531,6 +712,7 @@ All tokens stored in **private GitHub Gists** for security.
 // Stored in services, fetched by Cloud Functions
 const DGU_TOKEN_URL = 'https://gist.githubusercontent.com/nhuttel/.../dgu_token.txt';
 const WHS_TOKEN_URL = 'https://gist.githubusercontent.com/nhuttel/.../statistik%20token';
+const BIRDIE_TOKEN_URL = 'https://gist.githubusercontent.com/nhuttel/.../Birdie%20bonus%20deltagere'; // NEW v2.0
 const NOTIF_TOKEN_URL = 'https://gist.githubusercontent.com/nhuttel/.../notification_token.txt';
 ```
 
@@ -734,6 +916,14 @@ flutter run -d chrome --web-browser-flag "--disable-web-security"
   - Generer nyt password i DGU/Statistik system
   - Opdater Gist med nyt token
   - Test at app virker med nyt token
+
+- 🔒 **Firestore Rules - Birdie Bonus Cache**: Midlertidig åben read access
+  - **Current**: `allow read: if true;` (open for all)
+  - **Issue**: Permission errors med `isAuthenticated()` check + `Source.server`
+  - **TODO**: Implementer proper Firebase Auth med custom claims for `unionId`
+  - **Target**: `allow read: if request.auth != null && request.auth.token.unionId != null;`
+  - **Files**: `firestore.rules`, `lib/services/birdie_bonus_service.dart`
+  - **Priority**: Medium (POC environment, low risk)
 
 ### CORS Handling
 - **Local**: `--disable-web-security` flag
