@@ -18,6 +18,7 @@ import '../services/golfdk_news_service.dart';
 import '../services/birdie_bonus_service.dart';
 import '../screens/privacy_settings_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 /// Home Screen - Single-page dashboard (no bottom nav)
 /// Dashboard with widgets linking to full-screen views
@@ -552,6 +553,29 @@ class _HjemTabState extends State<_HjemTab> {
           ),
           const SizedBox(height: 12),
           const _MineSenesteScoresWidget(),
+          const SizedBox(height: 24),
+
+          // Turneringer & Ranglister - NEW Widget (inline WebView)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                '🏆 Turneringer & Ranglister',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final uri = Uri.parse('https://www.golf.dk/app/turneringer-i-app');
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+                child: const Text('Åbn ekstern →'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const _TurneringerRanglisteWidget(),
         ],
       ),
     );
@@ -1157,6 +1181,60 @@ class _NewsPreviewCardState extends State<_NewsPreviewCard> {
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+/// Turneringer & Ranglister Widget - Embedded Golf.dk page
+class _TurneringerRanglisteWidget extends StatefulWidget {
+  const _TurneringerRanglisteWidget();
+
+  @override
+  State<_TurneringerRanglisteWidget> createState() => _TurneringerRanglisteWidgetState();
+}
+
+class _TurneringerRanglisteWidgetState extends State<_TurneringerRanglisteWidget> {
+  late final WebViewController _controller;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Initialize WebView controller
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(Colors.white)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageStarted: (String url) {
+            setState(() => _isLoading = true);
+          },
+          onPageFinished: (String url) {
+            setState(() => _isLoading = false);
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse('https://www.golf.dk/app/turneringer-i-app'));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: SizedBox(
+        height: 600, // Fixed height for inline display
+        child: Stack(
+          children: [
+            WebViewWidget(controller: _controller),
+            if (_isLoading)
+              const Center(
+                child: CircularProgressIndicator(
+                  color: AppTheme.dguGreen,
+                ),
+              ),
+          ],
         ),
       ),
     );
