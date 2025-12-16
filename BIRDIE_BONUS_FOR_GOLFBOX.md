@@ -96,9 +96,10 @@ GET https://birdie.bonus.sdmdev.dk/api/member/rating_list/2
 - `dguNumber`: Player's DGU union ID (string, e.g., "177-2813")
 - `Birdiebonuspoints`: Total birdies (note lowercase 'p')
 - `rankInRegionGroup`: Position in leaderboard
-- `"BB participant"`: Status field (note: has space in name!)
-  - Value `2` = active participant
-  - Other values = not participating
+- `"BB participant"`: Participant sequence number (note: has space in name!)
+  - Values: `2`, `3`, `4`, etc. (sequential participant IDs)
+  - **All values > 0 mean active participant** (not a status code!)
+  - If present in API, player is participating in Birdie Bonus
 
 ### 2.3 Our Pagination Loop
 
@@ -198,7 +199,7 @@ for (let i = 0; i < allParticipants.length; i += BATCH_SIZE) {
       rankingPosition: participant.rankInRegionGroup || 0,
       regionLabel: participant.regionLabel || 'Ukendt',
       hcpGroupLabel: participant.hcpGroupLabel || 'Ukendt',
-      isParticipant: (participant["BB participant"] || 0) === 2,
+      isParticipant: (participant["BB participant"] || 0) > 0, // Any value > 0 = participant
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
   }
@@ -207,7 +208,7 @@ for (let i = 0; i < allParticipants.length; i += BATCH_SIZE) {
 }
 ```
 
-**Note**: We normalize field names to camelCase and add `isParticipant` boolean for easier client-side checks.
+**Note**: We normalize field names to camelCase and add `isParticipant` boolean for easier client-side checks. The API's `"BB participant"` field is a sequence number (2, 3, 4, etc.), not a status code - we convert any value > 0 to `true`.
 
 ### 3.4 Error Handling We Added
 
@@ -252,7 +253,7 @@ try {
   rankingPosition: number;    // 630
   regionLabel: string;        // "Sjælland"
   hcpGroupLabel: string;      // "11.5-18.4"
-  isParticipant: boolean;     // true (derived from "BB participant" === 2)
+  isParticipant: boolean;     // true if "BB participant" > 0 (sequence number, not status)
   updatedAt: Timestamp;       // Server timestamp
 }
 ```

@@ -1542,6 +1542,14 @@ exports.cacheBirdieBonusData = functions
       
       console.log(`✅ Fetched ${allParticipants.length} participants from ${page + 1} pages`);
       
+      // DEBUG: Log first 3 participants to see actual field names
+      if (allParticipants.length > 0) {
+        console.log('🔍 DEBUG: First 3 participants structure:');
+        for (let i = 0; i < Math.min(3, allParticipants.length); i++) {
+          console.log(`Participant ${i}:`, JSON.stringify(allParticipants[i], null, 2));
+        }
+      }
+      
       // STEP 3: Write to Firestore (batch writes)
       if (allParticipants.length > 0) {
         console.log('📝 Writing to Firestore...');
@@ -1558,6 +1566,36 @@ exports.cacheBirdieBonusData = functions
             const dguNumber = participant.dguNumber;
             if (!dguNumber) continue;
             
+            // DEBUG: Log BB participant field for first few entries
+            if (written < 3) {
+              console.log(`🔍 DEBUG participant ${written}:`, {
+                dguNumber,
+                'BB participant': participant["BB participant"],
+                'BB_participant': participant["BB_participant"],
+                'BBparticipant': participant["BBparticipant"],
+                'bbParticipant': participant["bbParticipant"],
+                allKeys: Object.keys(participant)
+              });
+            }
+            
+            // Try multiple possible field names for BB participant
+            const bbParticipantValue = 
+              participant["BB participant"] || 
+              participant["BB_participant"] || 
+              participant["BBparticipant"] ||
+              participant["bbParticipant"] ||
+              0;
+            
+            // BB participant is a sequence number (2, 3, 4, etc.) - NOT a status code!
+            // All participants in the API are Birdie Bonus participants.
+            // Any value > 0 means they are participating.
+            const isParticipantValue = Number(bbParticipantValue) > 0;
+            
+            // DEBUG: Log the computed value for first few
+            if (written < 3) {
+              console.log(`🔍 Computed isParticipant for ${dguNumber}: ${isParticipantValue} (from value: ${bbParticipantValue})`);
+            }
+            
             const docRef = db.collection('birdie_bonus_cache').doc(dguNumber);
             batch.set(docRef, {
               dguNumber,
@@ -1569,7 +1607,7 @@ exports.cacheBirdieBonusData = functions
               rankingPosition: participant.rankInRegionGroup || 0,
               regionLabel: participant.regionLabel || 'Ukendt',
               hcpGroupLabel: participant.hcpGroupLabel || 'Ukendt',
-              isParticipant: (participant["BB participant"] || 0) === 2,
+              isParticipant: isParticipantValue,
               updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             }, { merge: true });
             written++;
@@ -1590,6 +1628,155 @@ exports.cacheBirdieBonusData = functions
     } catch (error) {
       console.error('❌ Cache update failed:', error);
       throw error;
+    }
+  });
+
+/**
+ * TEST FUNCTION: Debug Birdie Bonus API Response
+ * Callable function to test API response structure
+ */
+exports.testBirdieBonusAPI = functions
+  .region('europe-west1')
+  .https.onCall(async (data, context) => {
+    try {
+      console.log('🧪 Testing Birdie Bonus API...');
+      
+      // Fetch token
+      const authToken = await fetchBirdieBonusToken();
+      console.log('✅ Token fetched');
+      
+      // Fetch first page
+      const result = await fetchBirdieBonusPage(0, authToken);
+      console.log(`✅ Got ${result.participants.length} participants`);
+      
+      if (result.participants.length > 0) {
+        const firstParticipant = result.participants[0];
+        console.log('🔍 First participant:', JSON.stringify(firstParticipant, null, 2));
+        
+        return {
+          success: true,
+          participantCount: result.participants.length,
+          firstParticipant: firstParticipant,
+          allKeys: Object.keys(firstParticipant),
+          bbParticipantField: firstParticipant["BB participant"],
+          bbParticipantField2: firstParticipant["BB_participant"],
+        };
+      }
+      
+      return { success: false, error: 'No participants found' };
+    } catch (error) {
+      console.error('❌ Test failed:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+/**
+ * MANUAL TRIGGER: Run Birdie Bonus cache update manually
+ * Callable function to trigger cache update without waiting for schedule
+ */
+exports.manualCacheBirdieBonusData = functions
+  .region('europe-west1')
+  .runWith({
+    timeoutSeconds: 540,
+    memory: '512MB'
+  })
+  .https.onCall(async (data, context) => {
+    console.log('🔧 Manual trigger: Birdie Bonus cache update');
+    const startTime = Date.now();
+    const db = admin.firestore();
+    
+    try {
+      // STEP 1: Fetch auth token
+      console.log('📡 Fetching Birdie Bonus token...');
+      const authToken = await fetchBirdieBonusToken();
+      
+      // STEP 2: Fetch ONLY first page for testing
+      console.log('📡 Fetching first page only (test mode)...');
+      const result = await fetchBirdieBonusPage(0, authToken);
+      const allParticipants = result.participants;
+      
+      console.log(`✅ Fetched ${allParticipants.length} participants (test mode - page 0 only)`);
+      
+      // DEBUG: Log first 3 participants
+      if (allParticipants.length > 0) {
+        console.log('🔍 DEBUG: First 3 participants structure:');
+        for (let i = 0; i < Math.min(3, allParticipants.length); i++) {
+          console.log(`Participant ${i}:`, JSON.stringify(allParticipants[i], null, 2));
+        }
+      }
+      
+      // STEP 3: Write to Firestore
+      if (allParticipants.length > 0) {
+        console.log('📝 Writing to Firestore...');
+        
+        const batch = db.batch();
+        let written = 0;
+        
+        for (const participant of allParticipants) {
+          const dguNumber = participant.dguNumber;
+          if (!dguNumber) continue;
+          
+          // DEBUG: Log BB participant field for first few entries
+          if (written < 3) {
+            console.log(`🔍 DEBUG participant ${written}:`, {
+              dguNumber,
+              'BB participant': participant["BB participant"],
+              'BB_participant': participant["BB_participant"],
+              'BBparticipant': participant["BBparticipant"],
+              'bbParticipant': participant["bbParticipant"],
+              allKeys: Object.keys(participant)
+            });
+          }
+          
+          // Try multiple possible field names for BB participant
+          const bbParticipantValue = 
+            participant["BB participant"] || 
+            participant["BB_participant"] || 
+            participant["BBparticipant"] ||
+            participant["bbParticipant"] ||
+            0;
+          
+          // BB participant is a sequence number (2, 3, 4, etc.) - NOT a status code!
+          // All participants in the API are Birdie Bonus participants.
+          // Any value > 0 means they are participating.
+          const isParticipantValue = Number(bbParticipantValue) > 0;
+          
+          // DEBUG: Log the computed value for first few
+          if (written < 3) {
+            console.log(`🔍 Computed isParticipant for ${dguNumber}: ${isParticipantValue} (from value: ${bbParticipantValue})`);
+          }
+          
+          const docRef = db.collection('birdie_bonus_cache').doc(dguNumber);
+          batch.set(docRef, {
+            dguNumber,
+            birdieCount: participant.Birdiebonuspoints || 0,
+            rankingPosition: participant.rankInRegionGroup || 0,
+            regionLabel: participant.regionLabel || 'Ukendt',
+            hcpGroupLabel: participant.hcpGroupLabel || 'Ukendt',
+            isParticipant: isParticipantValue,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          }, { merge: true });
+          written++;
+        }
+        
+        await batch.commit();
+        console.log(`  ✅ Written ${written} participants`);
+      }
+      
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.log('🎉 Manual cache update complete!');
+      console.log(`  Participants: ${allParticipants.length}`);
+      console.log(`  Duration: ${duration}s`);
+      
+      return { 
+        success: true, 
+        participants: allParticipants.length, 
+        duration,
+        message: 'Updated first page only (50 participants)'
+      };
+    } catch (error) {
+      console.error('❌ Manual cache update failed:', error);
+      return { success: false, error: error.message };
     }
   });
 
