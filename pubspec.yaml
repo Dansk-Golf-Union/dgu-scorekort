@@ -67,9 +67,6 @@ dependencies:
   
   # SVG Support
   flutter_svg: ^2.0.0
-  
-  # WebView (for embedding external pages)
-  webview_flutter: ^4.4.4
 
 dev_dependencies:
   flutter_test:
