@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // For kIsWeb and kDebugMode
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
+import '../providers/friends_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_friend_dialog.dart';
 import '../widgets/birdie_bonus_bar.dart';
 import '../models/score_record_model.dart';
 import '../models/news_article_model.dart';
 import '../models/birdie_bonus_model.dart';
+import '../models/activity_item_model.dart';
 import '../services/whs_statistik_service.dart';
 import '../services/golfdk_news_service.dart';
 import '../services/birdie_bonus_service.dart';
@@ -215,10 +218,11 @@ class _HjemTabState extends State<_HjemTab> {
   BirdieBonusData? _birdieBonusData;
   bool _isBirdieBonusParticipant = false;
   
-  // CRITICAL FIX: Flag to ensure data loads only once
+  // CRITICAL FIX: Flags to ensure data loads only once
   // Without this, didChangeDependencies() would trigger multiple times
   // (whenever Provider data changes) causing redundant API calls
   bool _hasLoadedBirdieBonus = false;
+  bool _hasLoadedFriends = false;
 
   @override
   void initState() {
@@ -245,14 +249,23 @@ class _HjemTabState extends State<_HjemTab> {
     //    (didChangeDependencies can be called multiple times during widget lifecycle)
     //
     // This pattern is necessary when loading data that depends on Provider state.
-    if (!_hasLoadedBirdieBonus) {
+    if (!_hasLoadedBirdieBonus || !_hasLoadedFriends) {
       final authProvider = context.read<AuthProvider>();
       final player = authProvider.currentPlayer;
       
-      // Check if player is fully loaded before attempting Birdie Bonus fetch
+      // Check if player is fully loaded before attempting data fetch
       if (player != null && player.unionId != null && player.unionId!.isNotEmpty) {
-        _hasLoadedBirdieBonus = true; // Prevent re-loading on future calls
-        _loadBirdieBonusData();
+        // Load Birdie Bonus data
+        if (!_hasLoadedBirdieBonus) {
+          _hasLoadedBirdieBonus = true; // Prevent re-loading on future calls
+          _loadBirdieBonusData();
+        }
+        
+        // Load friends data
+        if (!_hasLoadedFriends) {
+          _hasLoadedFriends = true; // Prevent re-loading on future calls
+          context.read<FriendsProvider>().loadFriends(player.unionId!);
+        }
       }
     }
   }
@@ -568,67 +581,94 @@ class _HjemTabState extends State<_HjemTab> {
   }
 }
 
-/// Venner Preview Card (Placeholder)
-/// Mine Venner Widget - Shows friend summary (not full list)
+/// Mine Venner Widget - Shows friend summary with LIVE DATA
 class _MineVennerWidget extends StatelessWidget {
   const _MineVennerWidget();
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.push('/venner'),
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                '3 venner • 2 forbedringer i dag',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: const [
-                  CircleAvatar(
-                    child: Icon(Icons.person),
-                    backgroundColor: AppTheme.dguGreen,
+    return Consumer<FriendsProvider>(
+      builder: (context, friendsProvider, child) {
+        final friends = friendsProvider.friends;
+        final friendCount = friends.length;
+
+        return GestureDetector(
+          onTap: () => context.push('/venner'),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Friend count header
+                  Text(
+                    friendCount == 0
+                        ? 'Ingen venner endnu'
+                        : '$friendCount ${friendCount == 1 ? 'ven' : 'venner'}',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                   ),
-                  SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Jonas Meyer', style: TextStyle(fontWeight: FontWeight.bold)),
-                      Text('12.0 📉', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                    ],
-                  ),
-                  Spacer(),
-                  Icon(Icons.trending_down, color: Colors.green),
+                  const SizedBox(height: 16),
+                  
+                  // Empty state or friend list
+                  if (friendCount == 0)
+                    const ListTile(
+                      leading: Icon(Icons.people_outline, color: Colors.grey, size: 32),
+                      title: Text('Ingen venner endnu'),
+                      subtitle: Text('Klik her for at tilføje venner'),
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                    )
+                  else
+                    // Show first 2-3 friends
+                    ...friends.take(3).map((friend) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: AppTheme.dguGreen,
+                              child: Text(
+                                friend.name.isNotEmpty ? friend.name[0].toUpperCase() : '?',
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    friend.name,
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    'HCP ${friend.currentHandicap.toStringAsFixed(1)} • ${friend.homeClubName ?? "Ingen klub"}',
+                                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Trend indicator (if available)
+                            if (friend.trend.delta != null)
+                              Icon(
+                                friend.trend.delta! < 0 ? Icons.trending_down : Icons.trending_up,
+                                color: friend.trend.delta! < 0 ? Colors.green : Colors.orange,
+                                size: 20,
+                              ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
                 ],
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: const [
-                  CircleAvatar(
-                    child: Icon(Icons.person),
-                    backgroundColor: AppTheme.dguGreen,
-                  ),
-                  SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Peter Hansen', style: TextStyle(fontWeight: FontWeight.bold)),
-                      Text('8.7 🏆', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                    ],
-                  ),
-                  Spacer(),
-                  Icon(Icons.emoji_events, color: Colors.amber),
-                ],
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -675,36 +715,125 @@ class _UgensBedsteWidget extends StatelessWidget {
     );
   }
 }
-/// Seneste Aktivitet Widget - Shows 2 most recent activities
+/// Seneste Aktivitet Widget - Shows 2 most recent activities (LIVE DATA)
 class _SenesteAktivitetWidget extends StatelessWidget {
   const _SenesteAktivitetWidget();
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+    final friendsProvider = context.watch<FriendsProvider>();
+
+    // Get list of friend union IDs + current user
+    final friendIds = friendsProvider.friends.map((f) => f.unionId).toList();
+    friendIds.add(authProvider.currentPlayer?.unionId ?? '');
+
     return GestureDetector(
       onTap: () => context.push('/feed'),
       child: Card(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: const [
-              ListTile(
-                leading: Icon(Icons.trending_down, color: Colors.green, size: 32),
-                title: Text('Jonas sænkede handicap!'),
-                subtitle: Text('12.8 → 12.0 (-0.8) • I dag'),
-                dense: true,
-              ),
-              Divider(),
-              ListTile(
-                leading: Icon(Icons.emoji_events, color: Colors.amber, size: 32),
-                title: Text('Peter nåede single-digit handicap!'),
-                subtitle: Text('10.3 → 9.8 • I går'),
-                dense: true,
-              ),
-            ],
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('activities')
+                .orderBy('timestamp', descending: true)
+                .limit(2) // Only 2 most recent
+                .snapshots(),
+            builder: (context, snapshot) {
+              // Loading state
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: CircularProgressIndicator(
+                      color: AppTheme.dguGreen,
+                    ),
+                  ),
+                );
+              }
+
+              // Error state
+              if (snapshot.hasError) {
+                return ListTile(
+                  leading: const Icon(Icons.error_outline, color: Colors.red),
+                  title: const Text('Kunne ikke hente aktiviteter'),
+                  subtitle: Text(snapshot.error.toString()),
+                  dense: true,
+                );
+              }
+
+              // Parse activities and filter to friends
+              final activities = snapshot.data!.docs
+                  .map((doc) => ActivityItem.fromFirestore(doc))
+                  .where((activity) => !activity.isDismissed)
+                  .where((activity) => friendIds.contains(activity.userId))
+                  .take(2) // Ensure max 2 items
+                  .toList();
+
+              // Empty state
+              if (activities.isEmpty) {
+                return const ListTile(
+                  leading: Icon(Icons.feed_outlined, color: Colors.grey, size: 32),
+                  title: Text('Ingen aktiviteter endnu'),
+                  subtitle: Text('Følg venner for at se deres fremskridt'),
+                  dense: true,
+                );
+              }
+
+              // Render activities
+              return Column(
+                children: activities.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final activity = entry.value;
+                  
+                  return Column(
+                    children: [
+                      _buildActivityListTile(activity),
+                      if (index < activities.length - 1) const Divider(),
+                    ],
+                  );
+                }).toList(),
+              );
+            },
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildActivityListTile(ActivityItem activity) {
+    // Determine icon and color based on activity type
+    IconData icon;
+    Color color;
+    
+    switch (activity.type) {
+      case ActivityType.improvement:
+        icon = Icons.trending_down;
+        color = Colors.green;
+        break;
+      case ActivityType.milestone:
+        icon = Icons.emoji_events;
+        color = Colors.amber;
+        break;
+      case ActivityType.eagle:
+        icon = Icons.flight;
+        color = Colors.blue;
+        break;
+      case ActivityType.albatross:
+        icon = Icons.flight;
+        color = Colors.purple;
+        break;
+      case ActivityType.personalBest:
+        icon = Icons.star;
+        color = Colors.orange;
+        break;
+    }
+
+    return ListTile(
+      leading: Icon(icon, color: color, size: 32),
+      title: Text(activity.getTitle()),
+      subtitle: Text(activity.getMessage()),
+      dense: true,
     );
   }
 }
