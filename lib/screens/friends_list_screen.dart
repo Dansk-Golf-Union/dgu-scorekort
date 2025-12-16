@@ -32,6 +32,14 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
     final friendsProvider = context.watch<FriendsProvider>();
     
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Mine Venner', style: TextStyle(color: Colors.white)),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           final authProvider = context.read<AuthProvider>();

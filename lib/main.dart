@@ -22,6 +22,8 @@ import 'screens/match_play_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/score_archive_screen.dart';
 import 'screens/friend_request_from_url_screen.dart';
+import 'screens/feed_screen.dart';
+import 'screens/friends_list_screen.dart';
 import 'theme/app_theme.dart';
 
 // TODO: Switch to OAuth when redirect URI is ready
@@ -170,6 +172,14 @@ class _AppRouter extends StatelessWidget {
         GoRoute(
           path: '/score-archive',
           builder: (context, state) => const ScoreArchiveScreen(),
+        ),
+        GoRoute(
+          path: '/feed',
+          builder: (context, state) => const FeedScreen(),
+        ),
+        GoRoute(
+          path: '/venner',
+          builder: (context, state) => const FriendsListScreen(),
         ),
       ],
     );
