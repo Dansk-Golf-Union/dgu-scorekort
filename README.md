@@ -23,23 +23,52 @@
 - ✅ Prove at **social features driver engagement** (især handicap tracking)
 - ✅ Production-ready code til integration i Mit Golf app
 
-### New Navigation Structure
+### Dashboard Redesign (December 2024)
+
+**Navigation Change:**
+- **Removed:** Bottom navigation bar (conflicts with native Mit Golf app)
+- **New:** Single-page dashboard with glanceable widgets
+- **Full-screen views:** Accessible via "Se alle →" links with back buttons
+
+**Dashboard Widgets:**
+1. **Player Card** - Name, HCP, home club
+2. **Birdie Bonus Bar** - Conditional (only if participating)
+3. **Quick Actions** - 4 green buttons (Bestil tid, DGU score, Indberet, Scorekort)
+4. **Golf.dk News Feed** - Latest articles from Golf.dk
+5. **Mine Venner** - Friend summary (live from FriendsProvider)
+6. **Seneste Aktivitet** - 2 recent activity items (live from Firestore)
+7. **Ugens Bedste** - Weekly highlight (placeholder)
+8. **Mine Seneste Scores** - 2 recent scores (live from WHS API)
+
+**Navigation Pattern:**
+- Widgets clickable → Full-screen views
+- Full-screen routes: `/feed`, `/venner`, `/score-archive`
+- AppBar with back button on full-screen views
+- All text in Danish
+
+**Rationale:**
+- Better compatibility with native "Mit Golf" app
+- Cleaner single-page experience
+- Glanceable dashboard pattern
+
+### Navigation Structure
 
 **From:** Single page scorecard app
 
-**To:** Multi-tab app med Home dashboard (Mit Golf style!)
+**To:** Dashboard-style POC (compatible with Mit Golf native navigation)
 
-**Navigation:**
-- 🏠 **Hjem** - Dashboard med quick actions + previews
-- 👥 **Venner** - Handicap tracking for friends (Coming in Phase 2)
-- 📰 **Feed** - Activity feed med handicap milestones (Coming in Phase 2)
-- 🏆 **Tops** - Leaderboards (Coming in Phase 2)
-- ☰ **Menu** - Settings, privacy, om app
+**Home Screen:**
+- 🏠 **Dashboard** - Glanceable widgets with "Se alle →" links
+- No bottom nav (defers to Mit Golf app's native navigation)
+
+**Full-Screen Views:**
+- 📰 **Feed** (`/feed`) - Activity feed
+- 👥 **Venner** (`/venner`) - Friends list
+- 📊 **Score Archive** (`/score-archive`) - Score history
 
 **Design:**
-- White header med DGU logo
-- Bottom navigation bar (like Mit Golf app)
-- Player info card med HCP badge
+- White header med DGU logo (centered)
+- Single-page scrollable dashboard
 - Clean, modern Material 3 design
 
 ---
@@ -984,6 +1013,6 @@ Dette er et POC projekt for DGU. Pull requests velkomne!
 
 **Bygget med ❤️, Flutter og Firebase**
 
-**Version:** 2.0 Extended POC - Phase 2A Complete
+**Version:** 2.0 Extended POC - Dashboard Redesign Complete
 
-**Last Updated:** December 16, 2025
+**Last Updated:** December 17, 2025
