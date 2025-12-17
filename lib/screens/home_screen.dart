@@ -1,3 +1,5 @@
+import 'dart:html' as html;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // For kIsWeb and kDebugMode
 import 'package:go_router/go_router.dart';
@@ -603,6 +605,11 @@ class _HjemTabState extends State<_HjemTab> {
               return const _MineSenesteScoresWidget();
             },
           ),
+          const SizedBox(height: 24),
+
+          // Turneringer & Ranglister - NEW!
+          const _TurneringerIframeWidget(),
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -1249,6 +1256,58 @@ class _NewsPreviewCardState extends State<_NewsPreviewCard> {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+/// Turneringer & Ranglister IFrame Widget
+class _TurneringerIframeWidget extends StatefulWidget {
+  const _TurneringerIframeWidget();
+
+  @override
+  State<_TurneringerIframeWidget> createState() => _TurneringerIframeWidgetState();
+}
+
+class _TurneringerIframeWidgetState extends State<_TurneringerIframeWidget> {
+  final String viewType = 'turneringer-iframe-${DateTime.now().millisecondsSinceEpoch}';
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Register iframe as platform view (only once)
+    // ignore: undefined_prefixed_name
+    ui.platformViewRegistry.registerViewFactory(viewType, (int viewId) {
+      final iframe = html.IFrameElement()
+        ..src = 'https://www.golf.dk/app/turneringer-i-app'
+        ..style.border = 'none'
+        ..style.height = '600px'
+        ..style.width = '100%';
+      
+      return iframe;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Text(
+              '🏆 Turneringer & Ranglister',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ),
+          const Divider(height: 1),
+          SizedBox(
+            height: 600,
+            child: HtmlElementView(viewType: viewType),
+          ),
+        ],
       ),
     );
   }
