@@ -129,16 +129,33 @@
 ### ⚙️ Dashboard Preferences - NEW!
 - ✅ **Customizable Widgets**: Bruger kontrollerer antal items per widget
 - ✅ **4 Sliders**: Nyheder (0-5), Venner/Aktiviteter/Scores (0-10)
+- ✅ **Drag-and-Drop Reordering**: Omarranger widgets på forsiden med træk og slip 🎯
+- ✅ **Persistent Order**: Rækkefølge gemmes automatisk i SharedPreferences
 - ✅ **Live Updates**: Widgets opdaterer live uden restart (Consumer pattern)
 - ✅ **Persistent Settings**: Gemmes i SharedPreferences
 - ✅ **Smart Headers**: Headers + "Se alle →" altid synlige (selv ved count=0)
 - ✅ **Minimalist Option**: Sæt count=0 for at skjule preview, behold navigation
-- ✅ **Reset Button**: Tilbage til defaults med ét klik
+- ✅ **Reset Button**: Tilbage til defaults (count + order) med ét klik
 
 **Access:** ☰ Menu → "Dashboard Indstillinger"
 
+**Reorderable Widgets:**
+- 🗞️ Nyheder fra Golf.dk
+- 👥 Mine Venner
+- 📰 Seneste Aktivitet
+- 📊 Mine Seneste Scores
+- 🏆 Turneringer & Ranglister
+
+**Fixed Widgets (ikke reorderable):**
+- Player Card (always first)
+- Birdie Bonus Bar (conditional)
+- Quick Actions
+- Ugens Bedste (always after reorderable widgets)
+
 **Technical:**
-- `DashboardPreferencesProvider` med SharedPreferences
+- `DashboardPreferencesProvider` med SharedPreferences (widgetOrder + counts)
+- `ReorderableListView` med drag handles i settings
+- Dynamic rendering via `_buildWidgetById()` dispatcher
 - Live reactive via `didChangeDependencies()` i News og Scores widgets
 - Dynamisk Firestore buffering for aktiviteter (count × 3, min 20)
 - API limitations respekteret (Golf.dk max 5 articles)
