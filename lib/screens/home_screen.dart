@@ -351,13 +351,14 @@ class _HjemTabState extends State<_HjemTab> {
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final player = authProvider.currentPlayer;
+    final prefs = context.watch<DashboardPreferencesProvider>();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Player Info Card (Mit Golf style)
+          // Player Info Card (Mit Golf style) - Always first, non-reorderable
           if (player != null) ...[
             Card(
               elevation: 2,
@@ -440,15 +441,14 @@ class _HjemTabState extends State<_HjemTab> {
             ),
             const SizedBox(height: 16),
 
-            // Birdie Bonus Bar - ONLY shown if user is participating
-            // Non-participants will not see this bar at all
+            // Birdie Bonus Bar - Conditional, non-reorderable
             if (_isBirdieBonusParticipant && _birdieBonusData != null)
               BirdieBonusBar(data: _birdieBonusData!),
             
             const SizedBox(height: 24),
           ],
 
-          // Quick Actions - 4 Buttons in 2x2 Grid (Mit Golf style)
+          // Quick Actions - Non-reorderable
           Row(
             children: [
               Expanded(
@@ -490,76 +490,10 @@ class _HjemTabState extends State<_HjemTab> {
           ),
           const SizedBox(height: 24),
 
-          // Seneste Nyheder (Golf.dk) - KEEP THIS! 🚨
-          const Text(
-            '🗞️ Nyheder fra Golf.dk',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          // Content conditional on preference (header always visible)
-          Consumer<DashboardPreferencesProvider>(
-            builder: (context, prefs, child) {
-              if (prefs.newsCount == 0) {
-                return const SizedBox.shrink();
-              }
-              return const _NewsPreviewCard();
-            },
-          ),
-          const SizedBox(height: 24),
-
-          // Mine Venner - NEW Widget (summary)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                '👥 Mine Venner',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              TextButton(
-                onPressed: () => context.push('/venner'),
-                child: const Text('Se alle →'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Content conditional on preference (header always visible)
-          Consumer<DashboardPreferencesProvider>(
-            builder: (context, prefs, child) {
-              if (prefs.friendsCount == 0) {
-                return const SizedBox.shrink();
-              }
-              return const _MineVennerWidget();
-            },
-          ),
-          const SizedBox(height: 24),
-
-          // Seneste Aktivitet - NEW Widget (2 items)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                '📰 Seneste Aktivitet',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              TextButton(
-                onPressed: () => context.push('/feed'),
-                child: const Text('Se alle →'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Content conditional on preference (header always visible)
-          Consumer<DashboardPreferencesProvider>(
-            builder: (context, prefs, child) {
-              if (prefs.activitiesCount == 0) {
-                return const SizedBox.shrink();
-              }
-              return const _SenesteAktivitetWidget();
-            },
-          ),
-          const SizedBox(height: 24),
-
-          // Ugens Bedste - NEW Widget
+          // DYNAMIC WIDGETS - User can reorder these via settings
+          ...prefs.widgetOrder.map((widgetId) => _buildWidgetById(widgetId, prefs)),
+          
+          // Ugens Bedste - NOT reorderable (always after dynamic widgets)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -580,38 +514,123 @@ class _HjemTabState extends State<_HjemTab> {
           const SizedBox(height: 12),
           const _UgensBedsteWidget(),
           const SizedBox(height: 24),
-
-          // Mine Seneste Scores - NEW Widget
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                '📊 Mine Seneste Scores',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              TextButton(
-                onPressed: () => context.push('/score-archive'),
-                child: const Text('Se arkiv →'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Content conditional on preference (header always visible)
-          Consumer<DashboardPreferencesProvider>(
-            builder: (context, prefs, child) {
-              if (prefs.scoresCount == 0) {
-                return const SizedBox.shrink();
-              }
-              return const _MineSenesteScoresWidget();
-            },
-          ),
-          const SizedBox(height: 24),
-
-          // Turneringer & Ranglister - NEW!
-          const _TurneringerIframeWidget(),
-          const SizedBox(height: 24),
         ],
       ),
+    );
+  }
+  
+  /// Build a widget by its ID - used for dynamic rendering based on user preferences
+  Widget _buildWidgetById(String id, DashboardPreferencesProvider prefs) {
+    switch (id) {
+      case 'news':
+        return _buildNewsSection(prefs.newsCount);
+      case 'friends':
+        return _buildFriendsSection(prefs.friendsCount);
+      case 'activities':
+        return _buildActivitiesSection(prefs.activitiesCount);
+      case 'scores':
+        return _buildScoresSection(prefs.scoresCount);
+      case 'tournaments':
+        return _buildTournamentsSection();
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+  
+  Widget _buildNewsSection(int count) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '🗞️ Nyheder fra Golf.dk',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        if (count > 0) const _NewsPreviewCard(),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+  
+  Widget _buildFriendsSection(int count) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              '👥 Mine Venner',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            TextButton(
+              onPressed: () => context.push('/venner'),
+              child: const Text('Se alle →'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (count > 0) const _MineVennerWidget(),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+  
+  Widget _buildActivitiesSection(int count) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              '📰 Seneste Aktivitet',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            TextButton(
+              onPressed: () => context.push('/feed'),
+              child: const Text('Se alle →'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (count > 0) const _SenesteAktivitetWidget(),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+  
+  Widget _buildScoresSection(int count) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              '📊 Mine Seneste Scores',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            TextButton(
+              onPressed: () => context.push('/score-archive'),
+              child: const Text('Se arkiv →'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (count > 0) const _MineSenesteScoresWidget(),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+  
+  Widget _buildTournamentsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: const [
+        _TurneringerIframeWidget(),
+        SizedBox(height: 24),
+      ],
     );
   }
 
