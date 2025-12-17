@@ -2,16 +2,17 @@
 
 **Flutter Web App** til danske golfspillere med scorecard indtastning og **handicap-focused social features**.
 
-## 🎯 Status: Version 2.0 Extended POC (In Development)
+## 🎯 Status: Version 2.0 Extended POC (Production)
 
-**Branch:** `feature/extended-version`
+**Main Branch:** `main` - v2.0 (Stable, deployed to all URLs)  
+**Development Branch:** `feature/extended-version` - Active development (continues here)
 
 **Live URLs:**
-- **Primary:** [https://dgu-app-poc.web.app](https://dgu-app-poc.web.app) - v2.0 Extended POC (Active Development)
-- **Mirror:** [https://dgu-scorekort.web.app](https://dgu-scorekort.web.app) - v2.0 (Same as POC)
-- **Backup:** [GitHub Pages](https://dansk-golf-union.github.io/dgu-scorekort/) - Auto-deploy from main
+- **Primary:** [https://dgu-app-poc.web.app](https://dgu-app-poc.web.app) - v2.0 Extended POC (Firebase Hosting)
+- **Mirror:** [https://dgu-scorekort.web.app](https://dgu-scorekort.web.app) - v2.0 (Firebase Hosting, same deployment)
+- **Backup:** [GitHub Pages](https://dansk-golf-union.github.io/dgu-scorekort/) - v2.0 (Auto-deploy from main)
 
-**Note:** Both Firebase URLs currently show v2.0 due to shared deployment. Will be consolidated after merge to main.
+**All three URLs now show v2.0 with OAuth, Dashboard, Birdie Bonus, and social features.**
 
 ---
 
@@ -1115,4 +1116,4 @@ Dette er et POC projekt for DGU. Pull requests velkomne!
 
 **Version:** 2.0 Extended POC - Dashboard Redesign + OAuth Login
 
-**Last Updated:** December 17, 2024 - OAuth UX improvements + Persistent login
+**Last Updated:** December 17, 2024 - Merged v2.0 to main, deployed to all URLs
