@@ -79,7 +79,7 @@ Both versions share 100% of backend infrastructure:
 4. **Golf.dk News Feed** - Latest articles from Golf.dk (customizable 0-5 items)
 5. **Mine Venner** - Friend summary (customizable 0-10 items)
 6. **Seneste Aktivitet** - Recent activity items (customizable 0-10 items)
-7. **Ugens Bedste** - Weekly highlight (placeholder)
+7. **Ugens Bedste** - Top 3 biggest improvements (customizable 0-10 items, tap to see full leaderboards)
 8. **Mine Seneste Scores** - Recent scores (customizable 0-10 items)
 9. **Turneringer & Ranglister** - Golf.dk tournaments iframe (with cookie consent)
 
@@ -278,10 +278,13 @@ Both versions share 100% of backend infrastructure:
 - ⏳ **Swipe-to-Dismiss**: Dismiss activities (future)
 - ⏳ **Activity Details**: Tap for full scorecard (future)
 
-### 🏆 Phase 2C: Leaderboards (NEXT!)
-- **Handicap Rankings**: Lowest, biggest improvement
-- **Score Rankings**: Best rounds, most consistent
-- **Friend Circles**: Compete with friends
+### 🏆 Phase 2C: Leaderboards ✅
+- **Handicap Rankings**: Lowest HCP, biggest improvement (client-side sorting)
+- **Dashboard Preview**: "Ugens Bedste" widget shows top 3 improvements
+- **Full Screen**: `/leaderboards` with 2 tabs (Laveste HCP, Største Fremgang)
+- **Navigation**: Drawer menu, "Se mere →" link, or tap entries
+- **Empty States**: Helpful messages when no data
+- **Trophy Emojis**: 🥇🥈🥉 for top 3
 
 ---
 
@@ -897,11 +900,16 @@ Example: 14.5 / 2 = 7.25 → 7.3
 - [ ] Activity notifications (future)
 - [ ] Swipe-to-dismiss (future)
 
-### 📅 Phase 2C: Leaderboards (NEXT)
-- [ ] Leaderboard data models
-- [ ] calculateLeaderboards Cloud Function
-- [ ] Leaderboard UI (rankings)
-- [ ] Friend circles
+### 📅 Phase 2C: Leaderboards ✅
+- [x] Leaderboard data models (`LeaderboardEntry`, `LeaderboardType`)
+- [x] Client-side leaderboard calculation in `FriendsProvider`
+- [x] "Ugens Bedste" widget with real data (top 3 improvements)
+- [x] Full `/leaderboards` screen with tabs (Laveste HCP, Største Fremgang)
+- [x] Navigation via drawer menu, "Se mere →" link, or tap entries
+- [x] Empty states, loading, and error handling
+- [x] Trophy emojis 🥇🥈🥉 for top 3
+- [ ] Best Scores leaderboard (future)
+- [ ] Friend circles (future)
 
 ### 📅 Phase 3: Polish & Testing
 - [ ] Flight Mode (multi-player)

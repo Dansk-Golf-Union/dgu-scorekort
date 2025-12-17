@@ -25,6 +25,7 @@ import 'screens/score_archive_screen.dart';
 import 'screens/friend_request_from_url_screen.dart';
 import 'screens/feed_screen.dart';
 import 'screens/friends_list_screen.dart';
+import 'screens/leaderboards_screen.dart';
 import 'theme/app_theme.dart';
 
 // Development tip: Toggle between OAuth and SimpleLogin as needed
@@ -183,6 +184,10 @@ class _AppRouter extends StatelessWidget {
         GoRoute(
           path: '/venner',
           builder: (context, state) => const FriendsListScreen(),
+        ),
+        GoRoute(
+          path: '/leaderboards',
+          builder: (context, state) => const LeaderboardsScreen(),
         ),
       ],
     );

@@ -155,6 +155,14 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.emoji_events, color: AppTheme.dguGreen),
+              title: const Text('Leaderboards'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/leaderboards');
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.privacy_tip, color: AppTheme.dguGreen),
               title: const Text('Privacy & Samtykke'),
               onTap: () {
@@ -616,11 +624,7 @@ class _HjemTabState extends State<_HjemTab> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             TextButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Leaderboards kommer i Phase 2C!')),
-                );
-              },
+              onPressed: () => context.push('/leaderboards'),
               child: const Text('Se mere →'),
             ),
           ],
@@ -767,37 +771,63 @@ class _UgensBedsteWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Leaderboards kommer i Phase 2C!')),
+    return Consumer<FriendsProvider>(
+      builder: (context, friendsProvider, child) {
+        // Get top 3 improvements from friends
+        final leaderboard = friendsProvider.getBiggestImprovementLeaderboard(limit: 3);
+        
+        if (leaderboard.isEmpty) {
+          return _buildEmptyState(context);
+        }
+        
+        return Card(
+          child: Column(
+            children: leaderboard.map((entry) => 
+              ListTile(
+                leading: Text(
+                  entry.trophyEmoji,
+                  style: const TextStyle(fontSize: 24),
+                ),
+                title: Text(entry.name),
+                subtitle: Text(entry.homeClubName ?? ''),
+                trailing: Chip(
+                  label: Text(entry.displayValue),
+                  backgroundColor: Colors.green.shade100,
+                ),
+                onTap: () => context.push('/leaderboards'),
+              )
+            ).toList(),
+          ),
         );
       },
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: const [
-              Icon(Icons.emoji_events, size: 48, color: Colors.amber),
-              SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Peter - Eagle på Furesø B12',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      '+2 over par → stableford 40',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ],
-                ),
+    );
+  }
+  
+  Widget _buildEmptyState(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          children: [
+            const Icon(Icons.emoji_events_outlined, size: 48, color: Colors.grey),
+            const SizedBox(height: 12),
+            const Text(
+              'Ingen data endnu',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Tilføj venner for at se leaderboards',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ],
         ),
       ),
     );
