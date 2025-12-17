@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../providers/friends_provider.dart';
 import '../models/activity_item_model.dart';
 import '../widgets/activity_card.dart';
+import '../widgets/dgu_hero_banner.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -38,6 +39,13 @@ class _FeedScreenState extends State<FeedScreen> {
       ),
       body: Column(
         children: [
+          // Hero Banner
+          DguHeroBanner(
+            title: 'Aktivitetsfeed',
+            subtitle: 'Følg med i hvad dine venner laver',
+            height: 170,
+            showFlag: true,
+          ),
           // Filter chips
           _buildFilterChips(),
           // Activity feed

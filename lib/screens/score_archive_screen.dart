@@ -4,6 +4,7 @@ import '../models/score_record_model.dart';
 import '../providers/auth_provider.dart';
 import '../services/whs_statistik_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/dgu_hero_banner.dart';
 
 /// Score Archive Screen
 /// 
@@ -94,10 +95,22 @@ class _ScoreArchiveScreenState extends State<ScoreArchiveScreen> {
         ),
         centerTitle: true,
       ),
-      body: RefreshIndicator(
-        onRefresh: _onRefresh,
-        color: AppTheme.dguGreen,
-        child: _buildBody(),
+      body: Column(
+        children: [
+          DguHeroBanner(
+            title: 'Scorearkiv',
+            subtitle: 'Dine seneste resultater',
+            height: 180,
+            showFlag: true,
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _onRefresh,
+              color: AppTheme.dguGreen,
+              child: _buildBody(),
+            ),
+          ),
+        ],
       ),
     );
   }

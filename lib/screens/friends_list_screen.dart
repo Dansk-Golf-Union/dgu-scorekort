@@ -4,6 +4,9 @@ import '../providers/friends_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/friend_card.dart';
 import '../widgets/add_friend_dialog.dart';
+import '../widgets/dgu_hero_banner.dart';
+import '../widgets/overlapping_card.dart';
+import '../widgets/pill_button.dart';
 
 class FriendsListScreen extends StatefulWidget {
   const FriendsListScreen({super.key});
@@ -48,12 +51,35 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
             await friendsProvider.loadFriends(unionId);
           }
         },
-        child: _buildBody(friendsProvider),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddFriendDialog(context),
-        icon: const Icon(Icons.person_add),
-        label: const Text('Tilføj Ven'),
+        child: Column(
+          children: [
+            // Hero Banner
+            DguHeroBanner(
+              title: 'Mine Venner',
+              height: 180,
+              showFlag: true,
+              showClubhouse: true,
+            ),
+            
+            // Add Friend button (overlapping)
+            OverlappingCard(
+              overlapAmount: 25,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: PillButton(
+                  text: 'Tilføj Ven',
+                  icon: Icons.person_add,
+                  onPressed: () => _showAddFriendDialog(context),
+                ),
+              ),
+            ),
+            
+            // Friends list
+            Expanded(
+              child: _buildBody(friendsProvider),
+            ),
+          ],
+        ),
       ),
     );
   }
