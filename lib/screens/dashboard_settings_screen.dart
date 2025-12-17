@@ -173,21 +173,22 @@ class DashboardSettingsScreen extends StatelessWidget {
                             ),
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppTheme.dguGreen,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            data.value.toInt().toString(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
+                        if (data.max > 1)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.dguGreen,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              data.value.toInt().toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
                             ),
                           ),
-                        ),
                       ],
                     ),
                     if (data.max > 1) ...[
