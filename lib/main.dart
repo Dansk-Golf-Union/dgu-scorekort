@@ -11,6 +11,7 @@ import 'providers/auth_provider.dart';
 import 'providers/match_play_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/friends_provider.dart';
+import 'providers/dashboard_preferences_provider.dart';
 import 'models/club_model.dart';
 import 'models/course_model.dart';
 import 'screens/scorecard_keypad_screen.dart';
@@ -56,6 +57,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()..initialize()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()..initialize()),
         ChangeNotifierProvider(create: (_) => FriendsProvider()),
+        ChangeNotifierProvider(create: (_) => DashboardPreferencesProvider()..loadPreferences()),
         ChangeNotifierProvider(create: (_) => MatchSetupProvider()),
         ChangeNotifierProvider(create: (_) => ScorecardProvider()),
         ChangeNotifierProvider(create: (_) => MatchPlayProvider()),

@@ -6,8 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../providers/friends_provider.dart';
+import '../providers/dashboard_preferences_provider.dart';
 import '../theme/app_theme.dart';
-import '../widgets/add_friend_dialog.dart';
 import '../widgets/birdie_bonus_bar.dart';
 import '../models/score_record_model.dart';
 import '../models/news_article_model.dart';
@@ -17,6 +17,7 @@ import '../services/whs_statistik_service.dart';
 import '../services/golfdk_news_service.dart';
 import '../services/birdie_bonus_service.dart';
 import '../screens/privacy_settings_screen.dart';
+import '../screens/dashboard_settings_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Home Screen - Single-page dashboard (no bottom nav)
@@ -141,6 +142,17 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             ListTile(
+              leading: const Icon(Icons.dashboard_customize, color: AppTheme.dguGreen),
+              title: const Text('Dashboard Indstillinger'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const DashboardSettingsScreen()),
+                );
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.privacy_tip, color: AppTheme.dguGreen),
               title: const Text('Privacy & Samtykke'),
               onTap: () {
@@ -148,17 +160,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const PrivacySettingsScreen()),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.person_add, color: AppTheme.dguGreen),
-              title: const Text('🧪 TEST: Tilføj Ven'),
-              onTap: () {
-                Navigator.pop(context);
-                showDialog(
-                  context: context,
-                  builder: (context) => const AddFriendDialog(),
                 );
               },
             ),
@@ -190,14 +191,34 @@ class _HomeScreenState extends State<HomeScreen> {
     showAboutDialog(
       context: context,
       applicationName: 'DGU Scorekort',
-      applicationVersion: 'v2.0 Extended POC',
-      applicationLegalese: '© 2024 Dansk Golf Union',
-      children: const [
-        SizedBox(height: 20),
+      applicationVersion: '2.0.0 Extended POC',
+      applicationIcon: Image.asset('assets/images/dgu_logo.png', width: 50, height: 50),
+      children: const <Widget>[
+        SizedBox(height: 16),
         Text(
-          'Native scorecard app med handicap-focused social features.\n\n'
-          'Proof of Concept for integration i DGU Mit Golf app.',
+          '© 2024 Dansk Golf Union',
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        SizedBox(height: 16),
+        Text(
+          'Native Flutter scorecard app med handicap-focused social features.',
+          style: TextStyle(fontSize: 14),
+        ),
+        SizedBox(height: 12),
+        Text(
+          'Proof of Concept for integration i DGU Mit Golf app.',
+          style: TextStyle(fontSize: 14),
+        ),
+        SizedBox(height: 16),
+        Text(
+          'Features:',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        ),
+        Text('• OAuth login med GolfBox', style: TextStyle(fontSize: 13)),
+        Text('• Venner system og social feed', style: TextStyle(fontSize: 13)),
+        Text('• Birdie Bonus integration', style: TextStyle(fontSize: 13)),
+        Text('• Score historie fra WHS/Statistik', style: TextStyle(fontSize: 13)),
+        Text('• Golf.dk news feed', style: TextStyle(fontSize: 13)),
       ],
     );
   }
@@ -473,7 +494,15 @@ class _HjemTabState extends State<_HjemTab> {
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          const _NewsPreviewCard(), // EXISTING - DO NOT DELETE
+          // Content conditional on preference (header always visible)
+          Consumer<DashboardPreferencesProvider>(
+            builder: (context, prefs, child) {
+              if (prefs.newsCount == 0) {
+                return const SizedBox.shrink();
+              }
+              return const _NewsPreviewCard();
+            },
+          ),
           const SizedBox(height: 24),
 
           // Mine Venner - NEW Widget (summary)
@@ -491,7 +520,15 @@ class _HjemTabState extends State<_HjemTab> {
             ],
           ),
           const SizedBox(height: 12),
-          const _MineVennerWidget(),
+          // Content conditional on preference (header always visible)
+          Consumer<DashboardPreferencesProvider>(
+            builder: (context, prefs, child) {
+              if (prefs.friendsCount == 0) {
+                return const SizedBox.shrink();
+              }
+              return const _MineVennerWidget();
+            },
+          ),
           const SizedBox(height: 24),
 
           // Seneste Aktivitet - NEW Widget (2 items)
@@ -509,7 +546,15 @@ class _HjemTabState extends State<_HjemTab> {
             ],
           ),
           const SizedBox(height: 12),
-          const _SenesteAktivitetWidget(),
+          // Content conditional on preference (header always visible)
+          Consumer<DashboardPreferencesProvider>(
+            builder: (context, prefs, child) {
+              if (prefs.activitiesCount == 0) {
+                return const SizedBox.shrink();
+              }
+              return const _SenesteAktivitetWidget();
+            },
+          ),
           const SizedBox(height: 24),
 
           // Ugens Bedste - NEW Widget
@@ -549,7 +594,15 @@ class _HjemTabState extends State<_HjemTab> {
             ],
           ),
           const SizedBox(height: 12),
-          const _MineSenesteScoresWidget(),
+          // Content conditional on preference (header always visible)
+          Consumer<DashboardPreferencesProvider>(
+            builder: (context, prefs, child) {
+              if (prefs.scoresCount == 0) {
+                return const SizedBox.shrink();
+              }
+              return const _MineSenesteScoresWidget();
+            },
+          ),
         ],
       ),
     );
@@ -585,10 +638,13 @@ class _MineVennerWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final prefs = context.watch<DashboardPreferencesProvider>();
+    
     return Consumer<FriendsProvider>(
       builder: (context, friendsProvider, child) {
         final friends = friendsProvider.friends;
         final friendCount = friends.length;
+        final friendsToShow = prefs.friendsCount;
 
         return GestureDetector(
           onTap: () => context.push('/venner'),
@@ -617,8 +673,8 @@ class _MineVennerWidget extends StatelessWidget {
                       contentPadding: EdgeInsets.zero,
                     )
                   else
-                    // Show first 2-3 friends
-                    ...friends.take(3).map((friend) {
+                    // Show friends based on preference
+                    ...friends.take(friendsToShow).map((friend) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12.0),
                         child: Row(
@@ -721,10 +777,14 @@ class _SenesteAktivitetWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final friendsProvider = context.watch<FriendsProvider>();
+    final prefs = context.watch<DashboardPreferencesProvider>();
 
     // Get list of friend union IDs + current user
     final friendIds = friendsProvider.friends.map((f) => f.unionId).toList();
     friendIds.add(authProvider.currentPlayer?.unionId ?? '');
+
+    // Dynamic Firestore limit: buffer x3 for friend filtering (min 20, max 100)
+    final firestoreLimit = (prefs.activitiesCount * 3).clamp(20, 100);
 
     return GestureDetector(
       onTap: () => context.push('/feed'),
@@ -735,7 +795,7 @@ class _SenesteAktivitetWidget extends StatelessWidget {
             stream: FirebaseFirestore.instance
                 .collection('activities')
                 .orderBy('timestamp', descending: true)
-                .limit(2) // Only 2 most recent
+                .limit(firestoreLimit) // Dynamic limit (min 20, max 100)
                 .snapshots(),
             builder: (context, snapshot) {
               // Loading state
@@ -765,7 +825,7 @@ class _SenesteAktivitetWidget extends StatelessWidget {
                   .map((doc) => ActivityItem.fromFirestore(doc))
                   .where((activity) => !activity.isDismissed)
                   .where((activity) => friendIds.contains(activity.userId))
-                  .take(2) // Ensure max 2 items
+                  .take(prefs.activitiesCount) // User's preference
                   .toList();
 
               // Empty state
@@ -847,23 +907,39 @@ class _MineSenesteScoresWidget extends StatefulWidget {
 class _MineSenesteScoresWidgetState extends State<_MineSenesteScoresWidget> {
   final _whsService = WhsStatistikService();
   Future<List<ScoreRecord>>? _scoresFuture;
+  int _lastScoresCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadScores();
+    // Initial load will happen in didChangeDependencies
   }
 
-  void _loadScores() {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload scores when preferences change
+    final prefs = context.watch<DashboardPreferencesProvider>();
+    if (prefs.scoresCount != _lastScoresCount) {
+      _lastScoresCount = prefs.scoresCount;
+      if (prefs.scoresCount > 0) {
+        _loadScores();
+      }
+    }
+  }
+
+  void _loadScores({int? limit}) {
     final authProvider = context.read<AuthProvider>();
+    final prefs = context.read<DashboardPreferencesProvider>();
     final player = authProvider.currentPlayer;
+    final scoresLimit = limit ?? prefs.scoresCount;
 
     if (player != null && player.unionId != null && player.homeClubId != null) {
       setState(() {
         _scoresFuture = _whsService.getPlayerScores(
           unionId: player.unionId!,
           clubId: player.homeClubId!,
-          limit: 2, // Show 2 most recent scores
+          limit: scoresLimit, // Use preference
         );
       });
     } else {
@@ -995,16 +1071,30 @@ class _NewsPreviewCard extends StatefulWidget {
 class _NewsPreviewCardState extends State<_NewsPreviewCard> {
   final _newsService = GolfDkNewsService();
   Future<List<NewsArticle>>? _newsFuture;
+  int _lastNewsCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadNews();
+    // Initial load will happen in didChangeDependencies
   }
 
-  void _loadNews() {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Load news when preferences change
+    final prefs = context.watch<DashboardPreferencesProvider>();
+    if (prefs.newsCount != _lastNewsCount) {
+      _lastNewsCount = prefs.newsCount;
+      if (prefs.newsCount > 0) {
+        _loadNews(prefs.newsCount);
+      }
+    }
+  }
+
+  void _loadNews(int limit) {
     setState(() {
-      _newsFuture = _newsService.getLatestNews(limit: 3);
+      _newsFuture = _newsService.getLatestNews(limit: limit);
     });
   }
 
@@ -1055,7 +1145,10 @@ class _NewsPreviewCardState extends State<_NewsPreviewCard> {
                   ),
                   const SizedBox(height: 12),
                   TextButton.icon(
-                    onPressed: _loadNews,
+                    onPressed: () {
+                      final prefs = context.read<DashboardPreferencesProvider>();
+                      _loadNews(prefs.newsCount);
+                    },
                     icon: const Icon(Icons.refresh),
                     label: const Text('Prøv igen'),
                   ),
