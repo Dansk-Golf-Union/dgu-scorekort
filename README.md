@@ -981,6 +981,58 @@ const bool useSimpleLogin = false; // OAuth enabled (production)
 - `lib/screens/home_screen.dart` - Burger menu for logout
 - `functions/index.js` - `golfboxCallback` + `exchangeOAuthToken` functions
 
+### OAuth Session & Validation Limitations
+
+**Issue 1: OAuth Session Persistence After Logout**
+
+**Beskrivelse:**
+- Efter logout kan OAuth session stadig være aktiv i browser
+- Ved return til URL kan app auto-login selv efter logout
+- Afhænger af browser cache og GolfBox OAuth session cookies
+
+**Workaround:**
+- Hard refresh (Ctrl+Shift+F5) eller incognito mode for frisk login
+- Clear browser data for komplet logout
+- Normal brugere oplever ikke dette (logger sjældent ud)
+
+**Impact:**
+- Low - Primært et test/development issue
+- End users vil typisk bruge persistent login (ønsket adfærd)
+
+**Future Fix:**
+- Implementer explicit session clear på logout
+- Eller: "Switch User" funktion i stedet for fuld logout
+- Vurder efter user testing feedback
+
+**Issue 2: DGU-nummer Validation**
+
+**Beskrivelse:**
+- OAuth flow returnerer ikke DGU-nummer fra GolfBox
+- App beder bruger om at indtaste DGU-nummer manuelt
+- Ingen validering at indtastet nummer matcher OAuth bruger
+- Bruger kan indtaste hvilket som helst DGU-nummer
+
+**Current Behavior:**
+1. OAuth success → Gem token
+2. Bed om DGU-nummer via TextField
+3. Fetch player data med Basic Auth (ikke OAuth token)
+4. Success - uanset om det matcher OAuth bruger
+
+**Use Case:**
+- **Testing:** Nyttigt for at skifte mellem test-brugere hurtigt
+- **Production:** Potentielt forvirrende hvis bruger indtaster forkert nummer
+
+**Future Fix:**
+- Når GolfBox OAuth returnerer unionId/DGU-nummer:
+  - Fjern manuel input
+  - Brug OAuth token direkte til player data
+  - Full OAuth-baseret flow uden Basic Auth
+- Alternativt: Valider at indtastet nummer findes i OAuth scope/claims
+
+**Priority:** Medium - Afvent GolfBox API updates og user feedback
+
+**Status:** Documented Dec 17, 2024 - Acceptabel for POC fase
+
 ### Current Limitations
 - **Test Whitelist**: WHS submission kun for test-brugere
 - **No Offline Support**: Requires internet
