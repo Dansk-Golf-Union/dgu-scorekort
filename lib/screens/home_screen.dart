@@ -492,28 +492,6 @@ class _HjemTabState extends State<_HjemTab> {
 
           // DYNAMIC WIDGETS - User can reorder these via settings
           ...prefs.widgetOrder.map((widgetId) => _buildWidgetById(widgetId, prefs)),
-          
-          // Ugens Bedste - NOT reorderable (always after dynamic widgets)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                '🏆 Ugens Bedste',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              TextButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Leaderboards kommer i Phase 2C!')),
-                  );
-                },
-                child: const Text('Se mere →'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const _UgensBedsteWidget(),
-          const SizedBox(height: 24),
         ],
       ),
     );
@@ -530,6 +508,8 @@ class _HjemTabState extends State<_HjemTab> {
         return _buildActivitiesSection(prefs.activitiesCount);
       case 'scores':
         return _buildScoresSection(prefs.scoresCount);
+      case 'ugens_bedste':
+        return _buildUgensBedsteSection(prefs.ugensBedsteCount);
       case 'tournaments':
         return _buildTournamentsSection();
       default:
@@ -619,6 +599,34 @@ class _HjemTabState extends State<_HjemTab> {
         ),
         const SizedBox(height: 12),
         if (count > 0) const _MineSenesteScoresWidget(),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+  
+  Widget _buildUgensBedsteSection(int count) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              '🏆 Ugens Bedste',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            TextButton(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Leaderboards kommer i Phase 2C!')),
+                );
+              },
+              child: const Text('Se mere →'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (count > 0) const _UgensBedsteWidget(),
         const SizedBox(height: 24),
       ],
     );
