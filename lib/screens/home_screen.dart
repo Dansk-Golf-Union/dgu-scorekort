@@ -1,5 +1,5 @@
 import 'dart:html' as html;
-import 'dart:ui' as ui;
+import 'dart:ui_web' as ui_web;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // For kIsWeb and kDebugMode
 import 'package:go_router/go_router.dart';
@@ -1277,8 +1277,7 @@ class _TurneringerIframeWidgetState extends State<_TurneringerIframeWidget> {
     super.initState();
     
     // Register iframe as platform view (only once)
-    // ignore: undefined_prefixed_name
-    ui.platformViewRegistry.registerViewFactory(viewType, (int viewId) {
+    ui_web.platformViewRegistry.registerViewFactory(viewType, (int viewId) {
       final iframe = html.IFrameElement()
         ..src = 'https://www.golf.dk/app/turneringer-i-app'
         ..style.border = 'none'
