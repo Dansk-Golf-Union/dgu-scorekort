@@ -11,6 +11,8 @@ import '../providers/friends_provider.dart';
 import '../providers/dashboard_preferences_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/birdie_bonus_bar.dart';
+import '../widgets/dgu_hero_banner.dart';
+import '../widgets/overlapping_card.dart';
 import '../models/score_record_model.dart';
 import '../models/news_article_model.dart';
 import '../models/birdie_bonus_model.dart';
@@ -354,14 +356,23 @@ class _HjemTabState extends State<_HjemTab> {
     final prefs = context.watch<DashboardPreferencesProvider>();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: EdgeInsets.zero, // No padding for hero banner
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Player Info Card (Mit Golf style) - Always first, non-reorderable
+          // Hero Banner (Alternative Design)
+          DguHeroBanner(
+            title: 'Hej ${player?.name.split(' ').first ?? 'Golfspiller'}!',
+            subtitle: 'Klar til at spille golf?',
+            height: 200,
+            showFlag: true,
+            showSun: true,
+          ),
+          
+          // Player Info Card in overlapping card
           if (player != null) ...[
-            Card(
-              elevation: 2,
+            OverlappingCard(
+              overlapAmount: 30,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
@@ -387,49 +398,29 @@ class _HjemTabState extends State<_HjemTab> {
                               Expanded(
                                 child: Text(
                                   player.homeClubName ?? 'Ingen klub',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 14,
-                                    color: Colors.grey,
+                                    color: Colors.grey.shade700,
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '# ${player.unionId ?? player.memberNo}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.dguGreen.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: AppTheme.dguGreen,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        children: [
-                          const Text(
-                            'HCP',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            player.hcp.toStringAsFixed(1),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
+                            child: Text(
+                              'HCP ${player.hcp.toStringAsFixed(1)}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.dguGreen,
+                              ),
                             ),
                           ),
                         ],
@@ -439,59 +430,71 @@ class _HjemTabState extends State<_HjemTab> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-
-            // Birdie Bonus Bar - Conditional, non-reorderable
-            if (_isBirdieBonusParticipant && _birdieBonusData != null)
-              BirdieBonusBar(data: _birdieBonusData!),
-            
-            const SizedBox(height: 24),
+            const SizedBox(height: 8), // Reduced spacing after overlapping card
           ],
+          
+          // Birdie Bonus Bar - Conditional, non-reorderable  
+          if (player != null && _isBirdieBonusParticipant && _birdieBonusData != null) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: BirdieBonusBar(data: _birdieBonusData!),
+            ),
+            const SizedBox(height: 16),
+          ],
+          
+          // Rest of content with padding
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Quick Actions - Non-reorderable
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildActionButton(
+                        context,
+                        'Bestil tid',
+                        () => _launchUrl('https://www.golf.dk/'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildActionButton(
+                        context,
+                        'DGU score',
+                        () => context.push('/setup-round'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildActionButton(
+                        context,
+                        'Indberet',
+                        () => _launchUrl('https://www.golf.dk/'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildActionButton(
+                        context,
+                        'Scorekort',
+                        () => _launchUrl('https://www.golf.dk/'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
 
-          // Quick Actions - Non-reorderable
-          Row(
-            children: [
-              Expanded(
-                child: _buildActionButton(
-                  context,
-                  'Bestil tid',
-                  () => _launchUrl('https://www.golf.dk/'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildActionButton(
-                  context,
-                  'DGU score',
-                  () => context.push('/setup-round'),
-                ),
-              ),
-            ],
+                // DYNAMIC WIDGETS - User can reorder these via settings
+                ...prefs.widgetOrder.map((widgetId) => _buildWidgetById(widgetId, prefs)),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildActionButton(
-                  context,
-                  'Indberet',
-                  () => _launchUrl('https://www.golf.dk/'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildActionButton(
-                  context,
-                  'Scorekort',
-                  () => _launchUrl('https://www.golf.dk/'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // DYNAMIC WIDGETS - User can reorder these via settings
-          ...prefs.widgetOrder.map((widgetId) => _buildWidgetById(widgetId, prefs)),
         ],
       ),
     );
