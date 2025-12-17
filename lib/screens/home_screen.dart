@@ -195,7 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
     showAboutDialog(
       context: context,
       applicationName: 'DGU Scorekort',
-      applicationVersion: '2.0.0 Extended POC',
+      applicationVersion: '2.1.0 Alternative Design',
       applicationIcon: Image.asset('assets/images/dgu_logo.png', width: 50, height: 50),
       children: const <Widget>[
         SizedBox(height: 16),
