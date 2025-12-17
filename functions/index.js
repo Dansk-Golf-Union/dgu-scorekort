@@ -25,7 +25,9 @@ const ALLOW_LIST = [
   'https://dgu-scorekort.web.app',
   'https://dgu-scorekort.firebaseapp.com',
   'https://dgu-app-poc.web.app',           // POC site
-  'https://dgu-app-poc.firebaseapp.com'    // POC site (alt domain)
+  'https://dgu-app-poc.firebaseapp.com',   // POC site (alt domain)
+  'https://dgu-alt-design.web.app',        // Alternative Design (V2 callback)
+  'https://dgu-alt-design.firebaseapp.com' // Alternative Design (alt domain)
 ];
 
 /**
@@ -528,6 +530,125 @@ exports.golfboxCallback = functions
       
     } catch (error) {
       console.error('❌ Unexpected error in golfboxCallback:', error);
+      console.error('  Stack trace:', error.stack);
+      res.status(500).send('Internal Server Error');
+    }
+  });
+
+/**
+ * Cloud Function: GolfBox OAuth Callback V2 (Dynamic Redirect for A/B Testing)
+ * 
+ * Version 2 of golfboxCallback that extracts the origin URL from state parameter
+ * to enable proper A/B testing between different hosting sites.
+ * 
+ * Differences from V1:
+ * - Extracts origin from state parameter (JSON format: {"verifier": "...", "origin": "..."})
+ * - Dynamically redirects to the site where user started OAuth flow
+ * - Used by: dgu-alt-design.web.app (Alternative Design version)
+ * 
+ * Original golfboxCallback (V1) remains unchanged for backward compatibility
+ * and is used by: dgu-app-poc.web.app, dgu-scorekort.web.app
+ */
+exports.golfboxCallbackV2 = functions
+  .region('europe-west1')
+  .https.onRequest((req, res) => {
+    console.log('🔐 GolfBox OAuth callback V2 received (dynamic redirect)');
+    console.log('  Method:', req.method);
+    console.log('  Query params:', JSON.stringify(req.query));
+    
+    try {
+      // 1. Extract query parameters
+      const queryParams = req.query;
+      const code = queryParams.code;
+      const state = queryParams.state;
+      
+      // 2. Validate required parameters
+      if (!code) {
+        console.error('❌ Missing code parameter');
+        res.status(400).send('Bad Request: Missing authorization code');
+        return;
+      }
+      
+      if (!state) {
+        console.error('❌ Missing state parameter');
+        res.status(400).send('Bad Request: Missing state parameter');
+        return;
+      }
+      
+      console.log('  ✅ Code received (length:', code.length, ')');
+      console.log('  ✅ State received (length:', state.length, ')');
+      
+      // 3. Extract origin from state parameter (dynamic redirect for A/B testing)
+      let targetUrl;
+      
+      try {
+        // Decode state parameter (base64url encoded JSON)
+        const stateDecoded = Buffer.from(state, 'base64').toString('utf-8');
+        
+        try {
+          // Parse JSON: {"verifier": "...", "origin": "https://dgu-alt-design.web.app"}
+          const stateData = JSON.parse(stateDecoded);
+          
+          if (stateData.origin && typeof stateData.origin === 'string') {
+            targetUrl = stateData.origin + '/login';
+            console.log('  ✅ Origin extracted from state:', stateData.origin);
+          } else {
+            throw new Error('origin field missing in state');
+          }
+        } catch (jsonError) {
+          console.error('  ❌ State is not valid JSON:', jsonError.message);
+          throw jsonError;
+        }
+      } catch (error) {
+        console.error('  ❌ Failed to extract origin from state:', error.message);
+        res.status(400).send('Bad Request: Invalid state parameter (V2 requires origin)');
+        return;
+      }
+      
+      console.log('  📍 Target URL (from state):', targetUrl);
+      
+      // 4. Validate targetUrl against ALLOW_LIST
+      const isAllowed = ALLOW_LIST.some(allowedPrefix => {
+        // Check if targetUrl starts with any allowed prefix
+        // For localhost, allow any port
+        if (allowedPrefix === 'http://localhost') {
+          return targetUrl === 'http://localhost' || 
+                 targetUrl.startsWith('http://localhost:') ||
+                 targetUrl.startsWith('http://localhost/');
+        }
+        return targetUrl.startsWith(allowedPrefix);
+      });
+      
+      if (!isAllowed) {
+        console.error('🚨 SECURITY: Rejected redirect to unauthorized URL:', targetUrl);
+        console.error('  Allowed domains:', ALLOW_LIST.join(', '));
+        res.status(400).send('Bad Request: Unauthorized redirect URL');
+        return;
+      }
+      
+      console.log('  ✅ Target URL validated against allowlist');
+      
+      // 5. Build redirect URL with OAuth parameters
+      const url = new URL(targetUrl);
+      url.searchParams.append('code', code);
+      url.searchParams.append('state', state);
+      
+      // Forward any additional query parameters (scope, etc.)
+      Object.keys(queryParams).forEach(key => {
+        if (key !== 'code' && key !== 'state') {
+          url.searchParams.append(key, queryParams[key]);
+        }
+      });
+      
+      const redirectUrl = url.toString();
+      console.log('  📍 Redirect URL:', redirectUrl);
+      console.log('✅ Redirecting (302) to client');
+      
+      // 6. Perform 302 redirect
+      res.redirect(302, redirectUrl);
+      
+    } catch (error) {
+      console.error('❌ Unexpected error in golfboxCallbackV2:', error);
       console.error('  Stack trace:', error.stack);
       res.status(500).send('Internal Server Error');
     }

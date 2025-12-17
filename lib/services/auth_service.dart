@@ -28,10 +28,19 @@ class AuthService {
   }
 
   /// Builds the OAuth authorization URL with PKCE parameters
-  /// The code_verifier is encoded in the state parameter for web compatibility
+  /// V2: Encodes BOTH code_verifier AND origin URL in state parameter (JSON format)
+  /// for dynamic OAuth redirect in A/B testing scenarios
   String getAuthorizationUrl(String codeChallenge, String codeVerifier) {
-    // Encode code_verifier in state parameter (base64url for web compatibility)
-    final stateWithVerifier = base64Url.encode(utf8.encode(codeVerifier)).replaceAll('=', '');
+    // Get current origin URL (e.g., "https://dgu-alt-design.web.app")
+    final originUrl = Uri.base.origin;
+    
+    // Encode BOTH verifier AND origin in state parameter as JSON
+    final stateData = {
+      'verifier': codeVerifier,
+      'origin': originUrl,
+    };
+    final stateJson = jsonEncode(stateData);
+    final encodedState = base64Url.encode(utf8.encode(stateJson)).replaceAll('=', '');
     
     final params = {
       'client_id': AuthConfig.clientId,
@@ -41,7 +50,7 @@ class AuthService {
       'code_challenge': codeChallenge,
       'code_challenge_method': 'S256',
       'country_iso_code': 'dk',
-      'state': stateWithVerifier,
+      'state': encodedState,  // Now contains JSON with verifier + origin
     };
 
     final queryString = params.entries
@@ -52,6 +61,8 @@ class AuthService {
   }
   
   /// Extracts code_verifier from state parameter
+  /// V2: Handles both JSON format ({"verifier": "...", "origin": "..."})
+  /// and legacy plain string format for backward compatibility
   String decodeVerifierFromState(String state) {
     try {
       // Add padding if needed for base64 decoding
@@ -60,6 +71,18 @@ class AuthService {
         paddedState += '=';
       }
       final decoded = utf8.decode(base64Url.decode(paddedState));
+      
+      // Try to parse as JSON (V2 format with origin)
+      try {
+        final stateData = jsonDecode(decoded);
+        if (stateData is Map && stateData.containsKey('verifier')) {
+          return stateData['verifier'];
+        }
+      } catch (_) {
+        // Not JSON - treat as plain verifier string (legacy format)
+      }
+      
+      // Fallback: return raw decoded string
       return decoded;
     } catch (e) {
       throw Exception('Failed to decode state parameter: $e');

@@ -3,8 +3,9 @@ class AuthConfig {
   static const String clientId = 'DGU_TEST_DK';
 
   // Redirect URI - Cloud Function relay håndterer OAuth callback
+  // V2: Uses golfboxCallbackV2 for dynamic redirect (A/B testing support)
   static const String redirectUri =
-      'https://europe-west1-dgu-scorekort.cloudfunctions.net/golfboxCallback';
+      'https://europe-west1-dgu-scorekort.cloudfunctions.net/golfboxCallbackV2';
 
   // GolfBox Auth endpoints
   static const String authBaseUrl = 'https://auth.golfbox.io';
