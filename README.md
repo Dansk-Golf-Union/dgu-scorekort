@@ -38,11 +38,12 @@
 1. **Player Card** - Name, HCP, home club
 2. **Birdie Bonus Bar** - Conditional (only if participating)
 3. **Quick Actions** - 4 green buttons (Bestil tid, DGU score, Indberet, Scorekort)
-4. **Golf.dk News Feed** - Latest articles from Golf.dk
-5. **Mine Venner** - Friend summary (live from FriendsProvider)
-6. **Seneste Aktivitet** - 2 recent activity items (live from Firestore)
+4. **Golf.dk News Feed** - Latest articles from Golf.dk (customizable 0-5 items)
+5. **Mine Venner** - Friend summary (customizable 0-10 items)
+6. **Seneste Aktivitet** - Recent activity items (customizable 0-10 items)
 7. **Ugens Bedste** - Weekly highlight (placeholder)
-8. **Mine Seneste Scores** - 2 recent scores (live from WHS API)
+8. **Mine Seneste Scores** - Recent scores (customizable 0-10 items)
+9. **Turneringer & Ranglister** - Golf.dk tournaments iframe (with cookie consent)
 
 **Navigation Pattern:**
 - Widgets clickable → Full-screen views
@@ -124,6 +125,23 @@
 - ✅ **All Screens**: Konsistent dark mode på alle sider
 
 **Placering:** ☰ Menu → "Dark Mode" med Switch (ingen ikon)
+
+### ⚙️ Dashboard Preferences - NEW!
+- ✅ **Customizable Widgets**: Bruger kontrollerer antal items per widget
+- ✅ **4 Sliders**: Nyheder (0-5), Venner/Aktiviteter/Scores (0-10)
+- ✅ **Live Updates**: Widgets opdaterer live uden restart (Consumer pattern)
+- ✅ **Persistent Settings**: Gemmes i SharedPreferences
+- ✅ **Smart Headers**: Headers + "Se alle →" altid synlige (selv ved count=0)
+- ✅ **Minimalist Option**: Sæt count=0 for at skjule preview, behold navigation
+- ✅ **Reset Button**: Tilbage til defaults med ét klik
+
+**Access:** ☰ Menu → "Dashboard Indstillinger"
+
+**Technical:**
+- `DashboardPreferencesProvider` med SharedPreferences
+- Live reactive via `didChangeDependencies()` i News og Scores widgets
+- Dynamisk Firestore buffering for aktiviteter (count × 3, min 20)
+- API limitations respekteret (Golf.dk max 5 articles)
 
 ### 👥 Friends System - NEW!
 - ✅ **Add Friends**: Via DGU nummer med validation
