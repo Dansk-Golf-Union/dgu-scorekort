@@ -14,6 +14,44 @@
 
 **All three URLs now show v2.0 with OAuth, Dashboard, Birdie Bonus, and social features.**
 
+### A/B Testing: Alternative Design (December 2025)
+
+**Purpose:** Design validation - comparing original vs alternative UI before committing to changes.
+
+**Live Versions:**
+| Version | URL | Branch | Status |
+|---------|-----|--------|--------|
+| **A (Original)** | [dgu-app-poc.web.app](https://dgu-app-poc.web.app) | `feature/extended-version` | ✅ **Active Development** |
+| **B (Alternative)** | [dgu-alt-design.web.app](https://dgu-alt-design.web.app) | `feature/alternative-design` | 🎨 **Frozen Demo** |
+
+**Design Differences (Version B):**
+- 🎨 Hero banners with code-based golf course illustrations
+- 🃏 Overlapping cards (modern depth effect)
+- 💊 Pill-shaped buttons (24px border-radius)
+- 🌈 Expanded color palette (cyan accents, feature-specific colors)
+- ✨ Custom widgets: `DguHeroBanner`, `OverlappingCard`, `PillButton`, `FeatureListItem`
+
+**Workflow:**
+1. ✅ **Develop in Version A** (`feature/extended-version`) - all new features go here
+2. 🎨 **Show Version B** (`dgu-alt-design.web.app`) to stakeholders for design feedback
+3. 🔄 **Merge design changes** to Version A if approved after feedback
+4. ❌ **Discard** Version B if design not approved
+
+**Backend Sharing:**
+Both versions share 100% of backend infrastructure:
+- Same Firestore database
+- Same Cloud Functions
+- Same Firebase Auth
+- Same API tokens
+
+**OAuth Implementation:**
+- Both versions use same `golfboxCallback` Cloud Function
+- V2 clients (Alternative Design) encode origin URL in state parameter → dynamic redirect
+- V1 clients (Original) use plain string state → default redirect (backward compatible)
+- 3 layers of try-catch safety for zero risk to original version
+
+**Note:** This is a **temporary A/B test setup** for design validation. After feedback, one version will be chosen for continued development.
+
 ---
 
 ## 📱 What's New in v2.0
