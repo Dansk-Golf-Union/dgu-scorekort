@@ -63,16 +63,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           fit: BoxFit.contain,
                         ),
                       ),
-                      // Envelope icon positioned absolute to the right
+                      // Burger menu icon positioned absolute to the right
                       Positioned(
                         right: 8,
                         child: IconButton(
-                          icon: const Icon(Icons.mail_outline, color: AppTheme.dguGreen),
-                          tooltip: 'Beskeder',
+                          icon: const Icon(Icons.menu, color: AppTheme.dguGreen),
+                          tooltip: 'Menu',
                           onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Beskeder coming soon!')),
-                            );
+                            _scaffoldKey.currentState?.openDrawer();
                           },
                         ),
                       ),

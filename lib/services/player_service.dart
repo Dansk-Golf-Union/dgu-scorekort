@@ -29,6 +29,8 @@ class PlayerService {
   }
 
   /// Fetches player information from GolfBox API using OAuth access token
+  /// NOTE: Not currently used - using fetchPlayerByUnionId with Basic Auth instead
+  /// This will be used later when OAuth player endpoint is confirmed
   Future<Player> fetchPlayerInfo(String accessToken) async {
     final url = Uri.parse(
       '${AuthConfig.proxyUrl}${AuthConfig.apiBaseUrl}/golfer',

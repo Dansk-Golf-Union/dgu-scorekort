@@ -7,8 +7,11 @@
 **Branch:** `feature/extended-version`
 
 **Live URLs:**
-- **POC (v2.0):** [https://dgu-app-poc.web.app](https://dgu-app-poc.web.app) - Extended version med social features
-- **Production (v1.6):** [https://dgu-scorekort.web.app](https://dgu-scorekort.web.app) - Stable version
+- **Primary:** [https://dgu-app-poc.web.app](https://dgu-app-poc.web.app) - v2.0 Extended POC (Active Development)
+- **Mirror:** [https://dgu-scorekort.web.app](https://dgu-scorekort.web.app) - v2.0 (Same as POC)
+- **Backup:** [GitHub Pages](https://dansk-golf-union.github.io/dgu-scorekort/) - Auto-deploy from main
+
+**Note:** Both Firebase URLs currently show v2.0 due to shared deployment. Will be consolidated after merge to main.
 
 ---
 
@@ -932,13 +935,58 @@ flutter run -d chrome --web-browser-flag "--disable-web-security"
 
 ## ⚠️ Known Issues
 
+### OAuth Login Status ✅ (December 2024)
+
+**Implementation:** OAuth 2.0 PKCE login is **fully implemented and active**
+
+**Current Setup:**
+- ✅ **OAuth 2.0 PKCE**: Complete implementation in `auth_service.dart`
+- ✅ **Cloud Function Relay**: `golfboxCallback` deployed in `europe-west1`
+- ✅ **Redirect URI**: `https://europe-west1-dgu-scorekort.cloudfunctions.net/golfboxCallback`
+- ✅ **Token Exchange Proxy**: `exchangeOAuthToken` Cloud Function (CORS fix)
+- ✅ **Login Screen**: OAuth popup with GolfBox credentials
+- ✅ **UX Improvements** (Dec 17, 2024):
+  - Login button hidden during DGU-nummer input
+  - Clear success message: "✅ Login lykkedes!"
+  - Prompt to enter DGU-nummer "igen" (clarity)
+  - Persistent login with stored token + unionId
+  - Logout button in drawer menu (burger icon)
+- ⏸️ **Simple Login**: Available as development toggle (`useSimpleLogin` flag in `main.dart`)
+
+**Login Flow:**
+1. User clicks "Log ind med DGU" → OAuth popup
+2. After successful OAuth → "✅ Login lykkedes!" message
+3. User enters DGU-nummer → Fetches player data (Basic Auth)
+4. Both token and unionId stored for persistent login
+5. Future app opens skip login (auto-login)
+
+**Development Toggle:**
+```dart
+// lib/main.dart
+const bool useSimpleLogin = false; // OAuth enabled (production)
+// const bool useSimpleLogin = true; // Quick Union ID login (development)
+```
+
+**Benefits:**
+- Switch between OAuth (production) and SimpleLogin (development convenience)
+- No conflicts - both flows work independently
+- Quick refresh testing during UI development without OAuth popup
+
+**Files:**
+- `lib/config/auth_config.dart` - OAuth configuration
+- `lib/services/auth_service.dart` - OAuth 2.0 PKCE service + token storage
+- `lib/providers/auth_provider.dart` - Auth state + persistent login
+- `lib/screens/login_screen.dart` - OAuth login UI with UX improvements
+- `lib/screens/simple_login_screen.dart` - Development login
+- `lib/screens/home_screen.dart` - Burger menu for logout
+- `functions/index.js` - `golfboxCallback` + `exchangeOAuthToken` functions
+
 ### Current Limitations
 - **Test Whitelist**: WHS submission kun for test-brugere
 - **No Offline Support**: Requires internet
 - **Web Only**: Primært Chrome (mobile responsive)
-- **Firestore Security**: Open rules (auth kommer senere)
-- **No Dark Mode**: Coming in Phase 1
-- **Social Features**: Coming in Phase 2-3
+- **Firestore Security**: Open rules for Birdie Bonus cache (proper auth coming)
+- **Social Features**: Friends system in Phase 2 (in development)
 
 ### Security TODO
 - 🔐 **Token Rotation Needed**: Statistik API token skal roteres (var exposed i git history)
@@ -1013,6 +1061,6 @@ Dette er et POC projekt for DGU. Pull requests velkomne!
 
 **Bygget med ❤️, Flutter og Firebase**
 
-**Version:** 2.0 Extended POC - Dashboard Redesign Complete
+**Version:** 2.0 Extended POC - Dashboard Redesign + OAuth Login
 
-**Last Updated:** December 17, 2025
+**Last Updated:** December 17, 2024 - OAuth UX improvements + Persistent login

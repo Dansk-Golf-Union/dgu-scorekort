@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'dart:html' as html;
 import '../models/player_model.dart';
 import '../services/auth_service.dart';
 import '../services/player_service.dart';
@@ -13,14 +14,16 @@ class AuthProvider with ChangeNotifier {
   Player? _currentPlayer;
   String? _errorMessage;
   String? _codeVerifier; // Stored temporarily for token exchange
+  bool _needsUnionId = false; // After OAuth, waiting for DGU-nummer input
 
   bool get isAuthenticated => _isAuthenticated;
   bool get isLoading => _isLoading;
   String? get accessToken => _accessToken;
   Player? get currentPlayer => _currentPlayer;
   String? get errorMessage => _errorMessage;
+  bool get needsUnionId => _needsUnionId;
 
-  /// Initialize auth state on app start - check for stored token
+  /// Initialize auth state on app start - check for stored token and unionId
   Future<void> initialize() async {
     _isLoading = true;
     _errorMessage = null;
@@ -28,15 +31,17 @@ class AuthProvider with ChangeNotifier {
 
     try {
       final token = await _authService.getStoredToken();
-      if (token != null && token.isNotEmpty) {
+      final unionId = await _authService.getStoredUnionId();
+      
+      // Only auto-login if we have both token AND unionId
+      if (token != null && token.isNotEmpty && unionId != null && unionId.isNotEmpty) {
         _accessToken = token;
-        // Try to fetch player info with stored token
-        await _fetchPlayerInfo(token);
-        _isAuthenticated = true;
+        // Use Basic Auth flow with stored unionId for persistent login
+        await loginWithUnionIdAfterOAuth(unionId);
       }
     } catch (e) {
       debugPrint('Error initializing auth: $e');
-      // Token might be expired, clear it
+      // Token/unionId might be expired/invalid, clear it
       await _authService.clearAuth();
       _isAuthenticated = false;
     } finally {
@@ -95,28 +100,63 @@ class AuthProvider with ChangeNotifier {
       // Store token for future sessions
       await _authService.storeToken(token);
 
-      // Fetch player information
-      await _fetchPlayerInfo(token);
-
-      _isAuthenticated = true;
+      // Don't fetch player info yet - wait for DGU-nummer input
+      _isAuthenticated = false;
+      _needsUnionId = true; // Trigger DGU-nummer input UI
       _errorMessage = null;
+      
+      debugPrint('✅ OAuth token stored, waiting for DGU-nummer input');
     } catch (e) {
       _errorMessage = 'Login failed: $e';
       _isAuthenticated = false;
       debugPrint('Error during OAuth callback: $e');
     } finally {
+      // ALWAYS clean URL parameters (prevents code reuse on refresh, even after errors)
+      if (kIsWeb) {
+        try {
+          // Remove code and state from URL without reload
+          final uri = Uri.parse(html.window.location.href);
+          final cleanUri = uri.replace(
+            queryParameters: {},
+            fragment: '', // Also clear fragment
+          );
+          html.window.history.replaceState({}, '', cleanUri.toString());
+          debugPrint('✅ Cleaned OAuth parameters from URL');
+        } catch (e) {
+          debugPrint('⚠️ Failed to clean URL: $e');
+        }
+      }
+      
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  /// Fetch player information from API
-  Future<void> _fetchPlayerInfo(String token) async {
+  /// Login with DGU-nummer after OAuth success
+  /// Uses existing Basic Auth flow with fetchPlayerByUnionId
+  Future<void> loginWithUnionIdAfterOAuth(String unionId) async {
+    _isLoading = true;
+    notifyListeners();
+    
     try {
-      _currentPlayer = await _playerService.fetchPlayerInfo(token);
+      // Use existing Basic Auth flow
+      _currentPlayer = await _playerService.fetchPlayerByUnionId(unionId);
+      
+      // Store unionId for persistent login
+      await _authService.storeUnionId(unionId);
+      
+      _isAuthenticated = true;
+      _needsUnionId = false;
+      _errorMessage = null;
+      
+      debugPrint('✅ Login successful with DGU-nummer: $unionId');
     } catch (e) {
-      debugPrint('Error fetching player info: $e');
-      throw Exception('Failed to fetch player information');
+      _errorMessage = 'Kunne ikke hente spiller info: $e';
+      _isAuthenticated = false;
+      debugPrint('❌ Error fetching player by unionId: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
@@ -126,12 +166,15 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      await _authService.clearAuth();
+      await _authService.clearAuth(); // Clears token + verifier + unionId
       _accessToken = null;
       _currentPlayer = null;
       _isAuthenticated = false;
+      _needsUnionId = false;
       _errorMessage = null;
       _codeVerifier = null;
+      
+      debugPrint('✅ Logout successful');
     } catch (e) {
       debugPrint('Error during logout: $e');
     } finally {

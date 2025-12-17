@@ -66,34 +66,53 @@ class AuthService {
     }
   }
 
-  /// Exchanges authorization code for access token
+  /// Exchanges authorization code for access token via Cloud Function (CORS proxy)
+  /// Using direct HTTP instead of cloud_functions package to avoid Int64 deserialization issues
   Future<String> exchangeCodeForToken(String code, String codeVerifier) async {
-    final url = Uri.parse('${AuthConfig.authBaseUrl}/connect/token');
-    
     try {
+      print('🔄 Calling Cloud Function for token exchange (via HTTP)...');
+      print('  Code length: ${code.length}');
+      print('  Verifier length: ${codeVerifier.length}');
+      
+      // Call Cloud Function directly via HTTP POST to avoid cloud_functions SDK Int64 issues
+      final url = Uri.parse('https://europe-west1-dgu-scorekort.cloudfunctions.net/exchangeOAuthToken');
       final response = await http.post(
         url,
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: {
-          'grant_type': 'authorization_code',
-          'code': code,
-          'redirect_uri': AuthConfig.redirectUri,
-          'client_id': AuthConfig.clientId,
-          'code_verifier': codeVerifier,
-        },
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'data': {
+            'code': code,
+            'codeVerifier': codeVerifier,
+          }
+        }),
       );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+      print('✅ Cloud Function response received');
+      print('  Status code: ${response.statusCode}');
+      print('  Response body: ${response.body}');
+      
+      if (response.statusCode != 200) {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+      
+      final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
+      print('  Parsed JSON keys: ${jsonResponse.keys.toList()}');
+      
+      // Cloud Function returns data in 'result' field for HTTP calls
+      final data = jsonResponse['result'] as Map<String, dynamic>;
+      
+      if (data['success'] == true && data['access_token'] != null) {
+        print('✅ Access token received');
         return data['access_token'] as String;
       } else {
-        throw Exception(
-          'Token exchange failed: ${response.statusCode} - ${response.body}',
-        );
+        print('❌ Token exchange failed - response missing success or access_token');
+        print('  success: ${data['success']}');
+        throw Exception('Token exchange failed: Invalid response from Cloud Function');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ Token exchange error: $e');
+      print('  Error type: ${e.runtimeType}');
+      print('  Stack trace (first 500 chars): ${stackTrace.toString().substring(0, 500)}');
       throw Exception('Failed to exchange code for token: $e');
     }
   }
@@ -122,11 +141,24 @@ class AuthService {
     return prefs.getString(AuthConfig.codeVerifierKey);
   }
 
-  /// Clears stored token and verifier (logout)
+  /// Stores union ID (DGU-nummer) for persistent login
+  Future<void> storeUnionId(String unionId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(AuthConfig.unionIdKey, unionId);
+  }
+
+  /// Retrieves stored union ID
+  Future<String?> getStoredUnionId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(AuthConfig.unionIdKey);
+  }
+
+  /// Clears stored token, verifier, and unionId (logout)
   Future<void> clearAuth() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(AuthConfig.accessTokenKey);
     await prefs.remove(AuthConfig.codeVerifierKey);
+    await prefs.remove(AuthConfig.unionIdKey);
   }
 
   /// Validates if a token exists and is non-empty

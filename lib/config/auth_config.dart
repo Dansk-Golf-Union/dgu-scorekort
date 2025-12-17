@@ -2,9 +2,9 @@ class AuthConfig {
   // OAuth Client Configuration
   static const String clientId = 'DGU_TEST_DK';
 
-  // Redirect URI - relay side håndterer callback
+  // Redirect URI - Cloud Function relay håndterer OAuth callback
   static const String redirectUri =
-      'https://staging-danskgolfunion.dk.sdmdev.dk/verifiedlogin';
+      'https://europe-west1-dgu-scorekort.cloudfunctions.net/golfboxCallback';
 
   // GolfBox Auth endpoints
   static const String authBaseUrl = 'https://auth.golfbox.io';
@@ -22,4 +22,5 @@ class AuthConfig {
   // Storage keys
   static const String accessTokenKey = 'dgu_access_token';
   static const String codeVerifierKey = 'dgu_code_verifier';
+  static const String unionIdKey = 'dgu_union_id';
 }

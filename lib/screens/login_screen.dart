@@ -13,6 +13,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLoggingIn = false;
+  final _unionIdController = TextEditingController();
 
   @override
   void initState() {
@@ -21,6 +22,12 @@ class _LoginScreenState extends State<LoginScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkForCallback();
     });
+  }
+
+  @override
+  void dispose() {
+    _unionIdController.dispose();
+    super.dispose();
   }
 
   /// Check if URL contains OAuth callback code
@@ -136,34 +143,36 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 48),
                   
-                  // Login button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: FilledButton(
-                      onPressed: _isLoggingIn ? null : _handleLogin,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppTheme.dguGreen,
-                        disabledBackgroundColor: Colors.grey,
+                  // Login button - ONLY show if NOT waiting for unionId
+                  if (!authProvider.needsUnionId) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: FilledButton(
+                        onPressed: _isLoggingIn ? null : _handleLogin,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppTheme.dguGreen,
+                          disabledBackgroundColor: Colors.grey,
+                        ),
+                        child: _isLoggingIn
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'Log ind med DGU',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                       ),
-                      child: _isLoggingIn
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Text(
-                              'Log ind med DGU',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
                     ),
-                  ),
+                  ],
                   
                   // Error message
                   if (authProvider.errorMessage != null) ...[
@@ -189,6 +198,71 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                  ],
+                  
+                  // DGU-nummer input (after OAuth success)
+                  if (authProvider.needsUnionId && !authProvider.isLoading) ...[
+                    const SizedBox(height: 32),
+                    const Text(
+                      '✅ Login lykkedes!',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1B5E20),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Indtast dit DGU-nummer igen for at fortsætte',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.black87,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _unionIdController,
+                      decoration: InputDecoration(
+                        labelText: 'DGU-nummer (f.eks. 177-2813)',
+                        hintText: 'Indtast dit DGU-nummer',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        prefixIcon: const Icon(Icons.badge),
+                      ),
+                      keyboardType: TextInputType.text,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (value) async {
+                        if (value.trim().isNotEmpty) {
+                          await authProvider.loginWithUnionIdAfterOAuth(value.trim());
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: FilledButton(
+                        onPressed: () async {
+                          final unionId = _unionIdController.text.trim();
+                          if (unionId.isNotEmpty) {
+                            await authProvider.loginWithUnionIdAfterOAuth(unionId);
+                          }
+                        },
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppTheme.dguGreen,
+                        ),
+                        child: const Text(
+                          'Fortsæt',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
                     ),
                   ],

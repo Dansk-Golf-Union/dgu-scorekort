@@ -26,9 +26,10 @@ import 'screens/feed_screen.dart';
 import 'screens/friends_list_screen.dart';
 import 'theme/app_theme.dart';
 
-// TODO: Switch to OAuth when redirect URI is ready
-// Set to false to use OAuth login, true for simple Union ID login
-const bool useSimpleLogin = true;
+// Development tip: Toggle between OAuth and SimpleLogin as needed
+// - false = OAuth (production, testing OAuth flow)
+// - true = SimpleLogin (development convenience, quick refresh)
+const bool useSimpleLogin = false;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

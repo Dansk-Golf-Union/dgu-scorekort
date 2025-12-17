@@ -23,7 +23,9 @@ const API_DELAY_MS = 300;
 const ALLOW_LIST = [
   'http://localhost',
   'https://dgu-scorekort.web.app',
-  'https://dgu-scorekort.firebaseapp.com'
+  'https://dgu-scorekort.firebaseapp.com',
+  'https://dgu-app-poc.web.app',           // POC site
+  'https://dgu-app-poc.firebaseapp.com'    // POC site (alt domain)
 ];
 
 /**
@@ -453,49 +455,41 @@ exports.golfboxCallback = functions
     try {
       // 1. Extract query parameters
       const queryParams = req.query;
-      const stateParam = queryParams.state;
+      const code = queryParams.code;
+      const state = queryParams.state;
       
-      // 2. Validate that state parameter exists
-      if (!stateParam) {
+      // 2. Validate required parameters
+      if (!code) {
+        console.error('❌ Missing code parameter');
+        res.status(400).send('Bad Request: Missing authorization code');
+        return;
+      }
+      
+      if (!state) {
         console.error('❌ Missing state parameter');
         res.status(400).send('Bad Request: Missing state parameter');
         return;
       }
       
-      // 3. Decode state parameter (base64 -> JSON)
-      let decodedState;
-      try {
-        // State can be base64-encoded or URL-encoded JSON
-        const stateJson = Buffer.from(stateParam, 'base64').toString('utf-8');
-        console.log('  Decoded state (base64):', stateJson);
-        decodedState = JSON.parse(stateJson);
-      } catch (base64Error) {
-        // If base64 decoding fails, try parsing as plain JSON (URL-decoded)
-        try {
-          console.log('  Base64 decode failed, trying plain JSON');
-          decodedState = JSON.parse(decodeURIComponent(stateParam));
-          console.log('  Decoded state (plain JSON):', JSON.stringify(decodedState));
-        } catch (jsonError) {
-          console.error('❌ Failed to decode state parameter:', jsonError.message);
-          res.status(400).send('Bad Request: Invalid state parameter (not valid base64 or JSON)');
-          return;
-        }
+      console.log('  ✅ Code received (length:', code.length, ')');
+      console.log('  ✅ State received (length:', state.length, ')');
+      
+      // 3. Determine target URL - IGNORE referer from auth.golfbox.io
+      const referer = req.headers.referer || req.headers.origin;
+      let targetUrl;
+      
+      // Always use default target (referer from auth.golfbox.io is not useful)
+      // The callback comes FROM auth.golfbox.io, but we need to redirect TO our app
+      targetUrl = 'https://dgu-app-poc.web.app/login';
+      console.log('  📍 Target URL:', targetUrl);
+      if (referer) {
+        console.log('  📍 (Ignored referer:', referer + ')');
       }
       
-      // 4. Extract targetUrl from decoded state
-      const targetUrl = decodedState.targetUrl;
-      if (!targetUrl) {
-        console.error('❌ Missing targetUrl in decoded state');
-        res.status(400).send('Bad Request: Missing targetUrl in state parameter');
-        return;
-      }
-      
-      console.log('  Target URL:', targetUrl);
-      
-      // 5. Validate targetUrl against ALLOW_LIST
+      // 4. Validate targetUrl against ALLOW_LIST
       const isAllowed = ALLOW_LIST.some(allowedPrefix => {
         // Check if targetUrl starts with any allowed prefix
-        // For localhost, allow any port (e.g., http://localhost:3000, http://localhost:8080)
+        // For localhost, allow any port
         if (allowedPrefix === 'http://localhost') {
           return targetUrl === 'http://localhost' || 
                  targetUrl.startsWith('http://localhost:') ||
@@ -513,26 +507,141 @@ exports.golfboxCallback = functions
       
       console.log('  ✅ Target URL validated against allowlist');
       
-      // 6. Build redirect URL with all original query parameters
-      // Parse targetUrl to check if it already has query params
+      // 5. Build redirect URL with OAuth parameters
       const url = new URL(targetUrl);
+      url.searchParams.append('code', code);
+      url.searchParams.append('state', state);
       
-      // Append all query parameters from the original request
+      // Forward any additional query parameters (scope, etc.)
       Object.keys(queryParams).forEach(key => {
-        url.searchParams.append(key, queryParams[key]);
+        if (key !== 'code' && key !== 'state') {
+          url.searchParams.append(key, queryParams[key]);
+        }
       });
       
       const redirectUrl = url.toString();
-      console.log('  Redirect URL:', redirectUrl);
+      console.log('  📍 Redirect URL:', redirectUrl);
       console.log('✅ Redirecting (302) to client');
       
-      // 7. Perform 302 redirect
+      // 6. Perform 302 redirect
       res.redirect(302, redirectUrl);
       
     } catch (error) {
       console.error('❌ Unexpected error in golfboxCallback:', error);
       console.error('  Stack trace:', error.stack);
       res.status(500).send('Internal Server Error');
+    }
+  });
+
+/**
+ * Cloud Function: Exchange OAuth Code for Token (CORS Proxy)
+ * 
+ * Handles token exchange for OAuth 2.0 PKCE flow to avoid CORS issues in web browsers.
+ * Client sends authorization code + code_verifier, function exchanges for access token.
+ * 
+ * Usage from Flutter:
+ * ```dart
+ * final callable = FirebaseFunctions.instance.httpsCallable('exchangeOAuthToken');
+ * final result = await callable.call({
+ *   'code': 'auth_code_here',
+ *   'codeVerifier': 'pkce_code_verifier',
+ * });
+ * final accessToken = result.data['access_token'];
+ * ```
+ */
+exports.exchangeOAuthToken = functions
+  .region('europe-west1')
+  .runWith({
+    timeoutSeconds: 30,
+    memory: '256MB'
+  })
+  .https.onCall(async (data, context) => {
+    console.log('🔐 exchangeOAuthToken called');
+    console.log('  📥 Input:', JSON.stringify({ code: '***', codeVerifier: '***' }));
+    
+    // Validate input
+    const code = data.code;
+    const codeVerifier = data.codeVerifier;
+    
+    if (!code || !codeVerifier) {
+      console.error('  ❌ Missing required parameters');
+      throw new functions.https.HttpsError('invalid-argument', 'code and codeVerifier are required');
+    }
+    
+    try {
+      // OAuth configuration (matches AuthConfig.dart)
+      const clientId = 'DGU_TEST_DK';
+      const redirectUri = 'https://europe-west1-dgu-scorekort.cloudfunctions.net/golfboxCallback';
+      const tokenUrl = 'https://auth.golfbox.io/connect/token';
+      
+      console.log('  🔄 Exchanging code for token...');
+      console.log('  📍 Token URL:', tokenUrl);
+      console.log('  🔑 Client ID:', clientId);
+      
+      // Build form data for token exchange
+      const formData = new URLSearchParams({
+        grant_type: 'authorization_code',
+        code: code,
+        redirect_uri: redirectUri,
+        client_id: clientId,
+        code_verifier: codeVerifier
+      }).toString();
+      
+      // Use axios for POST request
+      const axios = require('axios');
+      const response = await axios.post(tokenUrl, formData, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json'
+        },
+        timeout: 25000,
+        validateStatus: (status) => status < 500 // Don't throw on 4xx
+      });
+      
+      console.log(`  📥 Response Status: ${response.status}`);
+      
+      if (response.status === 200) {
+        console.log('  ✅ Token exchange successful');
+        console.log('  📦 Raw response.data type:', typeof response.data);
+        console.log('  📦 Raw response.data:', response.data);
+        
+        // Extract only the fields we actually need (minimal response)
+        const minimalResponse = {
+          success: true,
+          access_token: String(response.data.access_token || ''),
+          token_type: String(response.data.token_type || 'Bearer'),
+          expires_in: parseInt(response.data.expires_in || '3600', 10),
+          scope: String(response.data.scope || '')
+        };
+        
+        console.log('  📦 Minimal response:', JSON.stringify(minimalResponse));
+        console.log('  📦 expires_in type:', typeof minimalResponse.expires_in);
+        console.log('  📦 expires_in value:', minimalResponse.expires_in);
+        
+        return minimalResponse;
+      } else {
+        console.error(`  ❌ Token exchange failed: HTTP ${response.status}`);
+        console.error('  📦 Response:', JSON.stringify(response.data));
+        throw new functions.https.HttpsError(
+          'internal',
+          `Token exchange failed: ${response.status} - ${JSON.stringify(response.data)}`
+        );
+      }
+      
+    } catch (error) {
+      console.error('  ❌ Error:', error.message);
+      
+      if (error.response) {
+        console.error('  📥 Error Response:', error.response.status, error.response.data);
+        throw new functions.https.HttpsError(
+          'internal',
+          `Token exchange failed: ${error.response.status} - ${JSON.stringify(error.response.data)}`
+        );
+      } else if (error.message.includes('timeout')) {
+        throw new functions.https.HttpsError('deadline-exceeded', 'Request timeout');
+      } else {
+        throw new functions.https.HttpsError('internal', `Token exchange error: ${error.message}`);
+      }
     }
   });
 
