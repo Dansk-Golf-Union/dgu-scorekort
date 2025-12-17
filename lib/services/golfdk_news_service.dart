@@ -27,7 +27,9 @@ class GolfDkNewsService {
   /// Throws: Exception if API call fails
   Future<List<NewsArticle>> getLatestNews({int limit = 3}) async {
     try {
-      final url = Uri.parse('$baseUrl/rest/latest_news?_format=json');
+      // Add limit parameter to API URL (request more than needed as buffer)
+      // Some APIs might ignore this, so we also do client-side take()
+      final url = Uri.parse('$baseUrl/rest/latest_news?_format=json&limit=${limit * 2}');
 
       final response = await http.get(
         url,
@@ -39,6 +41,7 @@ class GolfDkNewsService {
 
       if (response.statusCode == 200) {
         final List<dynamic> jsonList = json.decode(response.body);
+        // Client-side limit as fallback (in case API ignores limit parameter)
         return jsonList
             .take(limit)
             .map((json) => NewsArticle.fromJson(json as Map<String, dynamic>))
