@@ -27,7 +27,7 @@
 - ✅ Prove at **social features driver engagement** (især handicap tracking)
 - ✅ Production-ready code til integration i Mit Golf app
 
-### Dashboard Redesign (December 2024)
+### Dashboard Redesign (December 2025)
 
 **Navigation Change:**
 - **Removed:** Bottom navigation bar (conflicts with native Mit Golf app)
@@ -471,7 +471,7 @@ Cached course data per club
 
 ## 🐛 Birdie Bonus Integration: Lessons Learned
 
-During Birdie Bonus Bar implementation (Dec 2024), we encountered two critical bugs that required architectural fixes. These lessons apply to **any Flutter + Firestore + Provider integration**.
+During Birdie Bonus Bar implementation (Dec 2025), we encountered two critical bugs that required architectural fixes. These lessons apply to **any Flutter + Firestore + Provider integration**.
 
 ### Integration Architecture
 
@@ -936,7 +936,7 @@ flutter run -d chrome --web-browser-flag "--disable-web-security"
 
 ## ⚠️ Known Issues
 
-### OAuth Login Status ✅ (December 2024)
+### OAuth Login Status ✅ (December 2025)
 
 **Implementation:** OAuth 2.0 PKCE login is **fully implemented and active**
 
@@ -946,7 +946,7 @@ flutter run -d chrome --web-browser-flag "--disable-web-security"
 - ✅ **Redirect URI**: `https://europe-west1-dgu-scorekort.cloudfunctions.net/golfboxCallback`
 - ✅ **Token Exchange Proxy**: `exchangeOAuthToken` Cloud Function (CORS fix)
 - ✅ **Login Screen**: OAuth popup with GolfBox credentials
-- ✅ **UX Improvements** (Dec 17, 2024):
+- ✅ **UX Improvements** (Dec 17, 2025):
   - Login button hidden during DGU-nummer input
   - Clear success message: "✅ Login lykkedes!"
   - Prompt to enter DGU-nummer "igen" (clarity)
@@ -1032,7 +1032,7 @@ const bool useSimpleLogin = false; // OAuth enabled (production)
 
 **Priority:** Medium - Afvent GolfBox API updates og user feedback
 
-**Status:** Documented Dec 17, 2024 - Acceptabel for POC fase
+**Status:** Documented Dec 17, 2025 - Acceptabel for POC fase
 
 ### Current Limitations
 - **Test Whitelist**: WHS submission kun for test-brugere
@@ -1116,4 +1116,4 @@ Dette er et POC projekt for DGU. Pull requests velkomne!
 
 **Version:** 2.0 Extended POC - Dashboard Redesign + OAuth Login
 
-**Last Updated:** December 17, 2024 - Merged v2.0 to main, deployed to all URLs
+**Last Updated:** December 17, 2025 - Merged v2.0 to main, deployed to all URLs
