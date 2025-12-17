@@ -198,7 +198,7 @@ class _HomeScreenState extends State<HomeScreen> {
       children: const <Widget>[
         SizedBox(height: 16),
         Text(
-          '© 2024 Dansk Golf Union',
+          '© 2025 Dansk Golf Union',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         SizedBox(height: 16),
