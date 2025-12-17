@@ -26,14 +26,14 @@ class DashboardSettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               
-              // News Slider
+              // News Slider (Golf.dk API max 5 articles)
               _buildSliderCard(
                 context,
                 title: '🗞️ Nyheder fra Golf.dk',
                 value: prefs.newsCount.toDouble(),
                 min: 0,
-                max: 10,
-                divisions: 10,
+                max: 5,
+                divisions: 5,
                 onChanged: (value) => prefs.setNewsCount(value.toInt()),
               ),
               const SizedBox(height: 16),
