@@ -50,6 +50,18 @@ class DashboardPreferencesProvider with ChangeNotifier {
     final orderJson = prefs.getString(_orderKey);
     if (orderJson != null) {
       _widgetOrder = List<String>.from(json.decode(orderJson));
+      
+      // Migration: Add 'ugens_bedste' if missing (for existing users)
+      if (!_widgetOrder.contains('ugens_bedste')) {
+        final tournamentsIndex = _widgetOrder.indexOf('tournaments');
+        if (tournamentsIndex != -1) {
+          _widgetOrder.insert(tournamentsIndex, 'ugens_bedste');
+        } else {
+          _widgetOrder.add('ugens_bedste');
+        }
+        // Save the migrated order
+        await prefs.setString(_orderKey, json.encode(_widgetOrder));
+      }
     }
     
     notifyListeners();
