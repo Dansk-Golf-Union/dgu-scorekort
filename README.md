@@ -1115,6 +1115,40 @@ const bool useSimpleLogin = false; // OAuth enabled (production)
 
 **Status:** Documented Dec 17, 2025 - Acceptabel for POC fase
 
+### Golf.dk Cookie Consent in Iframe Widget
+
+**Beskrivelse:**
+- Turneringer & Ranglister widget bruger iframe til `https://www.golf.dk/app/turneringer-i-app`
+- Golf.dk cookie consent dialog vises hver gang app reloades
+- Kan ikke bypass via URL parametre (allerede testet)
+- Cross-origin security (CORS) blokerer CSS/JS injection
+
+**Hvorfor det sker:**
+- Flutter Web apps reloader hele siden ved refresh
+- Iframe er fra andet domæne (golf.dk) → kan ikke injicere kode
+- Golf.dk's consent løsning gemmer valg i deres localStorage
+- Men valget vises igen ved hver iframe load
+
+**Workarounds forsøgt:**
+- ❌ URL parametre (`?cookie_consent=accepted`, etc.) - virker ikke
+- ❌ CSS injection - blokeret af CORS
+- ❌ JS injection - blokeret af CORS
+- ❌ iframe sandbox attributter - ingen effekt
+
+**Current Status:**
+- Cookie dialog accepteres manuelt én gang per session
+- Bruger kan lukke den - den huskes indtil page refresh
+- Impact: Medium annoyance for testing, lav for end users
+
+**Future Solution:**
+- Afvent direkte API fra Golf.dk (i stedet for iframe)
+- Eller kontakt Golf.dk for whitelisted domain eller URL parameter
+- Alternativ: Erstat med "Åbn i Golf.dk" knap
+
+**Priority:** Low - Afvent Golf.dk API dialog
+
+**Status:** Documented Dec 18, 2025 - Accepteret indtil Golf.dk API tilgængelig
+
 ### Current Limitations
 - **Test Whitelist**: WHS submission kun for test-brugere
 - **No Offline Support**: Requires internet

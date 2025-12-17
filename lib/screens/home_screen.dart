@@ -1336,7 +1336,8 @@ class _TurneringerIframeWidgetState extends State<_TurneringerIframeWidget> {
     // Register iframe as platform view (only once)
     ui_web.platformViewRegistry.registerViewFactory(viewType, (int viewId) {
       final iframe = html.IFrameElement()
-        ..src = 'https://www.golf.dk/app/turneringer-i-app'
+        // TEST 1: Try cookie_consent=accepted parameter
+        ..src = 'https://www.golf.dk/app/turneringer-i-app?cookie_consent=accepted'
         ..style.border = 'none'
         ..style.height = '600px'
         ..style.width = '100%';
