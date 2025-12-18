@@ -649,6 +649,10 @@ class _MineVennerWidget extends StatelessWidget {
         final friends = friendsProvider.friends;
         final friendCount = friends.length;
         final friendsToShow = prefs.friendsCount;
+        
+        // Sort alphabetically for consistent order (matches "Alle" tab)
+        final sortedFriends = List.from(friends)
+          ..sort((a, b) => a.name.compareTo(b.name));
 
         return GestureDetector(
           onTap: () => context.push('/venner'),
@@ -677,8 +681,8 @@ class _MineVennerWidget extends StatelessWidget {
                       contentPadding: EdgeInsets.zero,
                     )
                   else
-                    // Show friends based on preference
-                    ...friends.take(friendsToShow).map((friend) {
+                    // Show friends alphabetically sorted
+                    ...sortedFriends.take(friendsToShow).map((friend) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12.0),
                         child: Row(
