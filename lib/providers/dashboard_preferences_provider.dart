@@ -9,15 +9,13 @@ class DashboardPreferencesProvider with ChangeNotifier {
   int _friendsCount = 3;
   int _activitiesCount = 2;
   int _scoresCount = 2;
-  int _ugensBedsteCount = 1;
   
-  // Widget order
+  // Widget order (removed 'ugens_bedste' - merged into Mine Venner)
   List<String> _widgetOrder = [
     'news',
     'friends',
     'activities',
     'scores',
-    'ugens_bedste',
     'tournaments',
   ];
   
@@ -26,7 +24,6 @@ class DashboardPreferencesProvider with ChangeNotifier {
   int get friendsCount => _friendsCount;
   int get activitiesCount => _activitiesCount;
   int get scoresCount => _scoresCount;
-  int get ugensBedsteCount => _ugensBedsteCount;
   List<String> get widgetOrder => _widgetOrder;
   
   // SharedPreferences keys
@@ -34,7 +31,6 @@ class DashboardPreferencesProvider with ChangeNotifier {
   static const String _friendsKey = 'dashboard_friends_count';
   static const String _activitiesKey = 'dashboard_activities_count';
   static const String _scoresKey = 'dashboard_scores_count';
-  static const String _ugensBedsteKey = 'dashboard_ugens_bedste_count';
   static const String _orderKey = 'dashboard_widget_order';
   
   /// Load preferences from storage
@@ -44,21 +40,15 @@ class DashboardPreferencesProvider with ChangeNotifier {
     _friendsCount = prefs.getInt(_friendsKey) ?? 3;
     _activitiesCount = prefs.getInt(_activitiesKey) ?? 2;
     _scoresCount = prefs.getInt(_scoresKey) ?? 2;
-    _ugensBedsteCount = prefs.getInt(_ugensBedsteKey) ?? 1;
     
     // Load widget order
     final orderJson = prefs.getString(_orderKey);
     if (orderJson != null) {
       _widgetOrder = List<String>.from(json.decode(orderJson));
       
-      // Migration: Add 'ugens_bedste' if missing (for existing users)
-      if (!_widgetOrder.contains('ugens_bedste')) {
-        final tournamentsIndex = _widgetOrder.indexOf('tournaments');
-        if (tournamentsIndex != -1) {
-          _widgetOrder.insert(tournamentsIndex, 'ugens_bedste');
-        } else {
-          _widgetOrder.add('ugens_bedste');
-        }
+      // Migration: Remove 'ugens_bedste' if present (merged into Mine Venner)
+      if (_widgetOrder.contains('ugens_bedste')) {
+        _widgetOrder.remove('ugens_bedste');
         // Save the migrated order
         await prefs.setString(_orderKey, json.encode(_widgetOrder));
       }
@@ -99,14 +89,6 @@ class DashboardPreferencesProvider with ChangeNotifier {
     notifyListeners();
   }
   
-  /// Update ugens bedste count
-  Future<void> setUgensBedsteCount(int count) async {
-    _ugensBedsteCount = count;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_ugensBedsteKey, count);
-    notifyListeners();
-  }
-  
   /// Save widget order
   Future<void> saveWidgetOrder(List<String> order) async {
     _widgetOrder = order;
@@ -121,8 +103,7 @@ class DashboardPreferencesProvider with ChangeNotifier {
     await setFriendsCount(3);
     await setActivitiesCount(2);
     await setScoresCount(2);
-    await setUgensBedsteCount(1);
-    await saveWidgetOrder(['news', 'friends', 'activities', 'scores', 'ugens_bedste', 'tournaments']);
+    await saveWidgetOrder(['news', 'friends', 'activities', 'scores', 'tournaments']);
   }
 }
 

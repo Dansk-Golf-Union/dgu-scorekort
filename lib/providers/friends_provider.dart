@@ -3,7 +3,6 @@ import '../models/friendship_model.dart';
 import '../models/friend_request_model.dart';
 import '../models/friend_profile_model.dart';
 import '../models/handicap_trend_model.dart';
-import '../models/leaderboard_entry.dart';
 import '../services/friends_service.dart';
 import '../services/player_service.dart';
 import '../services/whs_statistik_service.dart';
@@ -357,93 +356,6 @@ class FriendsProvider extends ChangeNotifier {
   }
 
   // ========== LEADERBOARD METHODS ==========
-  
-  /// Get leaderboard of friends with lowest handicaps
-  /// 
-  /// Returns list sorted by currentHandicap (ascending), with top N entries.
-  /// Each entry includes rank, name, handicap, and home club.
-  List<LeaderboardEntry> getLowestHandicapLeaderboard({int limit = 10}) {
-    // Sort friends by currentHandicap (ascending - lowest first)
-    final sorted = _friends.toList()
-      ..sort((a, b) => a.currentHandicap.compareTo(b.currentHandicap));
-    
-    // Take top N and create leaderboard entries with ranks
-    return sorted.take(limit).toList().asMap().entries.map((entry) {
-      final rank = entry.key + 1;
-      final friend = entry.value;
-      return LeaderboardEntry(
-        userId: friend.unionId,
-        name: friend.name,
-        homeClubName: friend.homeClubName,
-        value: friend.currentHandicap,
-        rank: rank,
-        displayValue: 'HCP ${friend.currentHandicap.toStringAsFixed(1)}',
-      );
-    }).toList();
-  }
-  
-  /// Get leaderboard of friends with biggest handicap improvement
-  /// 
-  /// Returns list sorted by delta (most negative = best improvement).
-  /// Only includes friends with negative delta (improvement).
-  List<LeaderboardEntry> getBiggestImprovementLeaderboard({int limit = 10}) {
-    // Filter friends with negative delta (improvement)
-    // Sort by delta (most negative = best improvement)
-    final improved = _friends
-        .where((f) => f.trend.delta != null && f.trend.delta! < 0)
-        .toList()
-      ..sort((a, b) => a.trend.delta!.compareTo(b.trend.delta!));
-    
-    return improved.take(limit).toList().asMap().entries.map((entry) {
-      final rank = entry.key + 1;
-      final friend = entry.value;
-      return LeaderboardEntry(
-        userId: friend.unionId,
-        name: friend.name,
-        homeClubName: friend.homeClubName,
-        value: friend.trend.delta!,
-        rank: rank,
-        displayValue: friend.trend.deltaDisplay,
-      );
-    }).toList();
-  }
-  
-  /// Get leaderboard of best individual scores from all friends
-  /// 
-  /// Returns list sorted by points (descending - highest first).
-  /// Flattens all recent scores from all friends into single ranked list.
-  List<LeaderboardEntry> getBestScoresLeaderboard({int limit = 10}) {
-    // Flatten all recent scores from all friends
-    List<({String userId, String name, String? club, dynamic score})> allScores = [];
-    
-    for (var friend in _friends) {
-      for (var score in friend.recentScores) {
-        allScores.add((
-          userId: friend.unionId,
-          name: friend.name,
-          club: friend.homeClubName,
-          score: score,
-        ));
-      }
-    }
-    
-    // Sort by points (descending - highest first)
-    allScores.sort((a, b) => b.score.points.compareTo(a.score.points));
-    
-    return allScores.take(limit).toList().asMap().entries.map((entry) {
-      final rank = entry.key + 1;
-      final item = entry.value;
-      return LeaderboardEntry(
-        userId: item.userId,
-        name: item.name,
-        homeClubName: item.club,
-        value: item.score.points.toDouble(),
-        rank: rank,
-        displayValue: '${item.score.points} points',
-        date: item.score.date,
-      );
-    }).toList();
-  }
 
   /// Clear error message
   void clearError() {

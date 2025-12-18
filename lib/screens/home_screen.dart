@@ -155,14 +155,6 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.emoji_events, color: AppTheme.dguGreen),
-              title: const Text('Leaderboards'),
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/leaderboards');
-              },
-            ),
-            ListTile(
               leading: const Icon(Icons.privacy_tip, color: AppTheme.dguGreen),
               title: const Text('Privacy & Samtykke'),
               onTap: () {
@@ -516,8 +508,6 @@ class _HjemTabState extends State<_HjemTab> {
         return _buildActivitiesSection(prefs.activitiesCount);
       case 'scores':
         return _buildScoresSection(prefs.scoresCount);
-      case 'ugens_bedste':
-        return _buildUgensBedsteSection(prefs.ugensBedsteCount);
       case 'tournaments':
         return _buildTournamentsSection();
       default:
@@ -607,30 +597,6 @@ class _HjemTabState extends State<_HjemTab> {
         ),
         const SizedBox(height: 12),
         if (count > 0) const _MineSenesteScoresWidget(),
-        const SizedBox(height: 24),
-      ],
-    );
-  }
-  
-  Widget _buildUgensBedsteSection(int count) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              '🏆 Ugens Bedste',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            TextButton(
-              onPressed: () => context.push('/leaderboards'),
-              child: const Text('Se mere →'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (count > 0) const _UgensBedsteWidget(),
         const SizedBox(height: 24),
       ],
     );
@@ -765,74 +731,6 @@ class _MineVennerWidget extends StatelessWidget {
   }
 }
 
-/// Ugens Bedste Widget - Highlights top achievement this week
-class _UgensBedsteWidget extends StatelessWidget {
-  const _UgensBedsteWidget();
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<FriendsProvider>(
-      builder: (context, friendsProvider, child) {
-        // Get top 3 improvements from friends
-        final leaderboard = friendsProvider.getBiggestImprovementLeaderboard(limit: 3);
-        
-        if (leaderboard.isEmpty) {
-          return _buildEmptyState(context);
-        }
-        
-        return Card(
-          child: Column(
-            children: leaderboard.map((entry) => 
-              ListTile(
-                leading: Text(
-                  entry.trophyEmoji,
-                  style: const TextStyle(fontSize: 24),
-                ),
-                title: Text(entry.name),
-                subtitle: Text(entry.homeClubName ?? ''),
-                trailing: Chip(
-                  label: Text(entry.displayValue),
-                  backgroundColor: Colors.green.shade100,
-                ),
-                onTap: () => context.push('/leaderboards'),
-              )
-            ).toList(),
-          ),
-        );
-      },
-    );
-  }
-  
-  Widget _buildEmptyState(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            const Icon(Icons.emoji_events_outlined, size: 48, color: Colors.grey),
-            const SizedBox(height: 12),
-            const Text(
-              'Ingen data endnu',
-              style: TextStyle(
-                color: Colors.grey,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Tilføj venner for at se leaderboards',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 /// Seneste Aktivitet Widget - Shows 2 most recent activities (LIVE DATA)
 class _SenesteAktivitetWidget extends StatelessWidget {
   const _SenesteAktivitetWidget();
@@ -1336,8 +1234,7 @@ class _TurneringerIframeWidgetState extends State<_TurneringerIframeWidget> {
     // Register iframe as platform view (only once)
     ui_web.platformViewRegistry.registerViewFactory(viewType, (int viewId) {
       final iframe = html.IFrameElement()
-        // TEST 1: Try cookie_consent=accepted parameter
-        ..src = 'https://www.golf.dk/app/turneringer-i-app?cookie_consent=accepted'
+        ..src = 'https://www.golf.dk/app/turneringer-i-app'
         ..style.border = 'none'
         ..style.height = '600px'
         ..style.width = '100%';

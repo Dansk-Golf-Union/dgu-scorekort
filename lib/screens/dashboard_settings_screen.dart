@@ -52,14 +52,6 @@ class DashboardSettingsScreen extends StatelessWidget {
                   max: 10,
                   onChanged: (v) => prefs.setScoresCount(v.toInt()),
                 );
-              case 'ugens_bedste':
-                return _WidgetSliderData(
-                  id: 'ugens_bedste',
-                  title: '🏆 Ugens Bedste',
-                  value: prefs.ugensBedsteCount.toDouble(),
-                  max: 10,
-                  onChanged: (v) => prefs.setUgensBedsteCount(v.toInt()),
-                );
               case 'tournaments':
                 return _WidgetSliderData(
                   id: 'tournaments',

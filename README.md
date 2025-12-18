@@ -77,11 +77,10 @@ Both versions share 100% of backend infrastructure:
 2. **Birdie Bonus Bar** - Conditional (only if participating)
 3. **Quick Actions** - 4 green buttons (Bestil tid, DGU score, Indberet, Scorekort)
 4. **Golf.dk News Feed** - Latest articles from Golf.dk (customizable 0-5 items)
-5. **Mine Venner** - Friend summary (customizable 0-10 items)
+5. **Mine Venner** - Friend summary (customizable 0-10 items, tap to see full page with tabs)
 6. **Seneste Aktivitet** - Recent activity items (customizable 0-10 items)
-7. **Ugens Bedste** - Top 3 biggest improvements (customizable 0-10 items, tap to see full leaderboards)
-8. **Mine Seneste Scores** - Recent scores (customizable 0-10 items)
-9. **Turneringer & Ranglister** - Golf.dk tournaments iframe (with cookie consent)
+7. **Mine Seneste Scores** - Recent scores (customizable 0-10 items)
+8. **Turneringer & Ranglister** - Golf.dk tournaments iframe (with cookie consent)
 
 **Navigation Pattern:**
 - Widgets clickable → Full-screen views
@@ -188,7 +187,6 @@ Both versions share 100% of backend infrastructure:
 - Player Card (always first)
 - Birdie Bonus Bar (conditional)
 - Quick Actions
-- Ugens Bedste (always after reorderable widgets)
 
 **Technical:**
 - `DashboardPreferencesProvider` med SharedPreferences (widgetOrder + counts)
@@ -278,13 +276,16 @@ Both versions share 100% of backend infrastructure:
 - ⏳ **Swipe-to-Dismiss**: Dismiss activities (future)
 - ⏳ **Activity Details**: Tap for full scorecard (future)
 
-### 🏆 Phase 2C: Leaderboards ✅
-- **Handicap Rankings**: Lowest HCP, biggest improvement (client-side sorting)
-- **Dashboard Preview**: "Ugens Bedste" widget shows top 3 improvements
-- **Full Screen**: `/leaderboards` with 2 tabs (Laveste HCP, Største Fremgang)
-- **Navigation**: Drawer menu, "Se mere →" link, or tap entries
+### 🏆 Phase 2C: Leaderboards ✅ (Merged into Mine Venner)
+- **Integrated into Mine Venner**: Tabs for different views (Alle, Laveste HCP, Største Fremgang)
+- **Handicap Rankings**: Client-side sorting, medals for top 3
+- **No Redundancy**: Single page for all friend-related features
+- **Navigation**: Dashboard "Mine Venner" widget → Full page with tabs
+- **Tab 1 - Alle**: All friends with medals for top 3 HCP
+- **Tab 2 - Laveste HCP**: Sorted by handicap ascending with rankings
+- **Tab 3 - Største Fremgang**: Only friends with improvement, sorted by delta
 - **Empty States**: Helpful messages when no data
-- **Trophy Emojis**: 🥇🥈🥉 for top 3
+- **Trophy Emojis**: 🥇🥈🥉 for top 3 in all views
 
 ---
 
@@ -900,14 +901,15 @@ Example: 14.5 / 2 = 7.25 → 7.3
 - [ ] Activity notifications (future)
 - [ ] Swipe-to-dismiss (future)
 
-### 📅 Phase 2C: Leaderboards ✅
-- [x] Leaderboard data models (`LeaderboardEntry`, `LeaderboardType`)
-- [x] Client-side leaderboard calculation in `FriendsProvider`
-- [x] "Ugens Bedste" widget with real data (top 3 improvements)
-- [x] Full `/leaderboards` screen with tabs (Laveste HCP, Største Fremgang)
-- [x] Navigation via drawer menu, "Se mere →" link, or tap entries
-- [x] Empty states, loading, and error handling
-- [x] Trophy emojis 🥇🥈🥉 for top 3
+### 📅 Phase 2C: Leaderboards ✅ (Simplified & Merged)
+- [x] **Merged into Mine Venner**: Removed redundant Leaderboards screen
+- [x] **3 Tabs in Mine Venner**: Alle, Laveste HCP, Største Fremgang
+- [x] **Medal icons** for top 3 in all views (🥇🥈🥉)
+- [x] **Client-side sorting**: HCP rankings, improvement rankings
+- [x] **Trend indicators**: Show improvement/decline for each friend
+- [x] **Empty states**: Helpful messages when no data
+- [x] **Removed "Ugens Bedste" widget**: Redundant with tabbed view
+- [x] **Cleaner dashboard**: Less widgets, better focus
 - [ ] Best Scores leaderboard (future)
 - [ ] Friend circles (future)
 
