@@ -25,6 +25,13 @@ import 'screens/score_archive_screen.dart';
 import 'screens/friend_request_from_url_screen.dart';
 import 'screens/feed_screen.dart';
 import 'screens/friends_list_screen.dart';
+import 'screens/dutch_style_home_screen.dart';
+import 'screens/golf_nl_home_demo.dart';
+import 'screens/golf_nl_friends_demo.dart';
+import 'screens/golf_nl_feed_demo.dart';
+import 'screens/golf_nl_profile_demo.dart';
+import 'screens/golf_nl_news_demo.dart';
+import 'screens/golf_nl_stats_demo.dart';
 import 'theme/app_theme.dart';
 
 // Development tip: Toggle between OAuth and SimpleLogin as needed
@@ -183,6 +190,34 @@ class _AppRouter extends StatelessWidget {
         GoRoute(
           path: '/venner',
           builder: (context, state) => const FriendsListScreen(),
+        ),
+        GoRoute(
+          path: '/dutch-style-demo',
+          builder: (context, state) => const DutchStyleHomeScreen(),
+        ),
+        GoRoute(
+          path: '/golf-nl-home-demo',
+          builder: (context, state) => const GolfNlHomeDemo(),
+        ),
+        GoRoute(
+          path: '/golf-nl-friends-demo',
+          builder: (context, state) => const GolfNlFriendsDemo(),
+        ),
+        GoRoute(
+          path: '/golf-nl-feed-demo',
+          builder: (context, state) => const GolfNlFeedDemo(),
+        ),
+        GoRoute(
+          path: '/golf-nl-profile-demo',
+          builder: (context, state) => const GolfNlProfileDemo(),
+        ),
+        GoRoute(
+          path: '/golf-nl-news-demo',
+          builder: (context, state) => const GolfNlNewsDemo(),
+        ),
+        GoRoute(
+          path: '/golf-nl-stats-demo',
+          builder: (context, state) => const GolfNlStatsDemo(),
         ),
       ],
     );

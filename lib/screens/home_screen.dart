@@ -157,6 +157,83 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
+            const Divider(),
+            ListTile(
+              leading: Icon(Icons.palette, color: Colors.grey.shade600),
+              title: const Text(
+                '🇳🇱 GOLF.NL Design Demos',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+              enabled: false,
+              dense: true,
+            ),
+            ListTile(
+              leading: const Icon(Icons.home_outlined, size: 20),
+              title: const Text('  Alternativ 1: Home'),
+              dense: true,
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/golf-nl-home-demo');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.home, size: 20),
+              title: const Text('  Alternativ 2: Forside'),
+              dense: true,
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/dutch-style-demo');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.people_outline, size: 20),
+              title: const Text('  Mine Venner'),
+              dense: true,
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/golf-nl-friends-demo');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.feed_outlined, size: 20),
+              title: const Text('  Aktivitetsfeed'),
+              dense: true,
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/golf-nl-feed-demo');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.person_outline, size: 20),
+              title: const Text('  Min Profil'),
+              dense: true,
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/golf-nl-profile-demo');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.newspaper_outlined, size: 20),
+              title: const Text('  Nyheder'),
+              dense: true,
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/golf-nl-news-demo');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.bar_chart_outlined, size: 20),
+              title: const Text('  Mit Spil (Stats)'),
+              dense: true,
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/golf-nl-stats-demo');
+              },
+            ),
+            const Divider(),
             ListTile(
               leading: const Icon(Icons.privacy_tip, color: AppTheme.dguGreen),
               title: const Text('Privacy & Samtykke'),
