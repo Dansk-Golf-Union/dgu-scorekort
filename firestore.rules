@@ -13,28 +13,34 @@ service cloud.firestore {
     }
     
     // ==========================================
-    // EXISTING COLLECTIONS
+    // SCORECARD SYSTEM
     // ==========================================
     
-    // Pending scorecards (awaiting marker approval)
-    match /pending_scorecards/{documentId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update, delete: if isAuthenticated() && 
-                             (resource.data.playerId == getAuthUnionId() || 
-                              resource.data.markerId == getAuthUnionId());
-    }
-    
-    // Completed scorecards (after marker approval)
-    match /completed_scorecards/{documentId} {
-      allow read: if isAuthenticated() && 
-                  resource.data.playerId == getAuthUnionId();
-      allow create: if isAuthenticated();
-      allow update, delete: if false; // Immutable after completion
+    // Scorecards collection - main storage for marker approval flow
+    // Contains all scorecards: pending → approved/rejected → submitted to WHS
+    // TEMP: Open for testing (matches Friends System pattern)
+    match /scorecards/{documentId} {
+      allow read, write: if true; // TEMP: Open for testing
     }
     
     // ==========================================
-    // FRIENDS SYSTEM COLLECTIONS (NEW)
+    // COURSE CACHE (READ-ONLY FOR CLIENT)
+    // ==========================================
+    
+    // Course cache clubs - updated nightly by Cloud Function
+    match /course-cache-clubs/{clubId} {
+      allow read: if true;
+      allow write: if false; // Only Cloud Functions via Admin SDK
+    }
+    
+    // Course cache metadata - updated nightly by Cloud Function
+    match /course-cache-metadata/{docId} {
+      allow read: if true;
+      allow write: if false; // Only Cloud Functions via Admin SDK
+    }
+    
+    // ==========================================
+    // FRIENDS SYSTEM COLLECTIONS
     // ==========================================
     // NOTE: TEMPORARY OPEN RULES FOR TESTING
     // TODO: Implement proper Firebase Auth with custom claims for unionId

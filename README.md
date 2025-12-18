@@ -1019,6 +1019,26 @@ flutter run -d chrome --web-browser-flag "--disable-web-security"
 
 ## ⚠️ Known Issues
 
+### Firestore Rules Fix - Scorecard Permission Error ✅ (December 18, 2025)
+
+**Issue:** Scorecard submission failing with "permission denied" error after Friends System deployment (Dec 15).
+
+**Root Cause:**
+- Scorecard feature uses `scorecards` collection (since November 2024/2025)
+- Firestore rules were first deployed with Friends System (Dec 15, 2025)
+- Rules included `pending_scorecards` and `completed_scorecards` (never used in code)
+- Missing rule for `scorecards` → default deny → permission error
+
+**Solution:** ✅ Fixed Dec 18, 2025
+- Added rule for `scorecards` collection
+- Added rules for `course-cache-clubs` and `course-cache-metadata`
+- Removed unused `pending_scorecards` and `completed_scorecards` rules
+- Deployed to production
+
+**Status:** Resolved - See [FIRESTORE_RULES_FIX_DEC2025.md](FIRESTORE_RULES_FIX_DEC2025.md) for full details
+
+---
+
 ### OAuth Login Status ✅ (December 2025)
 
 **Implementation:** OAuth 2.0 PKCE login is **fully implemented and active**
