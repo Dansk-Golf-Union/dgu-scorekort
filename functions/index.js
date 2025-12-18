@@ -1711,9 +1711,11 @@ exports.cacheBirdieBonusData = functions
               // Field names from API (case-sensitive, some with spaces):
               // "BB participant": 2 (with space!)
               // "Birdiebonuspoints": 78 (lowercase 'p')
-              // "rankInRegionGroup": 159
+              // "rankInRegionGroup": 159 (region-only ranking, kept as backup)
+              // "rankInRegionGroupAndHcp": 41 (region + HCP ranking, primary)
               birdieCount: participant.Birdiebonuspoints || 0,
-              rankingPosition: participant.rankInRegionGroup || 0,
+              rankingPosition: participant.rankInRegionGroupAndHcp || 0,
+              rankInRegion: participant.rankInRegionGroup || 0,
               regionLabel: participant.regionLabel || 'Ukendt',
               hcpGroupLabel: participant.hcpGroupLabel || 'Ukendt',
               isParticipant: isParticipantValue,
@@ -1886,6 +1888,263 @@ exports.manualCacheBirdieBonusData = functions
     } catch (error) {
       console.error('❌ Manual cache update failed:', error);
       return { success: false, error: error.message };
+    }
+  });
+
+/**
+ * ==============================================================================
+ * TOURNAMENTS & RANKINGS CACHE (NIGHTLY SCHEDULED FUNCTION)
+ * ==============================================================================
+ * Fetches current tournaments and rankings from Golf.dk APIs and caches in Firestore.
+ * Runs daily at 02:30 CET (between course cache and milestone scan).
+ */
+
+/**
+ * Fetch Tournaments & Rankings API token from GitHub Gist
+ * Similar to fetchBirdieBonusToken()
+ */
+async function fetchTournamentsToken() {
+  const TOKEN_URL = 'https://gist.githubusercontent.com/nhuttel/3dce62aa15244a4aed2bfa50cd6e7099/raw/e390071b1a409e90ed8cf42689ca9c98ef77f71e/Turneringer%2520og%2520rangliste%2520SD%2520API';
+  
+  return new Promise((resolve, reject) => {
+    https.get(TOKEN_URL, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        const token = data.trim();
+        console.log('✅ Token fetched successfully');
+        resolve(token);
+      });
+    }).on('error', (err) => {
+      console.error('❌ Token fetch failed:', err);
+      reject(err);
+    });
+  });
+}
+
+/**
+ * Fetch tournaments from Golf.dk API
+ */
+function fetchTournaments(authToken) {
+  const API_URL = 'https://drupal.golf.dk/rest/taxonomy_lists/current_tournaments?_format=json';
+  
+  return new Promise((resolve, reject) => {
+    https.get(API_URL, {
+      headers: {
+        'Authorization': authToken,
+        'Accept': 'application/json'
+      }
+    }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          try {
+            const tournaments = JSON.parse(data);
+            resolve(tournaments);
+          } catch (err) {
+            console.error('Parse error (tournaments):', err.message);
+            reject(err);
+          }
+        } else {
+          console.error(`API error (tournaments): ${res.statusCode}`);
+          reject(new Error(`HTTP ${res.statusCode}`));
+        }
+      });
+    }).on('error', reject);
+  });
+}
+
+/**
+ * Fetch rankings from Golf.dk API
+ */
+function fetchRankings(authToken) {
+  const API_URL = 'https://drupal.golf.dk/rest/taxonomy_lists/rankings?_format=json';
+  
+  return new Promise((resolve, reject) => {
+    https.get(API_URL, {
+      headers: {
+        'Authorization': authToken,
+        'Accept': 'application/json'
+      }
+    }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          try {
+            const rankings = JSON.parse(data);
+            resolve(rankings);
+          } catch (err) {
+            console.error('Parse error (rankings):', err.message);
+            reject(err);
+          }
+        } else {
+          console.error(`API error (rankings): ${res.statusCode}`);
+          reject(new Error(`HTTP ${res.statusCode}`));
+        }
+      });
+    }).on('error', reject);
+  });
+}
+
+/**
+ * Fetch icon metadata from Golf.dk Drupal Media API
+ * @param {string} iconId - Icon ID (e.g., "6645")
+ * @param {string} authToken - Auth token
+ * @returns {Promise<string|null>} - Image URL or null if not found
+ */
+function fetchIconUrl(iconId, authToken) {
+  const API_URL = `https://drupal.golf.dk/media/${iconId}/edit?_format=json`;
+  
+  return new Promise((resolve) => {
+    https.get(API_URL, {
+      headers: {
+        'Authorization': authToken,
+        'Accept': 'application/json'
+      }
+    }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          try {
+            const json = JSON.parse(data);
+            const imageUrl = json.field_media_image?.[0]?.url || null;
+            resolve(imageUrl);
+          } catch (err) {
+            console.error(`Parse error (icon ${iconId}):`, err.message);
+            resolve(null);
+          }
+        } else {
+          console.warn(`Icon ${iconId} not found: ${res.statusCode}`);
+          resolve(null);
+        }
+      });
+    }).on('error', (err) => {
+      console.error(`Network error (icon ${iconId}):`, err.message);
+      resolve(null);
+    });
+  });
+}
+
+/**
+ * SCHEDULED FUNCTION: Cache Tournaments & Rankings
+ * Runs daily at 02:30 CET (between course cache and milestone scan)
+ * 
+ * Fetches current tournaments and rankings from Golf.dk APIs and caches in Firestore.
+ * Pattern follows updateCourseCache and cacheBirdieBonusData.
+ */
+exports.cacheTournamentsAndRankings = functions
+  .region('europe-west1')
+  .runWith({
+    timeoutSeconds: 540, // 9 minutes (same as other cache functions)
+    memory: '512MB'
+  })
+  .pubsub.schedule('30 2 * * *') // 02:30 CET (between 02:00 and 03:00 jobs)
+  .timeZone('Europe/Copenhagen')
+  .onRun(async (context) => {
+    console.log('🏆 Starting Tournaments & Rankings cache update...');
+    const startTime = Date.now();
+    const db = admin.firestore();
+    
+    try {
+      // STEP 1: Fetch auth token
+      console.log('📡 Fetching API token...');
+      const authToken = await fetchTournamentsToken();
+      
+      // STEP 2: Fetch tournaments
+      console.log('🏌️ Fetching current tournaments...');
+      const tournaments = await fetchTournaments(authToken);
+      console.log(`✅ Fetched ${tournaments.length} tournaments`);
+      
+      // STEP 3: Fetch rankings
+      console.log('🏆 Fetching rankings...');
+      const rankings = await fetchRankings(authToken);
+      console.log(`✅ Fetched ${rankings.length} rankings`);
+      
+      // STEP 4: Write to Firestore (single document per collection for simplicity)
+      console.log('💾 Writing to Firestore...');
+      
+      await db.collection('tournaments_cache').doc('current').set({
+        tournaments,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        count: tournaments.length
+      });
+      console.log(`  ✅ Tournaments written`);
+      
+      await db.collection('rankings_cache').doc('current').set({
+        rankings,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        count: rankings.length
+      });
+      console.log(`  ✅ Rankings written`);
+      
+      // STEP 5: Fetch and cache icons
+      console.log('🎨 Fetching tournament icons...');
+      
+      // Collect all unique icon IDs from tournaments and rankings
+      const iconIds = new Set();
+      tournaments.forEach(t => {
+        if (t.icon) iconIds.add(t.icon);
+      });
+      rankings.forEach(r => {
+        if (r.icon) iconIds.add(r.icon);
+      });
+      
+      console.log(`  Found ${iconIds.size} unique icon IDs`);
+      
+      // Fetch icon URLs (with rate limiting to avoid overwhelming API)
+      const iconUrls = new Map();
+      let fetchedCount = 0;
+      
+      for (const iconId of iconIds) {
+        const url = await fetchIconUrl(iconId, authToken);
+        if (url) {
+          iconUrls.set(iconId, url);
+          fetchedCount++;
+        }
+        
+        // Rate limit: 100ms delay between requests
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      console.log(`  ✅ Fetched ${fetchedCount}/${iconIds.size} icon URLs`);
+      
+      // Write icons to Firestore (batch writes)
+      if (iconUrls.size > 0) {
+        console.log('💾 Writing icons to Firestore...');
+        
+        const BATCH_SIZE = 500;
+        const iconEntries = Array.from(iconUrls.entries());
+        
+        for (let i = 0; i < iconEntries.length; i += BATCH_SIZE) {
+          const batch = db.batch();
+          const chunk = iconEntries.slice(i, i + BATCH_SIZE);
+          
+          for (const [iconId, url] of chunk) {
+            const docRef = db.collection('tournament_icons_cache').doc(iconId);
+            batch.set(docRef, {
+              iconId,
+              url,
+              updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            }, { merge: true });
+          }
+          
+          await batch.commit();
+        }
+        
+        console.log(`  ✅ ${iconUrls.size} icons written to cache`);
+      }
+      
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.log(`✅ Cache update complete in ${duration}s`);
+      console.log(`📊 Total: ${tournaments.length} tournaments + ${rankings.length} rankings + ${iconUrls.size} icons`);
+      
+      return null;
+    } catch (error) {
+      console.error('❌ Cache update failed:', error);
+      throw error;
     }
   });
 

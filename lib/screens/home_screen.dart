@@ -1,10 +1,10 @@
-import 'dart:html' as html;
-import 'dart:ui_web' as ui_web;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // For kIsWeb and kDebugMode
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:ui_web' as ui_web;
+import 'dart:html' as html;
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../providers/friends_provider.dart';
@@ -15,9 +15,12 @@ import '../models/score_record_model.dart';
 import '../models/news_article_model.dart';
 import '../models/birdie_bonus_model.dart';
 import '../models/activity_item_model.dart';
+import '../models/tournament_model.dart';
+import '../models/ranking_model.dart';
 import '../services/whs_statistik_service.dart';
 import '../services/golfdk_news_service.dart';
 import '../services/birdie_bonus_service.dart';
+import '../services/golf_events_service.dart';
 import '../screens/privacy_settings_screen.dart';
 import '../screens/dashboard_settings_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -509,7 +512,9 @@ class _HjemTabState extends State<_HjemTab> {
       case 'scores':
         return _buildScoresSection(prefs.scoresCount);
       case 'tournaments':
-        return _buildTournamentsSection();
+        return _buildTournamentsSection(prefs.tournamentsCount);
+      case 'rankings':
+        return _buildRankingsSection(prefs.rankingsCount);
       default:
         return const SizedBox.shrink();
     }
@@ -520,7 +525,7 @@ class _HjemTabState extends State<_HjemTab> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          '🗞️ Nyheder fra Golf.dk',
+          'Nyheder fra Golf.dk',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
@@ -538,7 +543,7 @@ class _HjemTabState extends State<_HjemTab> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
-              '👥 Mine Venner',
+              'Mine Venner',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             TextButton(
@@ -562,7 +567,7 @@ class _HjemTabState extends State<_HjemTab> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
-              '📰 Seneste Aktivitet',
+              'Seneste Aktivitet',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             TextButton(
@@ -586,7 +591,7 @@ class _HjemTabState extends State<_HjemTab> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
-              '📊 Mine Seneste Scores',
+              'Mine Seneste Scores',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             TextButton(
@@ -602,12 +607,22 @@ class _HjemTabState extends State<_HjemTab> {
     );
   }
   
-  Widget _buildTournamentsSection() {
+  Widget _buildTournamentsSection(int count) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
-        _TurneringerIframeWidget(),
-        SizedBox(height: 24),
+      children: [
+        _TournamentsWidget(count: count),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildRankingsSection(int count) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _RankingsWidget(count: count),
+        const SizedBox(height: 24),
       ],
     );
   }
@@ -1220,52 +1235,403 @@ class _NewsPreviewCardState extends State<_NewsPreviewCard> {
   }
 }
 
-/// Turneringer & Ranglister IFrame Widget
-class _TurneringerIframeWidget extends StatefulWidget {
-  const _TurneringerIframeWidget();
+/// Turneringer & Ranglister Widget
+/// 
+/// Fetches tournaments and rankings from Firestore cache (updated nightly at 02:30 CET).
+/// Shows first 3 of each by default, with "Vis alle →" / "Vis færre" toggle.
+/// Turneringer Widget - Shows tournaments with independent expand/collapse
+class _TournamentsWidget extends StatefulWidget {
+  final int count; // Number of items to show (0-10)
+  
+  const _TournamentsWidget({required this.count});
 
   @override
-  State<_TurneringerIframeWidget> createState() => _TurneringerIframeWidgetState();
+  State<_TournamentsWidget> createState() => _TournamentsWidgetState();
 }
 
-class _TurneringerIframeWidgetState extends State<_TurneringerIframeWidget> {
-  final String viewType = 'turneringer-iframe-${DateTime.now().millisecondsSinceEpoch}';
+class _TournamentsWidgetState extends State<_TournamentsWidget> {
+  final GolfEventsService _eventsService = GolfEventsService();
+  bool _isExpanded = false;
+  List<Tournament> _tournaments = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    
-    // Register iframe as platform view (only once)
-    ui_web.platformViewRegistry.registerViewFactory(viewType, (int viewId) {
-      final iframe = html.IFrameElement()
-        ..src = 'https://www.golf.dk/app/turneringer-i-app'
-        ..style.border = 'none'
-        ..style.height = '600px'
-        ..style.width = '100%';
-      
-      return iframe;
-    });
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final tournaments = await _eventsService.getCurrentTournaments();
+      setState(() {
+        _tournaments = tournaments;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('❌ Error loading tournaments: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Text(
-              '🏆 Turneringer & Ranglister',
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header (always visible)
+            const Text(
+              'Aktuelle Turneringer',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-          ),
-          const Divider(height: 1),
-          SizedBox(
-            height: 600,
-            child: HtmlElementView(viewType: viewType),
-          ),
-        ],
+            const SizedBox(height: 16),
+            
+            // Loading state
+            if (_isLoading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            // Empty state
+            else if (_tournaments.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(32.0),
+                child: Center(
+                  child: Text(
+                    'Ingen turneringer tilgængelige',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              )
+            // Data loaded
+            else
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Show items based on collapsed/expanded state
+                  // Collapsed: widget.count (0-10), Expanded: ALL
+                  if (!_isExpanded && widget.count > 0)
+                    ..._tournaments.take(widget.count).map((tournament) => _buildTournamentItem(tournament)).toList()
+                  else if (_isExpanded)
+                    ..._tournaments.map((tournament) => _buildTournamentItem(tournament)).toList(),
+                  
+                  // "Vis alle" / "Vis færre" button
+                  const SizedBox(height: 16),
+                  Center(
+                    child: TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _isExpanded = !_isExpanded;
+                        });
+                      },
+                      child: Text(
+                        _isExpanded ? 'Vis færre' : 'Vis alle →',
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTournamentItem(Tournament tournament) {
+    return InkWell(
+      onTap: () => _launchUrl(tournament.url),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Icon with FutureBuilder for cached image
+            FutureBuilder<String?>(
+              future: _eventsService.getIconUrl(tournament.icon),
+              builder: (context, snapshot) {
+                if (snapshot.hasData && snapshot.data != null) {
+                  // Use HTML img tag to bypass CORS
+                  return _buildHtmlImage(snapshot.data!, 48, 48);
+                }
+                // Fallback icon while loading or if no URL
+                return Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Icon(Icons.emoji_events, color: Colors.grey),
+                );
+              },
+            ),
+            const SizedBox(width: 12),
+            // Tournament info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tournament.title,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${tournament.tour} • ${tournament.starts} - ${tournament.ends}',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _launchUrl(String urlString) async {
+    if (urlString.isEmpty) return;
+    final uri = Uri.parse(urlString);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  /// Build HTML img element to bypass CORS restrictions
+  Widget _buildHtmlImage(String imageUrl, double width, double height) {
+    final String viewType = 'img-${imageUrl.hashCode}';
+    
+    // Register view factory (only once per unique URL)
+    // ignore: undefined_prefixed_name
+    ui_web.platformViewRegistry.registerViewFactory(
+      viewType,
+      (int viewId) {
+        final img = html.ImageElement()
+          ..src = imageUrl
+          ..style.width = '100%'
+          ..style.height = '100%'
+          ..style.objectFit = 'cover'
+          ..style.borderRadius = '4px';
+        return img;
+      },
+    );
+
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: HtmlElementView(viewType: viewType),
+      ),
+    );
+  }
+}
+
+/// Ranglister Widget - Shows rankings with independent expand/collapse
+class _RankingsWidget extends StatefulWidget {
+  final int count; // Number of items to show (0-10)
+  
+  const _RankingsWidget({required this.count});
+
+  @override
+  State<_RankingsWidget> createState() => _RankingsWidgetState();
+}
+
+class _RankingsWidgetState extends State<_RankingsWidget> {
+  final GolfEventsService _eventsService = GolfEventsService();
+  bool _isExpanded = false;
+  List<Ranking> _rankings = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final rankings = await _eventsService.getCurrentRankings();
+      setState(() {
+        _rankings = rankings;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('❌ Error loading rankings: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header (always visible)
+            const Text(
+              'Aktuelle Ranglister',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            
+            // Loading state
+            if (_isLoading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            // Empty state
+            else if (_rankings.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(32.0),
+                child: Center(
+                  child: Text(
+                    'Ingen ranglister tilgængelige',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              )
+            // Data loaded
+            else
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Show items based on collapsed/expanded state
+                  // Collapsed: widget.count (0-10), Expanded: ALL
+                  if (!_isExpanded && widget.count > 0)
+                    ..._rankings.take(widget.count).map((ranking) => _buildRankingItem(ranking)).toList()
+                  else if (_isExpanded)
+                    ..._rankings.map((ranking) => _buildRankingItem(ranking)).toList(),
+                  
+                  // "Vis alle" / "Vis færre" button
+                  const SizedBox(height: 16),
+                  Center(
+                    child: TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _isExpanded = !_isExpanded;
+                        });
+                      },
+                      child: Text(
+                        _isExpanded ? 'Vis færre' : 'Vis alle →',
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRankingItem(Ranking ranking) {
+    return InkWell(
+      onTap: () => _launchUrl(ranking.url),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Icon with FutureBuilder for cached image
+            FutureBuilder<String?>(
+              future: _eventsService.getIconUrl(ranking.icon),
+              builder: (context, snapshot) {
+                if (snapshot.hasData && snapshot.data != null) {
+                  // Use HTML img tag to bypass CORS
+                  return _buildHtmlImage(snapshot.data!, 48, 48);
+                }
+                // Fallback icon while loading or if no URL
+                return Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Icon(Icons.leaderboard, color: Colors.grey),
+                );
+              },
+            ),
+            const SizedBox(width: 12),
+            // Ranking info
+            Expanded(
+              child: Text(
+                ranking.title,
+                style: const TextStyle(fontWeight: FontWeight.w500),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _launchUrl(String urlString) async {
+    if (urlString.isEmpty) return;
+    final uri = Uri.parse(urlString);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  /// Build HTML img element to bypass CORS restrictions
+  Widget _buildHtmlImage(String imageUrl, double width, double height) {
+    final String viewType = 'img-${imageUrl.hashCode}';
+    
+    // Register view factory (only once per unique URL)
+    // ignore: undefined_prefixed_name
+    ui_web.platformViewRegistry.registerViewFactory(
+      viewType,
+      (int viewId) {
+        final img = html.ImageElement()
+          ..src = imageUrl
+          ..style.width = '100%'
+          ..style.height = '100%'
+          ..style.objectFit = 'cover'
+          ..style.borderRadius = '4px';
+        return img;
+      },
+    );
+
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: HtmlElementView(viewType: viewType),
       ),
     );
   }

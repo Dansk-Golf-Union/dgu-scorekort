@@ -80,7 +80,8 @@ Both versions share 100% of backend infrastructure:
 5. **Mine Venner** - Friend summary (customizable 0-10 items, tap to see full page with tabs)
 6. **Seneste Aktivitet** - Recent activity items (customizable 0-10 items)
 7. **Mine Seneste Scores** - Recent scores (customizable 0-10 items)
-8. **Turneringer & Ranglister** - Golf.dk tournaments iframe (with cookie consent)
+8. **Aktuelle Turneringer** - Golf.dk tournaments with icons (customizable 0-10 items, cached nightly)
+9. **Aktuelle Ranglister** - Golf.dk rankings with icons (customizable 0-10 items, cached nightly)
 
 **Navigation Pattern:**
 - Widgets clickable → Full-screen views
@@ -140,6 +141,25 @@ Both versions share 100% of backend infrastructure:
 
 **Placering:** Nederst på Hjem tab, under Mine Seneste Scores
 
+### 🏆 Turneringer & Ranglister - NEW!
+- ✅ **Aktuelle Turneringer**: Current golf tournaments from Golf.dk
+- ✅ **Aktuelle Ranglister**: Current golf rankings from Golf.dk
+- ✅ **Icon Support**: Tournament/ranking icons fetched from Drupal Media API
+- ✅ **Nightly Cache**: Data updated daily at 02:30 CET via Cloud Function
+- ✅ **Customizable Display**: User controls 0-10 items per widget via Dashboard Settings
+- ✅ **Expand/Collapse**: "Vis alle →" / "Vis færre" buttons for each widget
+- ✅ **Clickable Items**: Tap to open tournament/ranking details in external browser
+- ✅ **Separate Widgets**: Independent, reorderable dashboard widgets
+- ✅ **Graceful Fallback**: Material icons if image fails to load
+
+**Architecture:**
+- Cloud Function fetches data from 3 Golf.dk Drupal APIs (tournaments, rankings, icons)
+- Server-side caching in Firestore (no CORS issues)
+- Flutter reads from cache with `Source.server` (no stale data)
+- Icons served directly from drupal.golf.dk (no storage costs)
+
+**Replaces:** Old iframe widget (solved cookie consent issue)
+
 ### 🎨 Mit Golf Design Language - NEW!
 - ✅ **White Header**: DGU logo centered (matches Mit Golf app)
 - ✅ **Bottom Navigation**: 5 tabs (Hjem, Venner, Feed, Tops, Menu)
@@ -181,7 +201,8 @@ Both versions share 100% of backend infrastructure:
 - 👥 Mine Venner
 - 📰 Seneste Aktivitet
 - 📊 Mine Seneste Scores
-- 🏆 Turneringer & Ranglister
+- 🏆 Aktuelle Turneringer (cached nightly, customizable 0-10 items, with icons)
+- 🏆 Aktuelle Ranglister (cached nightly, customizable 0-10 items, with icons)
 
 **Fixed Widgets (ikke reorderable):**
 - Player Card (always first)
@@ -709,6 +730,147 @@ Even with `isAuthenticated()` check, permission errors occurred when forcing ser
 
 ---
 
+## 🏆 Tournaments & Rankings Integration
+
+**Added:** December 2025
+
+**Purpose:** Display current Golf.dk tournaments and rankings with proper icon support.
+
+### Architecture: 3-Layer Caching Pattern
+
+```
+Golf.dk Drupal APIs
+    ↓ (nightly @ 02:30 CET)
+Cloud Function: cacheTournamentsAndRankings
+    ↓ (fetch & cache in sequence)
+    ├─ Tournaments data → Firestore: tournaments_cache
+    ├─ Rankings data → Firestore: rankings_cache
+    └─ Icon URLs → Firestore: tournament_icons_cache
+    ↓ (server read with Source.server)
+Flutter Service: GolfEventsService
+    ↓ (loaded in widget)
+Home Screen: Separate widgets for tournaments & rankings
+    ↓ (displayed with Image.network)
+Icon images served directly from drupal.golf.dk
+```
+
+### APIs Used
+
+**1. Tournaments API:**
+- URL: `https://drupal.golf.dk/rest/taxonomy_lists/current_tournaments?_format=json`
+- Auth: Basic Auth (token from private Gist)
+- Returns: Array of tournaments with `title`, `tour`, `starts`, `ends`, `icon` (number), `link`
+
+**2. Rankings API:**
+- URL: `https://drupal.golf.dk/rest/taxonomy_lists/rankings?_format=json`
+- Auth: Basic Auth (same token)
+- Returns: Array of rankings with `title`, `icon` (number), `link`
+
+**3. Icon Media API:**
+- URL: `https://drupal.golf.dk/media/{iconId}/edit?_format=json`
+- Auth: Basic Auth (same token)
+- Returns: Icon metadata with `field_media_image[0].url`
+- Example: `iconId=6645` → `https://drupal.golf.dk/sites/default/files/.../Ikon_DPWorldtour.jpg`
+
+### Cloud Function: `cacheTournamentsAndRankings`
+
+**Schedule:** Daily at 02:30 CET (between course cache @ 02:00 and Birdie Bonus @ 04:00)
+
+**Execution Flow:**
+1. **Fetch token** from private Gist (Basic Auth credentials)
+2. **Fetch tournaments** from API → write to Firestore
+3. **Fetch rankings** from API → write to Firestore
+4. **Collect unique icon IDs** from tournaments + rankings data
+5. **Fetch icon URLs** for each unique ID from Drupal Media API
+   - Rate limited: 100ms delay between requests
+   - Error handling: Continue on individual icon failures
+6. **Write icon URLs** to Firestore using batch writes (500 docs per batch)
+
+**Key Features:**
+- Server-side fetching avoids CORS issues
+- Rate limiting respects API limits
+- Batch writes for efficiency
+- Graceful error handling (missing icons don't break entire sync)
+- Only fetches icons that are actually used
+
+**Firestore Collections:**
+- `tournaments_cache/current` - Single document with tournaments array
+- `rankings_cache/current` - Single document with rankings array
+- `tournament_icons_cache/{iconId}` - One document per icon with URL
+
+**Code:** `functions/index.js` - `fetchIconUrl()`, `cacheTournamentsAndRankings`
+
+### Flutter Service: `GolfEventsService`
+
+**Methods:**
+- `getCurrentTournaments()` - Fetches tournaments from Firestore
+- `getCurrentRankings()` - Fetches rankings from Firestore
+- `getTournamentsAndRankings()` - Fetches both in parallel
+- `getIconUrl(iconId)` - Fetches icon URL from cache
+
+**Cache Strategy:**
+- Uses `Source.server` to bypass client-side Firestore cache
+- Returns `null` for missing icons (graceful degradation)
+
+**Code:** `lib/services/golf_events_service.dart`
+
+### Flutter Widgets: Tournaments & Rankings
+
+**Dashboard Widgets:**
+- `_TournamentsWidget` - Shows tournaments with expand/collapse
+- `_RankingsWidget` - Shows rankings with expand/collapse
+- Both are separate, reorderable dashboard widgets
+- User controls display count (0-10) via Dashboard Settings
+
+**Icon Display:**
+- `FutureBuilder<String?>` fetches icon URL asynchronously
+- `Image.network()` displays image directly from drupal.golf.dk
+- Fallback to Material icon if URL missing or image fails to load
+- Flutter automatically caches network images in browser/app
+
+**Code:** `lib/screens/home_screen.dart`
+
+### Why This Pattern?
+
+**Server-Side Caching Benefits:**
+1. ✅ **No CORS issues** - APIs called from Node.js, not browser
+2. ✅ **Instant loading** - Data ready in Firestore, no API latency
+3. ✅ **Rate limiting** - Controlled server-side, not per-user
+4. ✅ **Efficient** - Icons only fetched once per night, not per user
+5. ✅ **Bandwidth** - Only icon URLs cached, images served by Golf.dk CDN
+
+**Image Strategy - CORS Bypass:**
+- ⚠️ **Problem:** `Image.network()` uses XMLHttpRequest → subject to CORS
+- ✅ **Solution:** HTML `<img>` tags via `HtmlElementView` → NOT subject to CORS
+- ✅ **No storage costs** - Images hosted by Golf.dk, we only cache URLs
+- ✅ **Auto-updates** - If Golf.dk updates image, users see it immediately
+- ✅ **Browser caching** - Images cached automatically by browser
+
+**CORS Issue Resolution (Dec 18, 2025):**
+```dart
+// ❌ BLOCKED: Image.network() → XMLHttpRequest → CORS error
+Image.network('https://drupal.golf.dk/sites/.../icon.jpg')
+
+// ✅ WORKS: HTML <img> tag → bypasses CORS for images
+HtmlElementView(viewType: 'img-${url.hashCode}')
+```
+
+**This is THE pattern for all external API integrations in this app:**
+- Birdie Bonus (same pattern)
+- Course cache (same pattern)
+- WHS scores (same pattern)
+- Tournaments & Rankings (same pattern + CORS bypass for images)
+
+**Files:**
+- `functions/index.js` - Cloud Function
+- `firestore.rules` - Security rules for icon cache
+- `lib/services/golf_events_service.dart` - Service
+- `lib/screens/home_screen.dart` - Widgets
+- `lib/models/tournament_model.dart` - Tournament model
+- `lib/models/ranking_model.dart` - Ranking model
+
+---
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -1137,39 +1299,31 @@ const bool useSimpleLogin = false; // OAuth enabled (production)
 
 **Status:** Documented Dec 17, 2025 - Acceptabel for POC fase
 
-### Golf.dk Cookie Consent in Iframe Widget
+### Golf.dk Cookie Consent in Iframe Widget ✅ RESOLVED
 
-**Beskrivelse:**
-- Turneringer & Ranglister widget bruger iframe til `https://www.golf.dk/app/turneringer-i-app`
-- Golf.dk cookie consent dialog vises hver gang app reloades
-- Kan ikke bypass via URL parametre (allerede testet)
-- Cross-origin security (CORS) blokerer CSS/JS injection
+**Problem (Historical):**
+- Initial implementation used iframe to `https://www.golf.dk/app/turneringer-i-app`
+- Golf.dk cookie consent dialog appeared on every reload
+- Cross-origin security (CORS) prevented CSS/JS injection
+- Workarounds (URL params, injection) all failed
 
-**Hvorfor det sker:**
-- Flutter Web apps reloader hele siden ved refresh
-- Iframe er fra andet domæne (golf.dk) → kan ikke injicere kode
-- Golf.dk's consent løsning gemmer valg i deres localStorage
-- Men valget vises igen ved hver iframe load
+**Solution (December 2025):**
+✅ **Replaced iframe with direct API integration**
+- Tournaments API: `https://drupal.golf.dk/rest/taxonomy_lists/current_tournaments?_format=json`
+- Rankings API: `https://drupal.golf.dk/rest/taxonomy_lists/rankings?_format=json`
+- Icons API: `https://drupal.golf.dk/media/{iconId}/edit?_format=json`
+- Server-side caching via Cloud Function at 02:30 CET
+- No iframe = no cookie consent issues!
 
-**Workarounds forsøgt:**
-- ❌ URL parametre (`?cookie_consent=accepted`, etc.) - virker ikke
-- ❌ CSS injection - blokeret af CORS
-- ❌ JS injection - blokeret af CORS
-- ❌ iframe sandbox attributter - ingen effekt
+**Benefits:**
+- ✅ No more cookie consent dialog
+- ✅ Faster loading (cached data)
+- ✅ Better UX (native Flutter widgets)
+- ✅ Clickable items opening external links
+- ✅ Customizable item count (0-10 per widget)
+- ✅ Proper icon support with fallback
 
-**Current Status:**
-- Cookie dialog accepteres manuelt én gang per session
-- Bruger kan lukke den - den huskes indtil page refresh
-- Impact: Medium annoyance for testing, lav for end users
-
-**Future Solution:**
-- Afvent direkte API fra Golf.dk (i stedet for iframe)
-- Eller kontakt Golf.dk for whitelisted domain eller URL parameter
-- Alternativ: Erstat med "Åbn i Golf.dk" knap
-
-**Priority:** Low - Afvent Golf.dk API dialog
-
-**Status:** Documented Dec 18, 2025 - Accepteret indtil Golf.dk API tilgængelig
+**Status:** Resolved Dec 18, 2025 - API integration complete
 
 ### Current Limitations
 - **Test Whitelist**: WHS submission kun for test-brugere

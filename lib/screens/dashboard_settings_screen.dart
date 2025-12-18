@@ -55,10 +55,18 @@ class DashboardSettingsScreen extends StatelessWidget {
               case 'tournaments':
                 return _WidgetSliderData(
                   id: 'tournaments',
-                  title: '🏆 Turneringer & Ranglister',
-                  value: 1.0, // Always visible
-                  max: 1,
-                  onChanged: (_) {}, // Not adjustable
+                  title: '🏌️ Aktuelle Turneringer',
+                  value: prefs.tournamentsCount.toDouble(),
+                  max: 10,
+                  onChanged: (v) => prefs.setTournamentsCount(v.toInt()),
+                );
+              case 'rankings':
+                return _WidgetSliderData(
+                  id: 'rankings',
+                  title: '🏆 Aktuelle Ranglister',
+                  value: prefs.rankingsCount.toDouble(),
+                  max: 10,
+                  onChanged: (v) => prefs.setRankingsCount(v.toInt()),
                 );
               default:
                 throw Exception('Unknown widget ID: $id');

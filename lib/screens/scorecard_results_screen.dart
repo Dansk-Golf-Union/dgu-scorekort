@@ -71,7 +71,7 @@ class ScorecardResultsScreen extends StatelessWidget {
         try {
           final notificationService = NotificationService();
           final approvalUrl =
-              'https://dgu-scorekort.web.app/#/marker-approval/$documentId';
+              'https://dgu-app-poc.web.app/marker-approval/$documentId';
 
           print(
             '📤 Sending notification to marker: ${marker.unionId ?? marker.memberNo}',

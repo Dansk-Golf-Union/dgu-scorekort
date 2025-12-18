@@ -106,6 +106,34 @@ service cloud.firestore {
     }
     
     // ==========================================
+    // TOURNAMENTS & RANKINGS CACHE
+    // ==========================================
+    
+    // Tournaments cache - read-only for all users
+    // Updated nightly by Cloud Function at 02:30 CET
+    // Only Cloud Functions can write
+    match /tournaments_cache/{docId} {
+      allow read: if true; // Public data - open read access
+      allow write: if false; // Only Cloud Functions (via Admin SDK)
+    }
+    
+    // Rankings cache - read-only for all users
+    // Updated nightly by Cloud Function at 02:30 CET
+    // Only Cloud Functions can write
+    match /rankings_cache/{docId} {
+      allow read: if true; // Public data - open read access
+      allow write: if false; // Only Cloud Functions (via Admin SDK)
+    }
+    
+    // Tournament icons cache - read-only for all users
+    // Updated nightly by Cloud Function at 02:30 CET
+    // Only Cloud Functions can write
+    match /tournament_icons_cache/{iconId} {
+      allow read: if true; // Public data - open read access
+      allow write: if false; // Only Cloud Functions (via Admin SDK)
+    }
+    
+    // ==========================================
     // DEFAULT DENY ALL
     // ==========================================
     
