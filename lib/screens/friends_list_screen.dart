@@ -4,6 +4,7 @@ import '../providers/friends_provider.dart';
 import '../providers/auth_provider.dart';
 import '../models/friend_profile_model.dart';
 import '../widgets/add_friend_dialog.dart';
+import '../screens/friend_detail_screen.dart';
 import '../theme/app_theme.dart';
 
 class FriendsListScreen extends StatefulWidget {
@@ -78,7 +79,7 @@ class _FriendsListScreenState extends State<FriendsListScreen>
     );
   }
 
-  /// Tab 1: Alle venner (original view with medals for top 3 HCP)
+  /// Tab 1: Alle venner (alphabetically sorted, no medals)
   Widget _buildAllFriendsTab(FriendsProvider provider) {
     if (provider.isLoading) {
       return const Center(child: CircularProgressIndicator(color: AppTheme.dguGreen));
@@ -88,9 +89,9 @@ class _FriendsListScreenState extends State<FriendsListScreen>
       return _buildEmptyState();
     }
     
-    // Get friends sorted by HCP for medal assignment
-    final sortedByHcp = List<FriendProfile>.from(provider.friends)
-      ..sort((a, b) => a.currentHandicap.compareTo(b.currentHandicap));
+    // Sort alphabetically by first name
+    final sortedFriends = List<FriendProfile>.from(provider.friends)
+      ..sort((a, b) => a.name.compareTo(b.name));
     
     return RefreshIndicator(
       onRefresh: () async {
@@ -103,12 +104,10 @@ class _FriendsListScreenState extends State<FriendsListScreen>
       color: AppTheme.dguGreen,
       child: ListView.builder(
         padding: const EdgeInsets.only(bottom: 80), // Space for FAB
-        itemCount: provider.friends.length,
+        itemCount: sortedFriends.length,
         itemBuilder: (context, index) {
-          final friend = provider.friends[index];
-          // Find rank in HCP sorted list
-          final hcpRank = sortedByHcp.indexOf(friend) + 1;
-          return _buildFriendTile(friend, hcpRank: hcpRank);
+          final friend = sortedFriends[index];
+          return _buildSimpleFriendTile(friend);
         },
       ),
     );
@@ -186,25 +185,18 @@ class _FriendsListScreenState extends State<FriendsListScreen>
     );
   }
 
-  /// Build a friend tile with medal for top 3 HCP (Tab 1)
-  Widget _buildFriendTile(FriendProfile friend, {required int hcpRank}) {
-    final isTopThree = hcpRank <= 3;
-    
+  /// Build a simple friend tile without medals (Tab 1 - Alle)
+  Widget _buildSimpleFriendTile(FriendProfile friend) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: ListTile(
-        leading: isTopThree 
-          ? Text(
-              _getMedalEmoji(hcpRank),
-              style: const TextStyle(fontSize: 32),
-            )
-          : CircleAvatar(
-              backgroundColor: AppTheme.dguGreen,
-              child: Text(
-                friend.name.isNotEmpty ? friend.name[0].toUpperCase() : '?',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
+        leading: CircleAvatar(
+          backgroundColor: AppTheme.dguGreen,
+          child: Text(
+            friend.name.isNotEmpty ? friend.name[0].toUpperCase() : '?',
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ),
         title: Text(
           friend.name,
           style: const TextStyle(fontWeight: FontWeight.w500),
@@ -231,9 +223,7 @@ class _FriendsListScreenState extends State<FriendsListScreen>
             ],
           ],
         ),
-        onTap: () {
-          // Navigate to friend detail if implemented
-        },
+        onTap: () => _navigateToFriendDetail(friend),
       ),
     );
   }
@@ -308,6 +298,7 @@ class _FriendsListScreenState extends State<FriendsListScreen>
             ),
           ),
         ),
+        onTap: () => _navigateToFriendDetail(friend),
       ),
     );
   }
@@ -434,6 +425,15 @@ class _FriendsListScreenState extends State<FriendsListScreen>
     showDialog(
       context: context,
       builder: (context) => const AddFriendDialog(),
+    );
+  }
+
+  void _navigateToFriendDetail(FriendProfile friend) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FriendDetailScreen(friend: friend),
+      ),
     );
   }
 }
