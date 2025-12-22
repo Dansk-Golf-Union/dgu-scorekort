@@ -66,6 +66,37 @@ class _AddFriendDialogState extends State<AddFriendDialog> {
   }
 
   Future<void> _sendFriendRequest() async {
+    // Show relation type dialog
+    final relationType = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hvordan vil du tilføje spilleren?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Text('💬', style: TextStyle(fontSize: 24)),
+              title: const Text('Som chat kontakt'),
+              subtitle: const Text('Kan kun chatte, ser ikke handicap'),
+              onTap: () => Navigator.pop(context, 'contact'),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Text('👥', style: TextStyle(fontSize: 24)),
+              title: const Text('Som ven'),
+              subtitle: const Text('Kan chatte + se handicap'),
+              onTap: () => Navigator.pop(context, 'friend'),
+            ),
+          ],
+        ),
+      ),
+    );
+    
+    if (relationType == null) return; // User cancelled
+    
+    print('🔍 [AddFriendDialog] User selected relationType: $relationType');
+    
+    // Send request with selected relation type
     final authProvider = context.read<AuthProvider>();
     final friendsProvider = context.read<FriendsProvider>();
     
@@ -77,18 +108,25 @@ class _AddFriendDialogState extends State<AddFriendDialog> {
         throw Exception('Ikke logget ind');
       }
       
+      print('🔍 [AddFriendDialog] Sending friend request:');
+      print('   fromUserId: $unionId');
+      print('   toUserId: ${_previewPlayer!.unionId}');
+      print('   relationType: $relationType');
+      
       await friendsProvider.sendFriendRequest(
         fromUserId: unionId,
         fromUserName: authProvider.currentPlayer!.name,
         toUserId: _previewPlayer!.unionId,
         toUserName: _previewPlayer!.name,
+        relationType: relationType, // NEW: Pass selected type
       );
       
       if (mounted) {
         Navigator.pop(context);
+        final typeLabel = relationType == 'friend' ? 'Venneanmodning' : 'Kontaktanmodning';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Venneanmodning sendt til ${_previewPlayer!.name}'),
+            content: Text('$typeLabel sendt til ${_previewPlayer!.name}'),
             backgroundColor: Colors.green,
           ),
         );

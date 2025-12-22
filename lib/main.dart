@@ -11,6 +11,7 @@ import 'providers/auth_provider.dart';
 import 'providers/match_play_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/friends_provider.dart';
+import 'providers/chat_provider.dart';
 import 'providers/dashboard_preferences_provider.dart';
 import 'models/club_model.dart';
 import 'models/course_model.dart';
@@ -25,6 +26,7 @@ import 'screens/score_archive_screen.dart';
 import 'screens/friend_request_from_url_screen.dart';
 import 'screens/feed_screen.dart';
 import 'screens/friends_list_screen.dart';
+import 'screens/chat_groups_screen.dart';
 import 'screens/dutch_style_home_screen.dart';
 import 'screens/golf_nl_home_demo.dart';
 import 'screens/golf_nl_friends_demo.dart';
@@ -68,6 +70,10 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => MatchSetupProvider()),
         ChangeNotifierProvider(create: (_) => ScorecardProvider()),
         ChangeNotifierProvider(create: (_) => MatchPlayProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, ChatProvider>(
+          create: (context) => ChatProvider(context.read<AuthProvider>()),
+          update: (context, auth, previous) => previous ?? ChatProvider(auth),
+        ),
       ],
       child: const _AppRouter(),
     );
@@ -190,6 +196,10 @@ class _AppRouter extends StatelessWidget {
         GoRoute(
           path: '/venner',
           builder: (context, state) => const FriendsListScreen(),
+        ),
+        GoRoute(
+          path: '/chats',
+          builder: (context, state) => const ChatGroupsScreen(),
         ),
         GoRoute(
           path: '/dutch-style-demo',

@@ -74,6 +74,12 @@ class _FriendRequestFromUrlScreenState
         return;
       }
 
+      print('🔍 [FriendRequestScreen] Request loaded:');
+      print('   requestId: ${request.id}');
+      print('   fromUserId: ${request.fromUserId}');
+      print('   toUserId: ${request.toUserId}');
+      print('   requestedRelationType: ${request.requestedRelationType}');
+      
       if (!mounted) return;
       setState(() {
         _requestData = {
@@ -85,6 +91,7 @@ class _FriendRequestFromUrlScreenState
           'status': request.status,
           'consentMessage': request.consentMessage,
           'createdAt': request.createdAt,
+          'requestedRelationType': request.requestedRelationType, // NEW: Add this!
         };
         _isLoading = false;
       });
@@ -116,6 +123,7 @@ class _FriendRequestFromUrlScreenState
           MaterialPageRoute(
             builder: (_) => FriendRequestSuccessScreen(
               friendName: _requestData!['fromUserName'],
+              relationType: _requestData!['requestedRelationType'] ?? 'friend', // NEW
             ),
           ),
         );
@@ -300,13 +308,16 @@ class _FriendRequestFromUrlScreenState
           ),
           const SizedBox(height: 8),
 
-          // Main message
-          const Text(
-            'vil følge dit handicap',
-            style: TextStyle(
+          // Main message (dynamic based on relation type)
+          Text(
+            _requestData!['requestedRelationType'] == 'contact'
+                ? 'vil gerne chatte med dig om golf'
+                : 'vil følge dit handicap',
+            style: const TextStyle(
               fontSize: 18,
               color: Colors.grey,
             ),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
 

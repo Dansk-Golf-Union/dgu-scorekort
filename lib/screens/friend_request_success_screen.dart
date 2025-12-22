@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
 
 class FriendRequestSuccessScreen extends StatelessWidget {
   final String friendName;
+  final String relationType; // NEW: 'contact' | 'friend'
 
   const FriendRequestSuccessScreen({
     super.key,
     required this.friendName,
+    required this.relationType, // NEW
   });
 
   @override
@@ -36,9 +37,11 @@ class FriendRequestSuccessScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
               
-              // Success message
+              // Success message (dynamic based on relation type)
               Text(
-                'Du er nu venner!',
+                relationType == 'contact'
+                    ? 'I er nu kontakter!'
+                    : 'Du er nu venner!',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -48,7 +51,9 @@ class FriendRequestSuccessScreen extends StatelessWidget {
               const SizedBox(height: 16),
               
               Text(
-                'Du følger nu $friendName\'s handicap.',
+                relationType == 'contact'
+                    ? 'I kan nu chatte om golf og planlægge runder sammen.'
+                    : 'Du følger nu $friendName\'s handicap.',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey.shade700,
@@ -57,27 +62,16 @@ class FriendRequestSuccessScreen extends StatelessWidget {
               ),
               const SizedBox(height: 48),
               
-              // Link to POC app
-              FilledButton.icon(
-                onPressed: () {
-                  // Navigate to home using go_router
-                  context.go('/');
-                },
-                icon: const Icon(Icons.open_in_new),
-                label: const Text('Åbn DGU App'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.dguGreen,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                ),
-              ),
-              const SizedBox(height: 16),
-              
+              // Close button (for webview)
               TextButton(
                 onPressed: () {
                   // Close webview (if possible)
                   Navigator.of(context).pop();
                 },
-                child: const Text('Luk'),
+                child: const Text(
+                  'Luk',
+                  style: TextStyle(fontSize: 16),
+                ),
               ),
             ],
           ),

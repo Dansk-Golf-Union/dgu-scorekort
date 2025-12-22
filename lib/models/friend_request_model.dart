@@ -14,6 +14,7 @@ class FriendRequest {
   final DateTime createdAt;
   final DateTime? respondedAt;
   final String consentMessage;
+  final String requestedRelationType; // 'contact' | 'friend'
 
   FriendRequest({
     required this.id,
@@ -25,6 +26,7 @@ class FriendRequest {
     required this.createdAt,
     this.respondedAt,
     required this.consentMessage,
+    this.requestedRelationType = 'friend', // Default for backward compatibility
   });
 
   /// Check if request is still pending
@@ -57,6 +59,7 @@ class FriendRequest {
           ? (data['respondedAt'] as Timestamp).toDate()
           : null,
       consentMessage: data['consentMessage'] as String? ?? _defaultConsentMessage,
+      requestedRelationType: data['requestedRelationType'] as String? ?? 'friend', // Default for backward compatibility
     );
   }
 
@@ -71,6 +74,7 @@ class FriendRequest {
       'createdAt': Timestamp.fromDate(createdAt),
       'respondedAt': respondedAt != null ? Timestamp.fromDate(respondedAt!) : null,
       'consentMessage': consentMessage,
+      'requestedRelationType': requestedRelationType,
     };
   }
 
@@ -83,8 +87,16 @@ class FriendRequest {
       'Du kan til enhver tid trække dit samtykke tilbage i Privacy indstillinger.';
 
   /// Create a consent message for a specific user
-  static String createConsentMessage(String fromUserName) {
-    return '$fromUserName vil følge dit handicap\n\n$_defaultConsentMessage';
+  static String createConsentMessage(String fromUserName, [String relationType = 'friend']) {
+    if (relationType == 'contact') {
+      return '$fromUserName vil gerne chatte med dig om golf\n\n'
+             'Ved at acceptere kan I:\n'
+             '• Chatte om golf og planlægge runder\n'
+             '• Tilføje hinanden til gruppe chats\n\n'
+             'Bemærk: $fromUserName vil IKKE kunne se dit handicap eller scorekort.';
+    } else {
+      return '$fromUserName vil følge dit handicap\n\n$_defaultConsentMessage';
+    }
   }
 
   @override

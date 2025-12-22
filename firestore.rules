@@ -134,6 +134,52 @@ service cloud.firestore {
     }
     
     // ==========================================
+    // USER STATS CACHE
+    // ==========================================
+    
+    // User stats - read-only for authenticated users
+    // Updated by Cloud Function triggers on friendship/chat changes
+    // Similar pattern to user_score_cache and birdie_bonus_cache
+    match /user_stats/{unionId} {
+      allow read: if true; // TEMP: Open for testing (TODO: Fix OAuth)
+      allow write: if false; // Only Cloud Functions (via Admin SDK)
+    }
+    
+    // ==========================================
+    // CHAT SYSTEM
+    // ==========================================
+    // NOTE: TEMPORARY OPEN RULES FOR TESTING
+    // TODO: Tighten rules when OAuth is fully implemented
+
+    // Chat groups - TEMP: Open for testing
+    match /chat_groups/{groupId} {
+      allow read, write: if true; // TEMP: Open for testing
+      // Target rules (implement when OAuth ready):
+      // allow read: if request.auth != null && 
+      //                request.auth.token.unionId in resource.data.members;
+      // allow create: if request.auth != null && 
+      //                  request.auth.token.unionId in request.resource.data.members;
+      // allow update: if request.auth != null && 
+      //                  request.auth.token.unionId in resource.data.members;
+      // allow delete: if request.auth != null && 
+      //                  request.auth.token.unionId == resource.data.createdBy;
+    }
+
+    // Chat messages - TEMP: Open for testing
+    match /messages/{groupId}/messages/{messageId} {
+      allow read, write: if true; // TEMP: Open for testing
+      // Target rules (implement when OAuth ready):
+      // allow read: if request.auth != null && 
+      //                request.auth.token.unionId in get(/databases/$(database)/documents/chat_groups/$(groupId)).data.members;
+      // allow create: if request.auth != null && 
+      //                  request.auth.token.unionId in get(/databases/$(database)/documents/chat_groups/$(groupId)).data.members &&
+      //                  request.resource.data.senderId == request.auth.token.unionId;
+      // allow delete: if request.auth != null && 
+      //                  request.auth.token.unionId == resource.data.senderId &&
+      //                  request.time < resource.data.timestamp + duration.value(5, 'm');
+    }
+    
+    // ==========================================
     // DEFAULT DENY ALL
     // ==========================================
     

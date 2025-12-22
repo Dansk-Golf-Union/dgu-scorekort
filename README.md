@@ -237,6 +237,163 @@ Both versions share 100% of backend infrastructure:
 - Loading states & error handling
 - Deep linking for friend requests
 
+### 👥 Venner & Kontakter - Two-Tier System (December 2025)
+
+**Purpose:** Different levels of connection for different needs.
+
+**Two Relation Types:**
+
+1. **Kontakt (💬 Chat Buddy)**
+   - ✅ Can chat and plan golf rounds together
+   - ❌ Cannot see each other's handicap or game info
+   - Use case: Tee-time partners, casual golf contacts
+
+2. **Ven (👥 Friend)**
+   - ✅ Can chat and plan golf rounds
+   - ✅ Can see each other's handicap, trends, and game info
+   - ✅ Appears in "Mine Venner" statistics on homepage
+   - Use case: Real friends, golf buddies you track progress with
+
+**Friend Request Flow:**
+- Sender selects relation type: "Kontakt" or "Ven" when sending request
+- Receiver sees appropriate consent message in "Mit Golf" app
+- Both parties must agree on relation type (mutual consent)
+- Relation type stored in `friendships.relationType` field
+
+**UI Implementation:**
+- Friends List has 3 tabs: "Venner 👥", "Kontakter 💬", "Anmodninger"
+- Distinct icons: 💬 for contacts, 👥 for friends
+- Privacy settings only show "real friends" (👥)
+- Homepage "Mine Venner" widget only counts friends (👥)
+
+**Technical:**
+- Model: `Friendship.relationType` ('contact' | 'friend')
+- Provider: `FriendsProvider.fullFriends` vs `FriendsProvider.contactsOnly`
+- Privacy: Only `fullFriends` have handicap visibility
+
+### 💬 Chat System - NEW! (December 2025)
+
+**Purpose:** Golf-focused communication for planning rounds and tee-time coordination.
+
+**Core Features:**
+- ✅ **Group Chats**: Manual creation with selected friends/contacts
+- ✅ **Friend Integration**: Select from both contacts (💬) and friends (👥)
+- ✅ **Real-time Messaging**: Firestore real-time streams
+- ✅ **Unread Badges**: Visual notification with count
+- ✅ **1-to-1 Chats**: Start directly from friend profile
+- ✅ **Message History**: 100 most recent messages per group
+- ✅ **Auto-cleanup**: Cloud Function deletes 30+ day old messages (03:00 nightly)
+- ✅ **Offline Support**: Messages cached locally automatically
+- ✅ **Swipe to Archive**: Dismissible chat groups (hiddenFor array)
+- ✅ **Group Members Modal**: Tap member count to view list
+- ✅ **Pull-to-Refresh**: Update unread count on homepage
+
+**Homepage Integration:**
+Split-button design in "Mine Venner & Chats" widget:
+- **Left half**: "Se venner" → navigates to friends list
+- **Right half**: "X beskeder" with unread badge → navigates to chats
+
+**Technical Implementation:**
+- Firestore collections: `chat_groups`, `messages/{groupId}/messages`, `user_stats`
+- Real-time listeners with Provider pattern
+- In-memory sorting (no Firestore composite index needed)
+- 30-day message retention policy
+- Cloud Functions:
+  - `cleanupOldChatMessages` - Scheduled cleanup (03:00)
+  - `updateMessageStats` - Unread count aggregation
+
+**Archive/Swipe to Delete:**
+- Chats are not deleted, just hidden via `hiddenFor` array in `chat_groups`
+- Sending a new message auto-unhides the chat for all members
+- Uses Flutter's `Dismissible` widget
+
+**Use Cases:**
+- Plan golf rounds between friends
+- Temporary tee-time groups
+- Coordinate practice sessions
+- Golf-focused communication (not general messaging)
+
+**Pricing (Firestore - 30-day retention):**
+- 1,000 users: ~$1.45/month
+- 10,000 users: ~$14.50/month
+- 100,000 users: ~$145/month
+
+**Production Ready:**
+- ✅ All features tested and verified
+- ✅ Real-time messaging working perfectly
+- ✅ In-memory sorting (no Firestore composite index needed)
+- ✅ Cloud Function deployed and scheduled
+- ✅ User stats aggregation integrated
+- ✅ Swipe-to-archive functional
+- 📋 Full implementation details in `CHAT_IMPLEMENTATION_STATUS.md`
+
+### 📊 User Stats Aggregation Pattern - NEW! (December 2025)
+
+**Problem:** Homepage widgets needed to count friends and unread messages, but:
+- Counting on-the-fly was slow and required multiple Firestore queries
+- Data wasn't fresh on page load (required pull-to-refresh)
+- Complex Provider dependencies caused rebuild issues
+
+**Solution:** Pre-aggregate statistics in a dedicated `user_stats` collection, updated by Cloud Functions.
+
+**Architecture:**
+
+```
+User Action (add friend, send message, etc.)
+    ↓
+Firestore Write (friendships, chat_groups, messages)
+    ↓
+Cloud Function Trigger (onWrite, onCreate, onUpdate)
+    ↓
+Calculate Stats (count friends, unread messages, etc.)
+    ↓
+Write to user_stats/{unionId}
+    ↓
+Flutter HomePage reads user_stats (instant, fresh data)
+```
+
+**Cloud Functions:**
+1. **`updateFriendStats`** - Triggered on `friendships` collection
+   - Calculates: `totalFriends`, `fullFriends` (👥 only), `contacts` (💬 only)
+   - Updates both users in the friendship
+
+2. **`updateChatGroupStats`** - Triggered on `chat_groups` collection
+   - Calculates: `totalChatGroups` per user
+   - Updates all group members
+
+3. **`updateMessageStats`** - Triggered on `messages/{groupId}/messages`
+   - Calculates: `unreadChatCount` per user
+   - Only counts messages where user is member but hasn't read
+
+**Firestore Collection: `user_stats`**
+```javascript
+{
+  unionId: "177-2813",
+  totalFriends: 7,        // All active friendships
+  fullFriends: 5,         // Only relationType='friend'
+  contacts: 2,            // Only relationType='contact'
+  unreadChatCount: 3,     // Messages user hasn't read
+  totalChatGroups: 4,     // Groups user is member of
+  lastUpdated: Timestamp
+}
+```
+
+**Benefits:**
+- ✅ Instant loading (1 Firestore read for all stats)
+- ✅ Eventually consistent (stats update within 1-2 seconds)
+- ✅ No complex Provider dependencies
+- ✅ Pull-to-refresh for immediate updates
+- ✅ Scalable (no counting queries)
+
+**Files:**
+- `functions/index.js` - Cloud Functions: `updateFriendStats`, `updateChatGroupStats`, `updateMessageStats`
+- `lib/models/user_stats_model.dart` - Data model
+- `lib/screens/home_screen.dart` - Reads and displays stats
+- `firestore.rules` - Security rules for `user_stats`
+- `seed_user_stats.js` - Initial population script
+
+**This pattern replaces complex Provider counting logic and eliminates homepage data freshness issues.**
+
 ---
 
 ## ✨ Features from v1.6 (Included in v2.0)
@@ -360,7 +517,8 @@ lib/
 │   ├── friend_request_model.dart          # Friend requests (NEW v2.0)
 │   ├── friend_profile_model.dart          # Friend profiles (NEW v2.0)
 │   ├── handicap_trend_model.dart          # Trend analysis (NEW v2.0)
-│   └── news_article_model.dart            # Golf.dk news (NEW v2.0)
+│   ├── news_article_model.dart            # Golf.dk news (NEW v2.0)
+│   └── user_stats_model.dart              # User stats (NEW v2.0)
 ├── providers/
 │   ├── auth_provider.dart                 # Auth state
 │   ├── match_setup_provider.dart          # Club/course/tee selection
@@ -402,12 +560,18 @@ lib/
 functions/
 └── index.js                               # Cloud Functions
     ├── updateCourseCache                  # Scheduled (02:00 daily)
+    ├── cacheTournamentsAndRankings        # Scheduled (02:30 daily)
+    ├── cleanupOldChatMessages             # Scheduled (03:00 daily, NEW v2.0)
     ├── scanForMilestones                  # Scheduled (03:00 daily, NEW v2.0)
     ├── cacheBirdieBonusData               # Scheduled (04:00 daily, NEW v2.0)
-    ├── sendNotification                   # Push notifications
-    ├── getWhsScores                       # WHS API proxy (NEW v2.0)
-    ├── forceFullReseed                    # Manual cache reset
-    └── golfboxCallback                    # OAuth callback
+    ├── updateFriendStats                  # Triggered (NEW v2.0)
+    ├── updateChatGroupStats               # Triggered (NEW v2.0)
+    ├── updateMessageStats                 # Triggered (NEW v2.0)
+    ├── sendNotification                   # Callable
+    ├── getWhsScores                       # Callable (NEW v2.0)
+    ├── exchangeOAuthToken                 # Callable (NEW v2.0)
+    ├── forceFullReseed                    # Callable
+    └── golfboxCallback                    # HTTP
 ```
 
 ---
@@ -454,6 +618,21 @@ functions/
 #### `golfboxCallback` (HTTP)
 - **Purpose**: OAuth callback dispatcher
 
+#### `updateFriendStats` ⚡ (Triggered) - NEW v2.0!
+- **Trigger**: `friendships/{friendshipId}` onWrite
+- **Purpose**: Update friend counts in user_stats for both users
+- **Calculates**: totalFriends, fullFriends (👥), contacts (💬)
+
+#### `updateChatGroupStats` ⚡ (Triggered) - NEW v2.0!
+- **Trigger**: `chat_groups/{groupId}` onWrite
+- **Purpose**: Update chat group counts in user_stats
+- **Calculates**: totalChatGroups per member
+
+#### `updateMessageStats` ⚡ (Triggered) - NEW v2.0!
+- **Trigger**: `messages/{groupId}/messages/{messageId}` onCreate/onUpdate
+- **Purpose**: Update unread message counts in user_stats
+- **Calculates**: unreadChatCount per user
+
 #### `cacheBirdieBonusData` ⏰ (Scheduled) - NEW v2.0!
 - **Schedule**: Hver nat kl. 04:00 (Copenhagen)
 - **Purpose**: Fetch paginated Birdie Bonus data and cache in Firestore
@@ -482,6 +661,13 @@ Privacy toggles per user (shareHandicapWithFriends)
 #### `birdie_bonus_cache` - NEW v2.0!
 Birdie Bonus participant cache (dguNumber, birdieCount, rankingPosition, regionLabel, hcpGroupLabel, isParticipant)
 Updated nightly by `cacheBirdieBonusData` at 04:00
+
+#### `user_stats` - NEW! (December 2025)
+Aggregated user statistics for instant homepage loading
+- Key: unionId
+- Fields: `totalFriends`, `fullFriends`, `contacts`, `unreadChatCount`, `totalChatGroups`, `lastUpdated`
+- Updated by: Cloud Functions (updateFriendStats, updateChatGroupStats, updateMessageStats)
+- Read by: Homepage widgets
 
 #### `course-cache-metadata`
 Cache metadata (lastUpdated, club list)

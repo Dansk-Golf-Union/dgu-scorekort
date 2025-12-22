@@ -31,10 +31,10 @@ class DashboardSettingsScreen extends StatelessWidget {
               case 'friends':
                 return _WidgetSliderData(
                   id: 'friends',
-                  title: '👥 Mine Venner',
-                  value: prefs.friendsCount.toDouble(),
-                  max: 10,
-                  onChanged: (v) => prefs.setFriendsCount(v.toInt()),
+                  title: '👥 Venner & Chats',
+                  value: 1, // Always visible
+                  max: 1, // No slider - split button card
+                  onChanged: (v) {}, // No-op
                 );
               case 'activities':
                 return _WidgetSliderData(

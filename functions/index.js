@@ -2148,3 +2148,311 @@ exports.cacheTournamentsAndRankings = functions
     }
   });
 
+// ==========================================
+// USER STATS CACHE TRIGGERS
+// ==========================================
+
+/**
+ * Cloud Function Trigger: Update user stats when friendships change
+ * 
+ * Triggered on: onCreate, onUpdate, onDelete in friendships collection
+ * Updates: user_stats for both users in the friendship
+ * 
+ * Similar to: Activity feed milestone detection pattern
+ */
+exports.updateFriendStats = functions
+  .region('europe-west1')
+  .firestore.document('friendships/{friendshipId}')
+  .onWrite(async (change, context) => {
+    console.log('📊 Friendship changed, updating user stats...');
+    
+    const db = admin.firestore();
+    const friendshipId = context.params.friendshipId;
+    
+    try {
+      // Determine which users are affected
+      let affectedUsers = [];
+      
+      if (change.after.exists) {
+        // Create or Update
+        const data = change.after.data();
+        affectedUsers = [data.userId1, data.userId2];
+      } else if (change.before.exists) {
+        // Delete
+        const data = change.before.data();
+        affectedUsers = [data.userId1, data.userId2];
+      }
+      
+      console.log(`  Affected users: ${affectedUsers.join(', ')}`);
+      
+      // Update stats for each user
+      for (const unionId of affectedUsers) {
+        await updateUserStats(db, unionId);
+      }
+      
+      console.log('  ✅ Stats updated');
+      return null;
+    } catch (error) {
+      console.error('❌ Failed to update friend stats:', error);
+      // Don't throw - allow Firestore write to succeed even if stats update fails
+      return null;
+    }
+  });
+
+/**
+ * Cloud Function Trigger: Update user stats when chat groups change
+ * 
+ * Triggered on: onCreate, onUpdate, onDelete in chat_groups collection
+ * Updates: user_stats for all members in the group
+ * 
+ * Similar to: Birdie Bonus cache update pattern
+ */
+exports.updateChatGroupStats = functions
+  .region('europe-west1')
+  .firestore.document('chat_groups/{groupId}')
+  .onWrite(async (change, context) => {
+    console.log('💬 Chat group changed, updating user stats...');
+    
+    const db = admin.firestore();
+    const groupId = context.params.groupId;
+    
+    try {
+      // Determine which users are affected
+      let affectedUsers = new Set();
+      
+      if (change.after.exists) {
+        // Create or Update
+        const data = change.after.data();
+        data.members.forEach(m => affectedUsers.add(m));
+      }
+      
+      if (change.before.exists) {
+        // Update or Delete - check previous members too
+        const data = change.before.data();
+        data.members.forEach(m => affectedUsers.add(m));
+      }
+      
+      console.log(`  Affected users: ${Array.from(affectedUsers).join(', ')}`);
+      
+      // Update stats for each user
+      for (const unionId of affectedUsers) {
+        await updateUserStats(db, unionId);
+      }
+      
+      console.log('  ✅ Stats updated');
+      return null;
+    } catch (error) {
+      console.error('❌ Failed to update chat stats:', error);
+      // Don't throw - allow Firestore write to succeed
+      return null;
+    }
+  });
+
+/**
+ * Cloud Function Trigger: Update unread counts when messages are sent/read
+ * 
+ * Triggered on: onCreate, onUpdate in messages/{groupId}/messages
+ * Updates: user_stats.unreadChatCount for recipients
+ * 
+ * Note: Only tracks unread count, not individual message details
+ */
+exports.updateMessageStats = functions
+  .region('europe-west1')
+  .firestore.document('messages/{groupId}/messages/{messageId}')
+  .onWrite(async (change, context) => {
+    console.log('📨 Message changed, updating unread counts...');
+    
+    const db = admin.firestore();
+    const groupId = context.params.groupId;
+    
+    try {
+      // Get group members
+      const groupDoc = await db.collection('chat_groups').doc(groupId).get();
+      if (!groupDoc.exists) {
+        console.log('  ⚠️  Group not found, skipping');
+        return null;
+      }
+      
+      const groupData = groupDoc.data();
+      const members = groupData.members || [];
+      
+      console.log(`  Group members: ${members.join(', ')}`);
+      
+      // Update stats for each member
+      for (const unionId of members) {
+        await updateUserStats(db, unionId);
+      }
+      
+      console.log('  ✅ Unread counts updated');
+      return null;
+    } catch (error) {
+      console.error('❌ Failed to update message stats:', error);
+      return null;
+    }
+  });
+
+/**
+ * Helper: Calculate and update user_stats for a specific user
+ * 
+ * Fetches fresh data from Firestore and writes to user_stats
+ * Similar pattern to: updateCourseCache metadata updates
+ */
+async function updateUserStats(db, unionId) {
+  console.log(`  📊 Calculating stats for ${unionId}...`);
+  
+  try {
+    // 1. Count friendships
+    const friendships1 = await db.collection('friendships')
+      .where('userId1', '==', unionId)
+      .where('status', '==', 'active')
+      .get();
+    
+    const friendships2 = await db.collection('friendships')
+      .where('userId2', '==', unionId)
+      .where('status', '==', 'active')
+      .get();
+    
+    const allFriendships = [...friendships1.docs, ...friendships2.docs];
+    
+    // Count by relationType
+    let fullFriends = 0;
+    let contacts = 0;
+    
+    allFriendships.forEach(doc => {
+      const relationType = doc.data().relationType || 'friend';
+      if (relationType === 'friend') {
+        fullFriends++;
+      } else {
+        contacts++;
+      }
+    });
+    
+    const totalFriends = fullFriends + contacts;
+    
+    console.log(`    Friends: ${totalFriends} (${fullFriends} full, ${contacts} contacts)`);
+    
+    // 2. Count chat groups (exclude hidden)
+    const groupsSnapshot = await db.collection('chat_groups')
+      .where('members', 'array-contains', unionId)
+      .get();
+    
+    const visibleGroups = groupsSnapshot.docs.filter(doc => {
+      const hiddenFor = doc.data().hiddenFor || [];
+      return !hiddenFor.includes(unionId);
+    });
+    
+    const totalChatGroups = visibleGroups.length;
+    
+    console.log(`    Chat groups: ${totalChatGroups}`);
+    
+    // 3. Calculate unread count
+    let unreadCount = 0;
+    
+    for (const groupDoc of visibleGroups) {
+      const groupData = groupDoc.data();
+      const unreadMap = groupData.unreadCount || {};
+      const userUnread = unreadMap[unionId] || 0;
+      unreadCount += userUnread;
+    }
+    
+    console.log(`    Unread messages: ${unreadCount}`);
+    
+    // 4. Write to user_stats
+    await db.collection('user_stats').doc(unionId).set({
+      unionId,
+      totalFriends,
+      fullFriends,
+      contacts,
+      unreadChatCount: unreadCount,
+      totalChatGroups,
+      lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    
+    console.log(`    ✅ Stats written for ${unionId}`);
+  } catch (error) {
+    console.error(`    ❌ Failed to calculate stats for ${unionId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Scheduled function: Clean up old chat messages (30+ days)
+ * Schedule: "0 3 * * *" = At 03:00 every day
+ */
+exports.cleanupOldChatMessages = functions
+  .region('europe-west1')
+  .runWith({
+    timeoutSeconds: 300, // 5 minutes
+    memory: '512MB'
+  })
+  .pubsub.schedule('0 3 * * *')
+  .timeZone('Europe/Copenhagen')
+  .onRun(async (context) => {
+    console.log('🕒 Starting chat message cleanup...');
+    const startTime = Date.now();
+    const db = admin.firestore();
+    
+    // Messages older than 30 days
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - 30);
+    const cutoffTimestamp = admin.firestore.Timestamp.fromDate(cutoffDate);
+    
+    console.log(`📅 Deleting messages older than: ${cutoffDate.toISOString()}`);
+    
+    try {
+      // Get all chat groups
+      const groupsSnapshot = await db.collection('chat_groups').get();
+      console.log(`📊 Found ${groupsSnapshot.size} chat groups`);
+      
+      let totalDeleted = 0;
+      let groupsProcessed = 0;
+      
+      for (const groupDoc of groupsSnapshot.docs) {
+        const groupId = groupDoc.id;
+        
+        // Get old messages in this group
+        const messagesRef = db
+          .collection('messages')
+          .doc(groupId)
+          .collection('messages');
+        
+        const oldMessagesSnapshot = await messagesRef
+          .where('timestamp', '<', cutoffTimestamp)
+          .limit(500) // Process max 500 per group per run
+          .get();
+        
+        if (oldMessagesSnapshot.empty) {
+          continue;
+        }
+        
+        // Delete in batches of 500 (Firestore limit)
+        const batch = db.batch();
+        oldMessagesSnapshot.docs.forEach(doc => {
+          batch.delete(doc.reference);
+        });
+        
+        await batch.commit();
+        totalDeleted += oldMessagesSnapshot.size;
+        groupsProcessed++;
+        
+        console.log(`  ✅ Group ${groupId}: Deleted ${oldMessagesSnapshot.size} messages`);
+      }
+      
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.log(`✅ Cleanup complete in ${duration}s`);
+      console.log(`📊 Groups processed: ${groupsProcessed}/${groupsSnapshot.size}`);
+      console.log(`📊 Total messages deleted: ${totalDeleted}`);
+      
+      return { 
+        success: true, 
+        deleted: totalDeleted,
+        groupsProcessed,
+        totalGroups: groupsSnapshot.size,
+        duration: `${duration}s`
+      };
+    } catch (error) {
+      console.error('❌ Cleanup failed:', error);
+      throw error;
+    }
+  });
+

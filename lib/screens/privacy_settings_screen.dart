@@ -101,13 +101,14 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
-                'Personer der kan se dit handicap (${friendsProvider.friends.length})',
+                'Personer der kan se dit handicap (${friendsProvider.fullFriends.length})',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
             
             // Friends list (= people who can see my data)
-            if (friendsProvider.friends.isEmpty)
+            // NOTE: Only show FULL FRIENDS (not contacts)
+            if (friendsProvider.fullFriends.isEmpty)
               const Center(
                 child: Padding(
                   padding: EdgeInsets.all(32),
@@ -118,7 +119,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                 ),
               )
             else
-              ...friendsProvider.friends.map((friend) => 
+              ...friendsProvider.fullFriends.map((friend) => 
                 _buildFriendPrivacyCard(context, friend),
               ),
           ],

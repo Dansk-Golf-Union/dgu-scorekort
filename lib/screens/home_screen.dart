@@ -17,6 +17,7 @@ import '../models/birdie_bonus_model.dart';
 import '../models/activity_item_model.dart';
 import '../models/tournament_model.dart';
 import '../models/ranking_model.dart';
+import '../models/user_stats_model.dart';
 import '../services/whs_statistik_service.dart';
 import '../services/golfdk_news_service.dart';
 import '../services/birdie_bonus_service.dart';
@@ -130,7 +131,6 @@ class _HomeScreenState extends State<HomeScreen> {
               title: const Text('Indstillinger'),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Navigate to settings
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Indstillinger coming soon!')),
                 );
@@ -318,10 +318,9 @@ class _HjemTabState extends State<_HjemTab> {
   final BirdieBonusService _birdieBonusService = BirdieBonusService();
   BirdieBonusData? _birdieBonusData;
   bool _isBirdieBonusParticipant = false;
+  UserStats? _userStats; // Cached stats for instant homepage display
   
-  // CRITICAL FIX: Flags to ensure data loads only once
-  // Without this, didChangeDependencies() would trigger multiple times
-  // (whenever Provider data changes) causing redundant API calls
+  // Flags to ensure data loads only once in didChangeDependencies
   bool _hasLoadedBirdieBonus = false;
   bool _hasLoadedFriends = false;
 
@@ -339,14 +338,8 @@ class _HjemTabState extends State<_HjemTab> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     
-    // CRITICAL FIX: Load data here instead of initState()
-    // didChangeDependencies() is called AFTER Provider dependencies are established,
-    // ensuring AuthProvider.currentPlayer is available.
-    //
-    // Why this pattern:
-    // 1. initState() runs BEFORE Provider context is ready → player is null
-    // 2. didChangeDependencies() runs AFTER Provider context → player is available
-    // 3. We use _hasLoadedBirdieBonus flag to prevent multiple loads
+    // Load data here (not initState) so Provider context is available
+    // Flags prevent multiple loads when dependencies change
     //    (didChangeDependencies can be called multiple times during widget lifecycle)
     //
     // This pattern is necessary when loading data that depends on Provider state.
@@ -367,6 +360,11 @@ class _HjemTabState extends State<_HjemTab> {
           _hasLoadedFriends = true; // Prevent re-loading on future calls
           context.read<FriendsProvider>().loadFriends(player.unionId!);
         }
+        
+        // Load user stats (instant cache for homepage display)
+        if (_userStats == null) {
+          _loadUserStats(player.unionId!);
+        }
       }
     }
   }
@@ -375,10 +373,7 @@ class _HjemTabState extends State<_HjemTab> {
     final authProvider = context.read<AuthProvider>();
     final player = authProvider.currentPlayer;
 
-    print('🏌️ Loading Birdie Bonus data for unionId: ${player?.unionId}');
-
     if (player == null || player.unionId == null || player.unionId!.isEmpty) {
-      print('⚠️ Player or unionId is null - skipping Birdie Bonus');
       setState(() {
         _isBirdieBonusParticipant = false;
       });
@@ -386,16 +381,12 @@ class _HjemTabState extends State<_HjemTab> {
     }
 
     try {
-      print('📡 Checking if ${player.unionId} is participating...');
-      // First check if user is participating in Birdie Bonus
+      // Check if user is participating in Birdie Bonus
       final isParticipating = await _birdieBonusService.isParticipating(player.unionId!);
-      print('✅ isParticipating result: $isParticipating');
       
       if (isParticipating) {
-        print('📊 Fetching Birdie Bonus data...');
         // Only fetch data if participating
         final data = await _birdieBonusService.getBirdieBonusData(player.unionId!);
-        print('🎉 Got Birdie Bonus data: $data');
         if (mounted) {
           setState(() {
             _birdieBonusData = data;
@@ -403,7 +394,6 @@ class _HjemTabState extends State<_HjemTab> {
           });
         }
       } else {
-        print('❌ User not participating - hiding bar');
         if (mounted) {
           setState(() {
             _isBirdieBonusParticipant = false;
@@ -411,7 +401,6 @@ class _HjemTabState extends State<_HjemTab> {
         }
       }
     } catch (e) {
-      print('❌ Error loading Birdie Bonus data: $e');
       if (mounted) {
         setState(() {
           _isBirdieBonusParticipant = false;
@@ -427,15 +416,69 @@ class _HjemTabState extends State<_HjemTab> {
     }
   }
 
+  /// Load user stats from Firestore cache (instant!)
+  /// Provides friend count and unread message count for homepage display
+  Future<void> _loadUserStats(String unionId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('user_stats')
+          .doc(unionId)
+          .get();
+      
+      if (mounted) {
+        setState(() {
+          if (doc.exists) {
+            _userStats = UserStats.fromFirestore(doc);
+          } else {
+            // Fallback to empty stats if document doesn't exist yet
+            _userStats = UserStats.empty(unionId);
+          }
+        });
+      }
+    } catch (e) {
+      // Fallback to empty stats on error
+      if (mounted) {
+        setState(() {
+          _userStats = UserStats.empty(unionId);
+        });
+      }
+    }
+  }
+
+  /// Refresh homepage data (pull-to-refresh)
+  /// Re-loads user stats and friends data
+  Future<void> _refreshHomepage() async {
+    final authProvider = context.read<AuthProvider>();
+    final player = authProvider.currentPlayer;
+    
+    if (player == null || player.unionId == null || player.unionId!.isEmpty) {
+      return;
+    }
+
+    // Refresh user stats (friend count + unread messages)
+    await _loadUserStats(player.unionId!);
+    
+    // Optionally refresh friends list too
+    await context.read<FriendsProvider>().loadFriends(player.unionId!);
+    
+    // Optionally refresh Birdie Bonus (if participating)
+    if (_isBirdieBonusParticipant) {
+      await _loadBirdieBonusData();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final player = authProvider.currentPlayer;
     final prefs = context.watch<DashboardPreferencesProvider>();
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
+    return RefreshIndicator(
+      onRefresh: _refreshHomepage,
+      color: AppTheme.dguGreen,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Player Info Card (Mit Golf style) - Always first, non-reorderable
@@ -571,9 +614,11 @@ class _HjemTabState extends State<_HjemTab> {
           const SizedBox(height: 24),
 
           // DYNAMIC WIDGETS - User can reorder these via settings
-          ...prefs.widgetOrder.map((widgetId) => _buildWidgetById(widgetId, prefs)),
+          for (final widgetId in prefs.widgetOrder)
+            _buildWidgetById(widgetId, prefs),
         ],
       ),
+    ),
     );
   }
   
@@ -613,24 +658,140 @@ class _HjemTabState extends State<_HjemTab> {
   }
   
   Widget _buildFriendsSection(int count) {
+    // Use cached stats if available, otherwise show loading state
+    final unreadCount = _userStats?.unreadChatCount ?? 0;
+    final isLoading = _userStats == null;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Mine Venner',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            TextButton(
-              onPressed: () => context.push('/venner'),
-              child: const Text('Se alle →'),
-            ),
-          ],
+        const Text(
+          'Mine Venner & Chats',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-        if (count > 0) const _MineVennerWidget(),
+        
+        // Split button card
+        Card(
+          child: IntrinsicHeight(
+            child: Row(
+              children: [
+                // Left: Friends
+                Expanded(
+                  child: InkWell(
+                    onTap: () => context.push('/venner'),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      bottomLeft: Radius.circular(12),
+                    ),
+                    child: const Padding(
+                      padding: EdgeInsets.all(20.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.people, size: 28, color: AppTheme.dguGreen),
+                          SizedBox(width: 12),
+                          Text(
+                            'Se venner',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                
+                // Vertical divider
+                VerticalDivider(
+                  width: 1,
+                  thickness: 1,
+                  color: Colors.grey.shade300,
+                ),
+                
+                // Right: Chats (with loading state)
+                Expanded(
+                  child: InkWell(
+                    onTap: () => context.push('/chats'),
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(12),
+                      bottomRight: Radius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Show loading spinner while stats load
+                          if (isLoading)
+                            const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppTheme.dguGreen,
+                              ),
+                            )
+                          else
+                            Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                const Icon(Icons.chat_bubble_outline, size: 28, color: AppTheme.dguGreen),
+                                if (unreadCount > 0)
+                                  Positioned(
+                                    right: -8,
+                                    top: -8,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      constraints: const BoxConstraints(
+                                        minWidth: 18,
+                                        minHeight: 18,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          unreadCount > 9 ? '9+' : '$unreadCount',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          const SizedBox(width: 12),
+                          Text(
+                            isLoading
+                                ? 'Indlæser...'
+                                : unreadCount > 0 
+                                    ? '$unreadCount ${unreadCount == 1 ? 'besked' : 'beskeder'}'
+                                    : 'Ingen nye',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: isLoading 
+                                  ? Colors.grey 
+                                  : unreadCount > 0 ? Colors.orange.shade700 : Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        
         const SizedBox(height: 24),
       ],
     );
@@ -724,105 +885,6 @@ class _HjemTabState extends State<_HjemTab> {
         ),
         textAlign: TextAlign.center,
       ),
-    );
-  }
-}
-
-/// Mine Venner Widget - Shows friend summary with LIVE DATA
-class _MineVennerWidget extends StatelessWidget {
-  const _MineVennerWidget();
-
-  @override
-  Widget build(BuildContext context) {
-    final prefs = context.watch<DashboardPreferencesProvider>();
-    
-    return Consumer<FriendsProvider>(
-      builder: (context, friendsProvider, child) {
-        final friends = friendsProvider.friends;
-        final friendCount = friends.length;
-        final friendsToShow = prefs.friendsCount;
-        
-        // Sort alphabetically for consistent order (matches "Alle" tab)
-        final sortedFriends = List.from(friends)
-          ..sort((a, b) => a.name.compareTo(b.name));
-
-        return GestureDetector(
-          onTap: () => context.push('/venner'),
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Friend count header
-                  Text(
-                    friendCount == 0
-                        ? 'Ingen venner endnu'
-                        : '$friendCount ${friendCount == 1 ? 'ven' : 'venner'}',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Empty state or friend list
-                  if (friendCount == 0)
-                    const ListTile(
-                      leading: Icon(Icons.people_outline, color: Colors.grey, size: 32),
-                      title: Text('Ingen venner endnu'),
-                      subtitle: Text('Klik her for at tilføje venner'),
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                    )
-                  else
-                    // Show friends alphabetically sorted
-                    ...sortedFriends.take(friendsToShow).map((friend) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12.0),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              backgroundColor: AppTheme.dguGreen,
-                              child: Text(
-                                friend.name.isNotEmpty ? friend.name[0].toUpperCase() : '?',
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    friend.name,
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  Text(
-                                    'HCP ${friend.currentHandicap.toStringAsFixed(1)} • ${friend.homeClubName ?? "Ingen klub"}',
-                                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            // Trend indicator (if available)
-                            if (friend.trend.delta != null)
-                              Icon(
-                                friend.trend.delta! < 0 ? Icons.trending_down : Icons.trending_up,
-                                color: friend.trend.delta! < 0 ? Colors.green : Colors.orange,
-                                size: 20,
-                              ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 }
@@ -1346,7 +1408,6 @@ class _TournamentsWidgetState extends State<_TournamentsWidget> {
         _isLoading = false;
       });
     } catch (e) {
-      print('❌ Error loading tournaments: $e');
       setState(() {
         _isLoading = false;
       });
@@ -1550,7 +1611,6 @@ class _RankingsWidgetState extends State<_RankingsWidget> {
         _isLoading = false;
       });
     } catch (e) {
-      print('❌ Error loading rankings: $e');
       setState(() {
         _isLoading = false;
       });

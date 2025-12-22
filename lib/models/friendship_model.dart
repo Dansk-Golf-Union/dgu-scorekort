@@ -12,6 +12,7 @@ class Friendship {
   final DateTime createdAt;
   final bool user1ConsentGiven; // Always true for requester
   final bool user2ConsentGiven; // True when accepted
+  final String relationType; // 'contact' | 'friend'
 
   Friendship({
     required this.id,
@@ -21,6 +22,7 @@ class Friendship {
     required this.createdAt,
     required this.user1ConsentGiven,
     required this.user2ConsentGiven,
+    this.relationType = 'friend', // Default for backward compatibility
   });
 
   /// Get the friend's userId given the current user's userId
@@ -36,6 +38,18 @@ class Friendship {
   /// Check if both users have given consent
   bool get hasMutualConsent => user1ConsentGiven && user2ConsentGiven;
 
+  /// Check if this is a full friendship (not just contact)
+  bool get isFriend => relationType == 'friend';
+
+  /// Check if this is just a contact
+  bool get isContact => relationType == 'contact';
+
+  /// Get relation type icon
+  String getRelationIcon() => relationType == 'friend' ? '👥' : '💬';
+
+  /// Get relation type label
+  String getRelationLabel() => relationType == 'friend' ? 'Ven' : 'Kontakt';
+
   /// Parse from Firestore document
   factory Friendship.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
@@ -47,6 +61,7 @@ class Friendship {
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       user1ConsentGiven: data['user1ConsentGiven'] as bool? ?? true,
       user2ConsentGiven: data['user2ConsentGiven'] as bool? ?? false,
+      relationType: data['relationType'] as String? ?? 'friend', // Default for backward compatibility
     );
   }
 
@@ -59,6 +74,7 @@ class Friendship {
       'createdAt': Timestamp.fromDate(createdAt),
       'user1ConsentGiven': user1ConsentGiven,
       'user2ConsentGiven': user2ConsentGiven,
+      'relationType': relationType,
     };
   }
 

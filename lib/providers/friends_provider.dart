@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:collection/collection.dart'; // For firstWhereOrNull
 import '../models/friendship_model.dart';
 import '../models/friend_request_model.dart';
 import '../models/friend_profile_model.dart';
@@ -26,6 +27,7 @@ class FriendsProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   bool _shareHandicapWithFriends = true; // Default
+  String? _currentUserId; // Track current user for getFriendship()
 
   // Getters
   List<Friendship> get friendships => _friendships;
@@ -37,10 +39,49 @@ class FriendsProvider extends ChangeNotifier {
   bool get shareHandicapWithFriends => _shareHandicapWithFriends;
   int get pendingRequestsCount => _pendingRequests.length;
 
+  /// Get only full friends (not contacts)
+  List<FriendProfile> get fullFriends {
+    print('🔍 [FriendsProvider] fullFriends getter called');
+    print('🔍 [FriendsProvider]   _friends.length: ${_friends.length}');
+    print('🔍 [FriendsProvider]   _currentUserId: $_currentUserId');
+    print('🔍 [FriendsProvider]   _friendships.length: ${_friendships.length}');
+    
+    final filtered = _friends.where((friend) {
+      final friendship = getFriendship(friend.unionId);
+      final isFriend = friendship?.isFriend ?? false;
+      print('🔍 [FriendsProvider]   ${friend.name}: friendship=${friendship != null}, isFriend=$isFriend');
+      return isFriend;
+    }).toList();
+    
+    print('🔍 [FriendsProvider] fullFriends result: ${filtered.length} friends');
+    return filtered;
+  }
+
+  /// Get only contacts (not full friends)
+  List<FriendProfile> get contactsOnly {
+    // Filter _friends to only include those with relationType == 'contact'
+    return _friends.where((friend) {
+      final friendship = getFriendship(friend.unionId);
+      return friendship?.isContact ?? false;
+    }).toList();
+  }
+
+  /// Get friendship for a specific friend
+  Friendship? getFriendship(String friendUnionId) {
+    // Need to check that BOTH currentUser AND friendUnionId are part of friendship
+    if (_currentUserId == null) return null;
+    
+    return _friendships.firstWhereOrNull(
+      (fs) => (fs.userId1 == _currentUserId && fs.userId2 == friendUnionId) ||
+              (fs.userId2 == _currentUserId && fs.userId1 == friendUnionId),
+    );
+  }
+
   /// Load friendships for current user
   Future<void> loadFriendships(String userId) async {
     try {
       _isLoading = true;
+      _currentUserId = userId; // Set current user for getFriendship()
       _errorMessage = null;
       notifyListeners();
 
@@ -62,18 +103,25 @@ class FriendsProvider extends ChangeNotifier {
   /// - Current handicap
   /// - Basic trend data (delta from last score if available)
   Future<void> loadFriends(String userId) async {
+    print('🔍 [FriendsProvider] loadFriends START for userId: $userId');
     _isLoading = true;
+    _currentUserId = userId; // Set current user for getFriendship()
     notifyListeners();
     
     try {
+      print('🔍 [FriendsProvider] Fetching friendships from Firestore...');
       _friendships = await _friendsService.getFriendships(userId);
+      print('🔍 [FriendsProvider] Found ${_friendships.length} friendships');
       
       // Build friend profiles list
       _friends.clear();
+      print('🔍 [FriendsProvider] Building friend profiles...');
+      
       for (var friendship in _friendships) {
         try {
           // Get friend's union ID
           final friendId = friendship.getFriendId(userId);
+          print('🔍 [FriendsProvider]   - Loading friend: $friendId (relationType: ${friendship.relationType})');
           
           // Fetch player info
           final player = await _playerService.fetchPlayerByUnionId(friendId);
@@ -93,27 +141,41 @@ class FriendsProvider extends ChangeNotifier {
           );
           
           _friends.add(profile);
+          print('🔍 [FriendsProvider]   ✅ Added: ${player.name}');
         } catch (e) {
-          print('Failed to fetch friend $e');
+          print('❌ [FriendsProvider]   Failed to fetch friend: $e');
           // Continue with other friends even if one fails
         }
       }
       
-      _errorMessage = null;
-    } catch (e) {
-      _errorMessage = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+    print('🔍 [FriendsProvider] Total profiles loaded: ${_friends.length}');
+    print('🔍 [FriendsProvider] loadFriends COMPLETE');
+    _errorMessage = null;
+  } catch (e) {
+    print('❌ [FriendsProvider] loadFriends ERROR: $e');
+    _errorMessage = e.toString();
+  } finally {
+    _isLoading = false;
+    print('🔔 [FriendsProvider] Calling notifyListeners() to rebuild UI');
+    notifyListeners();
+    print('🔔 [FriendsProvider] notifyListeners() called');
+  }
   }
 
   /// Load pending friend requests for current user
   Future<void> loadPendingRequests(String userId) async {
+    print('🔍 [FriendsProvider] loadPendingRequests START for userId: $userId');
     try {
       _pendingRequests = await _friendsService.getPendingRequests(userId);
+      print('🔍 [FriendsProvider] Found ${_pendingRequests.length} pending requests');
+      for (var request in _pendingRequests) {
+        print('   - Request from ${request.fromUserName} (${request.fromUserId})');
+        print('     requestedRelationType: ${request.requestedRelationType}');
+      }
       notifyListeners();
+      print('✅ [FriendsProvider] loadPendingRequests COMPLETE');
     } catch (e) {
+      print('❌ [FriendsProvider] loadPendingRequests ERROR: $e');
       _errorMessage = e.toString();
       notifyListeners();
       rethrow;
@@ -196,6 +258,7 @@ class FriendsProvider extends ChangeNotifier {
     String? toUnionId, // Old signature for backward compatibility
     String? toUserId, // New signature
     String? toUserName, // New signature
+    String relationType = 'friend', // NEW: 'contact' | 'friend'
   }) async {
     try {
       _isLoading = true;
@@ -218,13 +281,18 @@ class FriendsProvider extends ChangeNotifier {
       }
 
       // Send request
+      print('🔍 [FriendsProvider] Sending friend request with relationType: $relationType');
+      
       await _friendsService.sendFriendRequest(
         fromUserId: fromUserId,
         fromUserName: fromUserName,
         toUserId: targetUnionId,
         toUserName: targetUserName,
+        relationType: relationType, // NEW: Pass relation type
       );
 
+      print('✅ [FriendsProvider] Friend request sent successfully');
+      
       _isLoading = false;
       notifyListeners();
     } catch (e) {

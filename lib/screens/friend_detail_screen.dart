@@ -4,6 +4,11 @@ import 'package:fl_chart/fl_chart.dart';
 import '../models/friend_profile_model.dart';
 import '../models/handicap_trend_model.dart';
 import '../providers/friends_provider.dart';
+import '../providers/auth_provider.dart';
+import '../providers/chat_provider.dart';
+import '../models/chat_group.dart';
+import 'chat_screen.dart';
+import 'create_chat_group_screen.dart';
 import '../theme/app_theme.dart';
 
 class FriendDetailScreen extends StatefulWidget {
@@ -604,6 +609,21 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
+          // Start Chat button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _handleStartChat(context, profile),
+              icon: const Icon(Icons.chat),
+              label: const Text('Start Chat'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.dguGreen,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          
           // Remove friend button
           SizedBox(
             width: double.infinity,
@@ -667,6 +687,42 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _handleStartChat(BuildContext context, FriendProfile profile) async {
+    final chatProvider = context.read<ChatProvider>();
+    final myUnionId = context.read<AuthProvider>().currentPlayer?.unionId;
+    
+    if (myUnionId == null) return;
+
+    // Check if 1-to-1 chat already exists
+    final existingGroup = chatProvider.groups.cast<ChatGroup?>().firstWhere(
+      (g) => g != null && 
+             g.members.length == 2 &&
+             g.members.contains(profile.unionId) &&
+             g.members.contains(myUnionId),
+      orElse: () => null,
+    );
+
+    if (existingGroup != null) {
+      // Open existing chat
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChatScreen(group: existingGroup),
+        ),
+      );
+    } else {
+      // Create new 1-to-1 chat
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CreateChatGroupScreen(
+            preselectedFriends: [profile],
+          ),
+        ),
+      );
     }
   }
 }

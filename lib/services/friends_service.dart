@@ -21,16 +21,16 @@ class FriendsService {
   /// Get all active friendships for a user
   Future<List<Friendship>> getFriendships(String userId) async {
     try {
-      // Query friendships where user is userId1 OR userId2
+      // Force fetch from server (bypass cache)
       final query1 = await _friendshipsRef
           .where('userId1', isEqualTo: userId)
           .where('status', isEqualTo: 'active')
-          .get();
+          .get(const GetOptions(source: Source.server)); // FORCE SERVER
 
       final query2 = await _friendshipsRef
           .where('userId2', isEqualTo: userId)
           .where('status', isEqualTo: 'active')
-          .get();
+          .get(const GetOptions(source: Source.server)); // FORCE SERVER
 
       // Combine results
       final allDocs = [...query1.docs, ...query2.docs];
@@ -43,15 +43,27 @@ class FriendsService {
 
   /// Get pending friend requests sent TO a user
   Future<List<FriendRequest>> getPendingRequests(String userId) async {
+    print('🔍 [FriendsService] getPendingRequests called for userId: $userId');
     try {
       final query = await _friendRequestsRef
           .where('toUserId', isEqualTo: userId)
           .where('status', isEqualTo: 'pending')
-          .orderBy('createdAt', descending: true)
           .get();
 
-      return query.docs.map((doc) => FriendRequest.fromFirestore(doc)).toList();
+      print('🔍 [FriendsService] Found ${query.docs.length} pending requests');
+      final requests = query.docs.map((doc) => FriendRequest.fromFirestore(doc)).toList();
+      
+      // Sort in-memory by createdAt (newest first)
+      requests.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      
+      for (var request in requests) {
+        print('   - ${request.id}: ${request.fromUserName} → ${request.toUserName}');
+        print('     requestedRelationType: ${request.requestedRelationType}');
+      }
+      
+      return requests;
     } catch (e) {
+      print('❌ [FriendsService] getPendingRequests ERROR: $e');
       throw Exception('Failed to fetch pending requests: $e');
     }
   }
@@ -93,7 +105,13 @@ class FriendsService {
     required String fromUserName,
     required String toUserId,
     required String toUserName,
+    String relationType = 'friend', // NEW: 'contact' | 'friend'
   }) async {
+    print('🔍 [FriendsService] sendFriendRequest called:');
+    print('   fromUserId: $fromUserId');
+    print('   toUserId: $toUserId');
+    print('   relationType: $relationType');
+    
     try {
       // Validate: Not sending to self
       if (fromUserId == toUserId) {
@@ -117,7 +135,7 @@ class FriendsService {
       }
 
       // Create consent message
-      final consentMessage = FriendRequest.createConsentMessage(fromUserName);
+      final consentMessage = FriendRequest.createConsentMessage(fromUserName, relationType);
 
       // Create friend request
       final request = FriendRequest(
@@ -129,9 +147,16 @@ class FriendsService {
         status: 'pending',
         createdAt: DateTime.now(),
         consentMessage: consentMessage,
+        requestedRelationType: relationType, // NEW
       );
 
-      final docRef = await _friendRequestsRef.add(request.toFirestore());
+      print('🔍 [FriendsService] Writing FriendRequest to Firestore:');
+      print('   requestedRelationType: ${request.requestedRelationType}');
+      final firestoreData = request.toFirestore();
+      print('   Firestore data: $firestoreData');
+
+      final docRef = await _friendRequestsRef.add(firestoreData);
+      print('✅ [FriendsService] FriendRequest written with ID: ${docRef.id}');
 
       // Send push notification via Cloud Function HTTP endpoint
       // NOTE: Using HTTP endpoint instead of callable function because cloud_functions
@@ -175,11 +200,19 @@ class FriendsService {
   ///
   /// Creates a friendship and marks request as accepted.
   Future<void> acceptFriendRequest(String requestId) async {
+    print('🔍 [FriendsService] acceptFriendRequest called:');
+    print('   requestId: $requestId');
+    
     try {
       final request = await getFriendRequest(requestId);
       if (request == null) {
         throw Exception('Venneanmodning ikke fundet');
       }
+
+      print('🔍 [FriendsService] Request loaded:');
+      print('   fromUserId: ${request.fromUserId}');
+      print('   toUserId: ${request.toUserId}');
+      print('   requestedRelationType: ${request.requestedRelationType}');
 
       if (request.status != 'pending') {
         throw Exception('Denne anmodning er allerede behandlet');
@@ -200,7 +233,15 @@ class FriendsService {
         createdAt: DateTime.now(),
         user1ConsentGiven: true, // Requester always consents
         user2ConsentGiven: true, // Accepter consents by accepting
+        relationType: request.requestedRelationType, // NEW: Use requested type
       );
+
+      print('🔍 [FriendsService] Creating Friendship:');
+      print('   userId1: ${friendship.userId1}');
+      print('   userId2: ${friendship.userId2}');
+      print('   relationType: ${friendship.relationType}');
+      final firestoreData = friendship.toFirestore();
+      print('   Firestore data: $firestoreData');
 
       // Update request status
       await _friendRequestsRef.doc(requestId).update({
@@ -209,7 +250,8 @@ class FriendsService {
       });
 
       // Create friendship
-      await _friendshipsRef.add(friendship.toFirestore());
+      await _friendshipsRef.add(firestoreData);
+      print('✅ [FriendsService] Friendship created successfully');
     } catch (e) {
       throw Exception('Failed to accept friend request: $e');
     }
