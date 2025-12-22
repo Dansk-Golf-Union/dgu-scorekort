@@ -12,6 +12,9 @@ class DashboardPreferencesProvider with ChangeNotifier {
   int _tournamentsCount = 3;
   int _rankingsCount = 3;
   
+  // News display mode: 'list', 'carousel', or 'carousel_peek'
+  String _newsDisplayMode = 'carousel_peek';
+  
   // Widget order (split 'tournaments' into separate 'tournaments' and 'rankings')
   List<String> _widgetOrder = [
     'news',
@@ -29,10 +32,12 @@ class DashboardPreferencesProvider with ChangeNotifier {
   int get scoresCount => _scoresCount;
   int get tournamentsCount => _tournamentsCount;
   int get rankingsCount => _rankingsCount;
+  String get newsDisplayMode => _newsDisplayMode;
   List<String> get widgetOrder => _widgetOrder;
   
   // SharedPreferences keys
   static const String _newsKey = 'dashboard_news_count';
+  static const String _newsDisplayModeKey = 'dashboard_news_display_mode';
   static const String _friendsKey = 'dashboard_friends_count';
   static const String _activitiesKey = 'dashboard_activities_count';
   static const String _scoresKey = 'dashboard_scores_count';
@@ -44,6 +49,7 @@ class DashboardPreferencesProvider with ChangeNotifier {
   Future<void> loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     _newsCount = prefs.getInt(_newsKey) ?? 3;
+    _newsDisplayMode = prefs.getString(_newsDisplayModeKey) ?? 'list';
     _friendsCount = prefs.getInt(_friendsKey) ?? 3;
     _activitiesCount = prefs.getInt(_activitiesKey) ?? 2;
     _scoresCount = prefs.getInt(_scoresKey) ?? 2;
@@ -85,6 +91,14 @@ class DashboardPreferencesProvider with ChangeNotifier {
     _newsCount = count;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_newsKey, count);
+    notifyListeners();
+  }
+  
+  /// Update news display mode ('list' or 'carousel')
+  Future<void> setNewsDisplayMode(String mode) async {
+    _newsDisplayMode = mode;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_newsDisplayModeKey, mode);
     notifyListeners();
   }
   
@@ -139,6 +153,7 @@ class DashboardPreferencesProvider with ChangeNotifier {
   /// Reset to defaults
   Future<void> resetToDefaults() async {
     await setNewsCount(3);
+    await setNewsDisplayMode('list');
     await setFriendsCount(3);
     await setActivitiesCount(2);
     await setScoresCount(2);

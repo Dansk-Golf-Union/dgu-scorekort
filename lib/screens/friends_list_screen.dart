@@ -112,9 +112,9 @@ class _FriendsListScreenState extends State<FriendsListScreen>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  Icon(Icons.people, size: 16),
+                  SizedBox(width: 6),
                   Text('Venner'),
-                  SizedBox(width: 4),
-                  Text('👥', style: TextStyle(fontSize: 12)),
                 ],
               ),
             ),
@@ -122,9 +122,9 @@ class _FriendsListScreenState extends State<FriendsListScreen>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  Icon(Icons.chat_bubble_outline, size: 16),
+                  SizedBox(width: 6),
                   Text('Kontakter'),
-                  SizedBox(width: 4),
-                  Text('💬', style: TextStyle(fontSize: 12)),
                 ],
               ),
             ),
@@ -328,39 +328,17 @@ class _FriendsListScreenState extends State<FriendsListScreen>
   Widget _buildContactCard(FriendProfile friend, FriendsProvider provider) {
     final friendship = provider.getFriendship(friend.unionId);
     final relationType = friendship?.relationType ?? 'friend';
-    final icon = relationType == 'friend' ? '👥' : '💬';
     final showHandicap = relationType == 'friend';
     
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: ListTile(
-        leading: Stack(
-          children: [
-            CircleAvatar(
-              backgroundColor: AppTheme.dguGreen,
-              child: Text(
-                friend.name.isNotEmpty ? friend.name[0].toUpperCase() : '?',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
-            // Larger icon badge
-            Positioned(
-              right: -2,
-              bottom: -2,
-              child: Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: relationType == 'friend' ? Colors.blue.shade100 : Colors.orange.shade100,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-                child: Text(
-                  icon,
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ),
-            ),
-          ],
+        leading: CircleAvatar(
+          backgroundColor: AppTheme.dguGreen,
+          child: Text(
+            friend.name.isNotEmpty ? friend.name[0].toUpperCase() : '?',
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
         ),
         title: Text(
           friend.name,

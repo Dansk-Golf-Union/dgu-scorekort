@@ -97,7 +97,7 @@ class _CreateChatGroupScreenState extends State<CreateChatGroupScreen> {
                   child: Row(
                     children: [
                       const Text(
-                        'Vælg venner',
+                        'Vælg medlemmer',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

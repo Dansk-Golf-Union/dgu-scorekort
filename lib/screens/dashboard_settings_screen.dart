@@ -208,6 +208,42 @@ class DashboardSettingsScreen extends StatelessWidget {
                             : 'Viser ${data.value.toInt()} element${data.value.toInt() > 1 ? 'er' : ''}',
                         style: const TextStyle(fontSize: 12, color: Colors.grey),
                       ),
+                      // News display mode toggle (only for news widget)
+                      if (data.id == 'news' && data.value.toInt() > 0) ...[
+                        const SizedBox(height: 16),
+                        const Divider(),
+                        const SizedBox(height: 8),
+                        Consumer<DashboardPreferencesProvider>(
+                          builder: (context, prefs, _) {
+                            return SegmentedButton<String>(
+                              segments: const [
+                                ButtonSegment(
+                                  value: 'list',
+                                  label: Text('Liste', style: TextStyle(fontSize: 12)),
+                                  icon: Icon(Icons.list, size: 16),
+                                ),
+                                ButtonSegment(
+                                  value: 'carousel',
+                                  label: Text('Fuld', style: TextStyle(fontSize: 12)),
+                                  icon: Icon(Icons.crop_square, size: 16),
+                                ),
+                                ButtonSegment(
+                                  value: 'carousel_peek',
+                                  label: Text('Peek', style: TextStyle(fontSize: 12)),
+                                  icon: Icon(Icons.view_carousel, size: 16),
+                                ),
+                              ],
+                              selected: {prefs.newsDisplayMode},
+                              onSelectionChanged: (Set<String> selection) {
+                                prefs.setNewsDisplayMode(selection.first);
+                              },
+                              style: ButtonStyle(
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ] else ...[
                       const SizedBox(height: 8),
                       const Text(

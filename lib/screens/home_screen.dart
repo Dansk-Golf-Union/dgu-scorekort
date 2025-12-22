@@ -158,7 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             const Divider(),
-            ListTile(
+            ExpansionTile(
               leading: Icon(Icons.palette, color: Colors.grey.shade600),
               title: const Text(
                 '🇳🇱 GOLF.NL Design Demos',
@@ -167,71 +167,81 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontSize: 13,
                 ),
               ),
-              enabled: false,
-              dense: true,
-            ),
-            ListTile(
-              leading: const Icon(Icons.home_outlined, size: 20),
-              title: const Text('  Alternativ 1: Home'),
-              dense: true,
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/golf-nl-home-demo');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.home, size: 20),
-              title: const Text('  Alternativ 2: Forside'),
-              dense: true,
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/dutch-style-demo');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.people_outline, size: 20),
-              title: const Text('  Mine Venner'),
-              dense: true,
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/golf-nl-friends-demo');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.feed_outlined, size: 20),
-              title: const Text('  Aktivitetsfeed'),
-              dense: true,
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/golf-nl-feed-demo');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.person_outline, size: 20),
-              title: const Text('  Min Profil'),
-              dense: true,
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/golf-nl-profile-demo');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.newspaper_outlined, size: 20),
-              title: const Text('  Nyheder'),
-              dense: true,
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/golf-nl-news-demo');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.bar_chart_outlined, size: 20),
-              title: const Text('  Mit Spil (Stats)'),
-              dense: true,
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/golf-nl-stats-demo');
-              },
+              tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+              childrenPadding: EdgeInsets.zero,
+              initiallyExpanded: false,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.home_outlined, size: 20),
+                  title: const Text('Alternativ 1: Home'),
+                  dense: true,
+                  contentPadding: const EdgeInsets.only(left: 72, right: 16),
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.push('/golf-nl-home-demo');
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.home, size: 20),
+                  title: const Text('Alternativ 2: Forside'),
+                  dense: true,
+                  contentPadding: const EdgeInsets.only(left: 72, right: 16),
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.push('/dutch-style-demo');
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.people_outline, size: 20),
+                  title: const Text('Mine Venner'),
+                  dense: true,
+                  contentPadding: const EdgeInsets.only(left: 72, right: 16),
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.push('/golf-nl-friends-demo');
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.feed_outlined, size: 20),
+                  title: const Text('Aktivitetsfeed'),
+                  dense: true,
+                  contentPadding: const EdgeInsets.only(left: 72, right: 16),
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.push('/golf-nl-feed-demo');
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.person_outline, size: 20),
+                  title: const Text('Min Profil'),
+                  dense: true,
+                  contentPadding: const EdgeInsets.only(left: 72, right: 16),
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.push('/golf-nl-profile-demo');
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.newspaper_outlined, size: 20),
+                  title: const Text('Nyheder'),
+                  dense: true,
+                  contentPadding: const EdgeInsets.only(left: 72, right: 16),
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.push('/golf-nl-news-demo');
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.bar_chart_outlined, size: 20),
+                  title: const Text('Mit Spil (Stats)'),
+                  dense: true,
+                  contentPadding: const EdgeInsets.only(left: 72, right: 16),
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.push('/golf-nl-stats-demo');
+                  },
+                ),
+              ],
             ),
             const Divider(),
             ListTile(
@@ -643,6 +653,9 @@ class _HjemTabState extends State<_HjemTab> {
   }
   
   Widget _buildNewsSection(int count) {
+    final prefs = context.watch<DashboardPreferencesProvider>();
+    final displayMode = prefs.newsDisplayMode;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -651,7 +664,12 @@ class _HjemTabState extends State<_HjemTab> {
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-        if (count > 0) const _NewsPreviewCard(),
+        if (count > 0)
+          switch (displayMode) {
+            'carousel' => const _NewsCarouselCard(),
+            'carousel_peek' => const _NewsPeekCarouselCard(),
+            _ => const _NewsPreviewCard(), // default to list
+          },
         const SizedBox(height: 24),
       ],
     );
@@ -1368,6 +1386,554 @@ class _NewsPreviewCardState extends State<_NewsPreviewCard> {
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+/// News Carousel Card - Alternative display with horizontal swipe and large images
+class _NewsCarouselCard extends StatefulWidget {
+  const _NewsCarouselCard();
+
+  @override
+  State<_NewsCarouselCard> createState() => _NewsCarouselCardState();
+}
+
+class _NewsCarouselCardState extends State<_NewsCarouselCard> {
+  final _newsService = GolfDkNewsService();
+  final PageController _pageController = PageController();
+  Future<List<NewsArticle>>? _newsFuture;
+  int _lastNewsCount = 0;
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initial load will happen in didChangeDependencies
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Load news when preferences change
+    final prefs = context.watch<DashboardPreferencesProvider>();
+    if (prefs.newsCount != _lastNewsCount) {
+      _lastNewsCount = prefs.newsCount;
+      if (prefs.newsCount > 0) {
+        _loadNews(prefs.newsCount);
+      }
+    }
+  }
+
+  void _loadNews(int limit) {
+    setState(() {
+      _newsFuture = _newsService.getLatestNews(limit: limit);
+    });
+  }
+
+  Future<void> _launchUrl(String urlString) async {
+    final url = Uri.parse(urlString);
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Kunne ikke åbne link: $urlString')),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: FutureBuilder<List<NewsArticle>>(
+        future: _newsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const SizedBox(
+              height: 400,
+              child: Center(
+                child: CircularProgressIndicator(
+                  color: AppTheme.dguGreen,
+                ),
+              ),
+            );
+          }
+
+          if (snapshot.hasError) {
+            return SizedBox(
+              height: 400,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Kunne ikke hente nyheder',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      snapshot.error.toString().replaceAll('Exception: ', ''),
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton.icon(
+                      onPressed: () {
+                        final prefs = context.read<DashboardPreferencesProvider>();
+                        _loadNews(prefs.newsCount);
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Prøv igen'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return SizedBox(
+              height: 400,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.article, size: 64, color: Colors.grey),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Ingen nyheder',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          final news = snapshot.data!;
+          
+          return Column(
+            children: [
+              SizedBox(
+                height: 400,
+                child: PageView.builder(
+                  controller: _pageController,
+                  onPageChanged: (index) {
+                    setState(() => _currentPage = index);
+                  },
+                  itemCount: news.length,
+                  itemBuilder: (context, index) {
+                    return _buildNewsCard(news[index]);
+                  },
+                ),
+              ),
+              _buildPageIndicators(news.length),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildNewsCard(NewsArticle article) {
+    // Proxy image URLs through corsproxy.io for web production to avoid CORS
+    final imageUrl = kIsWeb && !kDebugMode
+        ? 'https://corsproxy.io/?${Uri.encodeComponent(article.image)}'
+        : article.image;
+    
+    // Responsive image height
+    final screenWidth = MediaQuery.of(context).size.width;
+    final imageHeight = screenWidth > 600 ? 250.0 : 200.0;
+    
+    return InkWell(
+      onTap: () => _launchUrl(article.url),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Large image (full width)
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            child: Image.network(
+              imageUrl,
+              width: double.infinity,
+              height: imageHeight,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: double.infinity,
+                  height: imageHeight,
+                  color: Colors.grey[300],
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.image_not_supported, size: 48, color: Colors.grey),
+                      SizedBox(height: 8),
+                      Text('Billede ikke tilgængeligt'),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          // Content
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    article.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    article.manchet,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      const Icon(Icons.arrow_forward, size: 16, color: AppTheme.dguGreen),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Læs mere',
+                        style: TextStyle(
+                          color: AppTheme.dguGreen,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPageIndicators(int count) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16, top: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(
+          count,
+          (index) => Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _currentPage == index 
+                  ? AppTheme.dguGreen 
+                  : Colors.grey[300],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// News Peek Carousel Card - Variant with visible edges of adjacent cards
+/// Same as _NewsCarouselCard but uses viewportFraction: 0.85 to show peek
+class _NewsPeekCarouselCard extends StatefulWidget {
+  const _NewsPeekCarouselCard();
+
+  @override
+  State<_NewsPeekCarouselCard> createState() => _NewsPeekCarouselCardState();
+}
+
+class _NewsPeekCarouselCardState extends State<_NewsPeekCarouselCard> {
+  final _newsService = GolfDkNewsService();
+  final PageController _pageController = PageController(
+    viewportFraction: 0.85, // KEY DIFFERENCE: Shows edges of adjacent cards
+  );
+  Future<List<NewsArticle>>? _newsFuture;
+  int _lastNewsCount = 0;
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initial load will happen in didChangeDependencies
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Load news when preferences change
+    final prefs = context.watch<DashboardPreferencesProvider>();
+    if (prefs.newsCount != _lastNewsCount) {
+      _lastNewsCount = prefs.newsCount;
+      if (prefs.newsCount > 0) {
+        _loadNews(prefs.newsCount);
+      }
+    }
+  }
+
+  void _loadNews(int limit) {
+    setState(() {
+      _newsFuture = _newsService.getLatestNews(limit: limit);
+    });
+  }
+
+  Future<void> _launchUrl(String urlString) async {
+    final url = Uri.parse(urlString);
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Kunne ikke åbne link: $urlString')),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<NewsArticle>>(
+      future: _newsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Card(
+            child: SizedBox(
+              height: 400,
+              child: Center(
+                child: CircularProgressIndicator(
+                  color: AppTheme.dguGreen,
+                ),
+              ),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Card(
+            child: SizedBox(
+              height: 400,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Kunne ikke hente nyheder',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      snapshot.error.toString().replaceAll('Exception: ', ''),
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton.icon(
+                      onPressed: () {
+                        final prefs = context.read<DashboardPreferencesProvider>();
+                        _loadNews(prefs.newsCount);
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Prøv igen'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Card(
+            child: SizedBox(
+              height: 400,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.article, size: 64, color: Colors.grey),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Ingen nyheder',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        final news = snapshot.data!;
+        
+        return Column(
+          children: [
+            SizedBox(
+              height: 400,
+              child: PageView.builder(
+                controller: _pageController,
+                onPageChanged: (index) {
+                  setState(() => _currentPage = index);
+                },
+                itemCount: news.length,
+                itemBuilder: (context, index) {
+                  // Add horizontal padding to create space between cards
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: _buildNewsCard(news[index]),
+                  );
+                },
+              ),
+            ),
+            _buildPageIndicators(news.length),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildNewsCard(NewsArticle article) {
+    // Proxy image URLs through corsproxy.io for web production to avoid CORS
+    final imageUrl = kIsWeb && !kDebugMode
+        ? 'https://corsproxy.io/?${Uri.encodeComponent(article.image)}'
+        : article.image;
+    
+    // Responsive image height
+    final screenWidth = MediaQuery.of(context).size.width;
+    final imageHeight = screenWidth > 600 ? 250.0 : 200.0;
+    
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: () => _launchUrl(article.url),
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Large image (full width)
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              child: Image.network(
+                imageUrl,
+                width: double.infinity,
+                height: imageHeight,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    width: double.infinity,
+                    height: imageHeight,
+                    color: Colors.grey[300],
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.image_not_supported, size: 48, color: Colors.grey),
+                        SizedBox(height: 8),
+                        Text('Billede ikke tilgængeligt'),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            // Content
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      article.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      article.manchet,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const Spacer(),
+                    Row(
+                      children: [
+                        const Icon(Icons.arrow_forward, size: 16, color: AppTheme.dguGreen),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Læs mere',
+                          style: TextStyle(
+                            color: AppTheme.dguGreen,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPageIndicators(int count) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16, top: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(
+          count,
+          (index) => Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _currentPage == index 
+                  ? AppTheme.dguGreen 
+                  : Colors.grey[300],
+            ),
+          ),
         ),
       ),
     );

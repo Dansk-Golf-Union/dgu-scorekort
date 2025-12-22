@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // DGU Colors
-  static const dguGreen = Color(0xFF1B5E20);
+  static const dguGreen = Color(0xFF346243);
   static const dguOlive = Color(0xFF9E9D24);
   static const backgroundColor = Color(0xFFF5F5F5);
   static const cardColor = Color(0xFFFFFFFF);
