@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
-import 'dart:html' as html;
 import '../models/player_model.dart';
 import '../services/auth_service.dart';
 import '../services/player_service.dart';
+import '../utils/web_utils.dart' if (dart.library.io) '../utils/web_utils_stub.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -114,13 +114,7 @@ class AuthProvider with ChangeNotifier {
       // ALWAYS clean URL parameters (prevents code reuse on refresh, even after errors)
       if (kIsWeb) {
         try {
-          // Remove code and state from URL without reload
-          final uri = Uri.parse(html.window.location.href);
-          final cleanUri = uri.replace(
-            queryParameters: {},
-            fragment: '', // Also clear fragment
-          );
-          html.window.history.replaceState({}, '', cleanUri.toString());
+          cleanUrlParams();
           debugPrint('✅ Cleaned OAuth parameters from URL');
         } catch (e) {
           debugPrint('⚠️ Failed to clean URL: $e');

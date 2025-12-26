@@ -3,8 +3,6 @@ import 'package:flutter/foundation.dart'; // For kIsWeb and kDebugMode
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:ui_web' as ui_web;
-import 'dart:html' as html;
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../providers/friends_provider.dart';
@@ -25,6 +23,7 @@ import '../services/golf_events_service.dart';
 import '../screens/privacy_settings_screen.dart';
 import '../screens/dashboard_settings_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../utils/html_image_web.dart' if (dart.library.io) '../utils/html_image_stub.dart';
 
 /// Home Screen - Single-page dashboard (no bottom nav)
 /// Dashboard with widgets linking to full-screen views
@@ -2061,11 +2060,11 @@ class _TournamentsWidgetState extends State<_TournamentsWidget> {
             FutureBuilder<String?>(
               future: _eventsService.getIconUrl(tournament.icon),
               builder: (context, snapshot) {
-                if (snapshot.hasData && snapshot.data != null) {
-                  // Use HTML img tag to bypass CORS
-                  return _buildHtmlImage(snapshot.data!, 48, 48);
+                if (snapshot.hasData && snapshot.data != null && kIsWeb) {
+                  // Use HTML img tag to bypass CORS (web only)
+                  return buildHtmlImage(snapshot.data!, 48, 48);
                 }
-                // Fallback icon while loading or if no URL
+                // Fallback icon (for iOS or while loading)
                 return Container(
                   width: 48,
                   height: 48,
@@ -2110,40 +2109,6 @@ class _TournamentsWidgetState extends State<_TournamentsWidget> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
-  }
-
-  /// Build HTML img element to bypass CORS restrictions
-  Widget _buildHtmlImage(String imageUrl, double width, double height) {
-    final String viewType = 'img-${imageUrl.hashCode}';
-    
-    // Register view factory (only once per unique URL)
-    // ignore: undefined_prefixed_name
-    ui_web.platformViewRegistry.registerViewFactory(
-      viewType,
-      (int viewId) {
-        final img = html.ImageElement()
-          ..src = imageUrl
-          ..style.width = '100%'
-          ..style.height = '100%'
-          ..style.objectFit = 'cover'
-          ..style.borderRadius = '4px';
-        return img;
-      },
-    );
-
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: HtmlElementView(viewType: viewType),
-      ),
-    );
   }
 }
 
@@ -2264,11 +2229,11 @@ class _RankingsWidgetState extends State<_RankingsWidget> {
             FutureBuilder<String?>(
               future: _eventsService.getIconUrl(ranking.icon),
               builder: (context, snapshot) {
-                if (snapshot.hasData && snapshot.data != null) {
-                  // Use HTML img tag to bypass CORS
-                  return _buildHtmlImage(snapshot.data!, 48, 48);
+                if (snapshot.hasData && snapshot.data != null && kIsWeb) {
+                  // Use HTML img tag to bypass CORS (web only)
+                  return buildHtmlImage(snapshot.data!, 48, 48);
                 }
-                // Fallback icon while loading or if no URL
+                // Fallback icon (for iOS or while loading)
                 return Container(
                   width: 48,
                   height: 48,
@@ -2303,39 +2268,5 @@ class _RankingsWidgetState extends State<_RankingsWidget> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
-  }
-
-  /// Build HTML img element to bypass CORS restrictions
-  Widget _buildHtmlImage(String imageUrl, double width, double height) {
-    final String viewType = 'img-${imageUrl.hashCode}';
-    
-    // Register view factory (only once per unique URL)
-    // ignore: undefined_prefixed_name
-    ui_web.platformViewRegistry.registerViewFactory(
-      viewType,
-      (int viewId) {
-        final img = html.ImageElement()
-          ..src = imageUrl
-          ..style.width = '100%'
-          ..style.height = '100%'
-          ..style.objectFit = 'cover'
-          ..style.borderRadius = '4px';
-        return img;
-      },
-    );
-
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: HtmlElementView(viewType: viewType),
-      ),
-    );
   }
 }

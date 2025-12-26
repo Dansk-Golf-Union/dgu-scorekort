@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:intl/intl.dart';
-import 'dart:html' as html;
 import '../services/scorecard_storage_service.dart';
 import '../services/whs_submission_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/web_utils.dart' if (dart.library.io) '../utils/web_utils_stub.dart';
 
 /// Standalone screen for marker approval via external URL
 /// Can be accessed directly via /marker-approval/{documentId}
@@ -655,19 +656,21 @@ class _MarkerApprovalFromUrlScreenState
                 ),
               ],
               const SizedBox(height: 20),
-              OutlinedButton.icon(
-                onPressed: () {
-                  // Try to close the browser tab/window
-                  html.window.close();
-                },
-                icon: const Icon(Icons.close),
-                label: const Text('Luk Scorekort'),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 48),
-                  foregroundColor: Colors.grey.shade700,
-                  side: BorderSide(color: Colors.grey.shade400),
+              // Only show close button on web (can't close iOS app programmatically)
+              if (kIsWeb)
+                OutlinedButton.icon(
+                  onPressed: () {
+                    // Try to close the browser tab/window
+                    closeWindow();
+                  },
+                  icon: const Icon(Icons.close),
+                  label: const Text('Luk Scorekort'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 48),
+                    foregroundColor: Colors.grey.shade700,
+                    side: BorderSide(color: Colors.grey.shade400),
+                  ),
                 ),
-              ),
             ],
           ),
         ),

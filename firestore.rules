@@ -2,19 +2,67 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper function to get authenticated user's unionId
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    
+    // Helper function to get authenticated user's unionId (from POC app)
     function getAuthUnionId() {
       return request.auth.token.unionId;
     }
     
-    // Helper function to check if user is authenticated
+    // Check if user is authenticated (has valid OAuth token)
     function isAuthenticated() {
       return request.auth != null;
     }
     
-    // ==========================================
-    // SCORECARD SYSTEM
-    // ==========================================
+    // Check if user is the player who created the round (Short Game specific)
+    function isRoundOwner(roundData) {
+      return isAuthenticated() && request.auth.token.unionId == roundData.playerId;
+    }
+    
+    // Check if user is the assigned marker (Short Game specific)
+    function isAssignedMarker(roundData) {
+      return isAuthenticated() && request.auth.token.unionId == roundData.markerId;
+    }
+    
+    // Check if status transition is valid (Short Game specific)
+    function isValidStatusTransition(oldStatus, newStatus) {
+      // pending → approved (marker only)
+      // pending → rejected (marker only)
+      // No other transitions allowed
+      return (oldStatus == 'pending' && (newStatus == 'approved' || newStatus == 'rejected'));
+    }
+    
+    // ============================================
+    // SHORT GAME ROUNDS COLLECTION (NEW)
+    // ============================================
+    
+    match /shortgame_rounds/{roundId} {
+      
+      // Players can create their own rounds
+      allow create: if isAuthenticated() 
+                    && request.resource.data.playerId == request.auth.token.unionId
+                    && request.resource.data.status == 'pending';
+      
+      // PUBLIC READ for marker approval via URL (marker may not be logged in)
+      // CRITICAL: Markers access approval URL without authentication
+      // The document ID in the URL acts as a secret token
+      allow read: if true;
+      
+      // Allow updates for marker approval (public access for unauthenticated markers)
+      // Validate in client that only status, markerApprovalTimestamp, rejectionReason, markerName are changed
+      allow update: if isValidStatusTransition(resource.data.status, request.resource.data.status)
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['status', 'markerApprovalTimestamp', 'rejectionReason', 'markerName']);
+      
+      // Players cannot delete rounds (archive only)
+      allow delete: if false;
+    }
+    
+    // ============================================
+    // SCORECARD SYSTEM (from POC app)
+    // ============================================
     
     // Scorecards collection - main storage for marker approval flow
     // Contains all scorecards: pending → approved/rejected → submitted to WHS
@@ -23,9 +71,9 @@ service cloud.firestore {
       allow read, write: if true; // TEMP: Open for testing
     }
     
-    // ==========================================
+    // ============================================
     // COURSE CACHE (READ-ONLY FOR CLIENT)
-    // ==========================================
+    // ============================================
     
     // Course cache clubs - updated nightly by Cloud Function
     match /course-cache-clubs/{clubId} {
@@ -39,9 +87,9 @@ service cloud.firestore {
       allow write: if false; // Only Cloud Functions via Admin SDK
     }
     
-    // ==========================================
-    // FRIENDS SYSTEM COLLECTIONS
-    // ==========================================
+    // ============================================
+    // FRIENDS SYSTEM COLLECTIONS (from POC app)
+    // ============================================
     // NOTE: TEMPORARY OPEN RULES FOR TESTING
     // TODO: Implement proper Firebase Auth with custom claims for unionId
     
@@ -63,9 +111,9 @@ service cloud.firestore {
       allow read, write: if true; // TEMP: Open for testing
     }
     
-    // ==========================================
-    // ACTIVITY FEED COLLECTIONS
-    // ==========================================
+    // ============================================
+    // ACTIVITY FEED COLLECTIONS (from POC app)
+    // ============================================
     
     // User score cache - read-only for authenticated users
     // Only Cloud Functions can write
@@ -83,9 +131,9 @@ service cloud.firestore {
       allow create, delete: if false; // Only Cloud Functions
     }
     
-    // ==========================================
-    // BIRDIE BONUS CACHE
-    // ==========================================
+    // ============================================
+    // BIRDIE BONUS CACHE (from POC app)
+    // ============================================
     
     // Birdie Bonus cache - read-only for authenticated users
     // Updated nightly by Cloud Function at 04:00 CET
@@ -105,9 +153,9 @@ service cloud.firestore {
       allow write: if false; // Only Cloud Functions (via Admin SDK)
     }
     
-    // ==========================================
-    // TOURNAMENTS & RANKINGS CACHE
-    // ==========================================
+    // ============================================
+    // TOURNAMENTS & RANKINGS CACHE (from POC app)
+    // ============================================
     
     // Tournaments cache - read-only for all users
     // Updated nightly by Cloud Function at 02:30 CET
@@ -133,9 +181,9 @@ service cloud.firestore {
       allow write: if false; // Only Cloud Functions (via Admin SDK)
     }
     
-    // ==========================================
-    // USER STATS CACHE
-    // ==========================================
+    // ============================================
+    // USER STATS CACHE (from POC app)
+    // ============================================
     
     // User stats - read-only for authenticated users
     // Updated by Cloud Function triggers on friendship/chat changes
@@ -145,9 +193,9 @@ service cloud.firestore {
       allow write: if false; // Only Cloud Functions (via Admin SDK)
     }
     
-    // ==========================================
-    // CHAT SYSTEM
-    // ==========================================
+    // ============================================
+    // CHAT SYSTEM (from POC app)
+    // ============================================
     // NOTE: TEMPORARY OPEN RULES FOR TESTING
     // TODO: Tighten rules when OAuth is fully implemented
 
@@ -179,9 +227,9 @@ service cloud.firestore {
       //                  request.time < resource.data.timestamp + duration.value(5, 'm');
     }
     
-    // ==========================================
+    // ============================================
     // DEFAULT DENY ALL
-    // ==========================================
+    // ============================================
     
     // Deny all other access by default
     match /{document=**} {
@@ -189,4 +237,3 @@ service cloud.firestore {
     }
   }
 }
-

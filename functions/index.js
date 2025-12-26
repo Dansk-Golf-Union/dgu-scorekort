@@ -25,7 +25,9 @@ const ALLOW_LIST = [
   'https://dgu-scorekort.web.app',
   'https://dgu-scorekort.firebaseapp.com',
   'https://dgu-app-poc.web.app',           // POC site
-  'https://dgu-app-poc.firebaseapp.com'    // POC site (alt domain)
+  'https://dgu-app-poc.firebaseapp.com',   // POC site (alt domain)
+  'https://dgu-shortgame.web.app',         // Short Game app
+  'https://dgu-shortgame.firebaseapp.com'  // Short Game app (alt domain)
 ];
 
 /**
@@ -474,16 +476,29 @@ exports.golfboxCallback = functions
       console.log('  ✅ Code received (length:', code.length, ')');
       console.log('  ✅ State received (length:', state.length, ')');
       
-      // 3. Determine target URL - IGNORE referer from auth.golfbox.io
-      const referer = req.headers.referer || req.headers.origin;
+      // 3. Decode state to determine target URL (with backwards compatibility)
       let targetUrl;
+      let codeVerifierFromState = null;
       
-      // Always use default target (referer from auth.golfbox.io is not useful)
-      // The callback comes FROM auth.golfbox.io, but we need to redirect TO our app
-      targetUrl = 'https://dgu-app-poc.web.app/login';
-      console.log('  📍 Target URL:', targetUrl);
-      if (referer) {
-        console.log('  📍 (Ignored referer:', referer + ')');
+      try {
+        // Try to decode state as JSON (new format from Short Game app)
+        const stateDecoded = Buffer.from(state, 'base64').toString('utf8');
+        const stateJson = JSON.parse(stateDecoded);
+        
+        if (stateJson.target && stateJson.verifier) {
+          // New format: use target URL from state
+          targetUrl = stateJson.target;
+          codeVerifierFromState = stateJson.verifier;
+          console.log('  📍 Using target URL from state (Short Game):', targetUrl);
+        } else {
+          // Fallback: JSON parsed but missing fields
+          targetUrl = 'https://dgu-app-poc.web.app/login';
+          console.log('  📍 JSON parse succeeded but no target, using POC fallback');
+        }
+      } catch (e) {
+        // Old format (POC app): state is just base64-encoded verifier
+        targetUrl = 'https://dgu-app-poc.web.app/login';
+        console.log('  📍 Using POC fallback (old state format)');
       }
       
       // 4. Validate targetUrl against ALLOW_LIST

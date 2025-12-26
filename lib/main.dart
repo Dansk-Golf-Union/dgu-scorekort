@@ -1,10 +1,11 @@
-import 'dart:html' as html;
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'config/firebase_options.dart';
+import 'utils/web_utils.dart' if (dart.library.io) 'utils/web_utils_stub.dart';
 import 'providers/match_setup_provider.dart';
 import 'providers/scorecard_provider.dart';
 import 'providers/auth_provider.dart';
@@ -95,17 +96,20 @@ class _AppRouter extends StatelessWidget {
       refreshListenable: authProvider, // Listen to auth changes!
       redirect: (context, state) {
         // NUCLEAR OPTION: Check actual browser URL first (bypasses GoRouter state issues)
-        final browserUrl = html.window.location.href;
-        
-        // If browser URL contains public routes, allow immediate access
-        if (browserUrl.contains('/friend-request/')) {
-          return null;
-        }
-        if (browserUrl.contains('/marker-approval/')) {
-          return null;
-        }
-        if (browserUrl.contains('/match-play')) {
-          return null;
+        // Only relevant on web - iOS uses custom URL scheme handled by system
+        if (kIsWeb) {
+          final browserUrl = getCurrentUrl() ?? '';
+          
+          // If browser URL contains public routes, allow immediate access
+          if (browserUrl.contains('/friend-request/')) {
+            return null;
+          }
+          if (browserUrl.contains('/marker-approval/')) {
+            return null;
+          }
+          if (browserUrl.contains('/match-play')) {
+            return null;
+          }
         }
         
         // Fallback: Check GoRouter state (for normal navigation within app)
