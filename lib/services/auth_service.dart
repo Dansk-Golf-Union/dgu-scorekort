@@ -4,6 +4,8 @@ import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/auth_config.dart';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class AuthService {
   /// Generates a cryptographically random code verifier for PKCE
@@ -30,8 +32,20 @@ class AuthService {
   /// Builds the OAuth authorization URL with PKCE parameters
   /// The code_verifier is encoded in the state parameter for web compatibility
   String getAuthorizationUrl(String codeChallenge, String codeVerifier) {
-    // Encode code_verifier in state parameter (base64url for web compatibility)
-    final stateWithVerifier = base64Url.encode(utf8.encode(codeVerifier)).replaceAll('=', '');
+    // Build state with verifier and optional origin
+    final stateMap = <String, dynamic>{
+      'verifier': codeVerifier,
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+    };
+    
+    // Add origin ONLY if running as native iOS app
+    if (!kIsWeb && Platform.isIOS) {
+      stateMap['origin'] = 'ios-app';
+    }
+    
+    // Encode as JSON, then base64url
+    final stateJson = jsonEncode(stateMap);
+    final stateWithVerifier = base64Url.encode(utf8.encode(stateJson)).replaceAll('=', '');
     
     final params = {
       'client_id': AuthConfig.clientId,
@@ -52,6 +66,9 @@ class AuthService {
   }
   
   /// Extracts code_verifier from state parameter
+  /// Handles both formats:
+  /// - Legacy web format: plain base64url-encoded verifier string
+  /// - New iOS format: base64url-encoded JSON with {"verifier": "...", "origin": "ios-app"}
   String decodeVerifierFromState(String state) {
     try {
       // Add padding if needed for base64 decoding
@@ -60,6 +77,20 @@ class AuthService {
         paddedState += '=';
       }
       final decoded = utf8.decode(base64Url.decode(paddedState));
+      
+      // Try to parse as JSON (new iOS format)
+      try {
+        final Map<String, dynamic> stateJson = jsonDecode(decoded);
+        if (stateJson.containsKey('verifier')) {
+          print('📱 Decoded iOS state format - extracted verifier');
+          return stateJson['verifier'] as String;
+        }
+      } catch (e) {
+        // Not JSON, fall through to legacy format
+        print('🌐 Decoded legacy web state format');
+      }
+      
+      // Legacy format: state IS the verifier
       return decoded;
     } catch (e) {
       throw Exception('Failed to decode state parameter: $e');

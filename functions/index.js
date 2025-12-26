@@ -476,58 +476,101 @@ exports.golfboxCallback = functions
       console.log('  ✅ Code received (length:', code.length, ')');
       console.log('  ✅ State received (length:', state.length, ')');
       
-      // 3. Decode state to determine target URL (with backwards compatibility)
+      // 3. Decode state to determine target URL and origin
       let targetUrl;
+      let origin = 'web'; // Default to web
       let codeVerifierFromState = null;
       
       try {
-        // Try to decode state as JSON (new format from Short Game app)
+        // Try to decode state as JSON
         const stateDecoded = Buffer.from(state, 'base64').toString('utf8');
         const stateJson = JSON.parse(stateDecoded);
         
-        if (stateJson.target && stateJson.verifier) {
-          // New format: use target URL from state
+        console.log('  📋 State parsed:', {
+          hasVerifier: !!stateJson.verifier,
+          hasTarget: !!stateJson.target,
+          origin: stateJson.origin || 'web (default)'
+        });
+        
+        // Check origin field
+        if (stateJson.origin === 'ios-app') {
+          origin = 'ios-app';
+          targetUrl = 'dgupoc://login'; // iOS app custom scheme
+          console.log('  📱 iOS app origin detected from state');
+        } else if (stateJson.target) {
+          // Short Game format: has explicit target
+          origin = 'web';
           targetUrl = stateJson.target;
-          codeVerifierFromState = stateJson.verifier;
-          console.log('  📍 Using target URL from state (Short Game):', targetUrl);
+          console.log('  📍 Using target URL from state:', targetUrl);
         } else {
-          // Fallback: JSON parsed but missing fields
+          // POC app format: default to POC web URL
+          origin = 'web';
           targetUrl = 'https://dgu-app-poc.web.app/login';
-          console.log('  📍 JSON parse succeeded but no target, using POC fallback');
+          console.log('  📍 Using POC default URL');
         }
+        
+        // Extract verifier if present
+        if (stateJson.verifier) {
+          codeVerifierFromState = stateJson.verifier;
+        }
+        
       } catch (e) {
-        // Old format (POC app): state is just base64-encoded verifier
+        // Legacy state format (old POC web app): just base64 verifier string
+        origin = 'web';
         targetUrl = 'https://dgu-app-poc.web.app/login';
-        console.log('  📍 Using POC fallback (old state format)');
+        console.log('  📍 Legacy state format - using POC fallback');
+        console.log('  ℹ️  This is normal for web app (sends plain verifier, not JSON)');
       }
       
-      // 4. Validate targetUrl against ALLOW_LIST
-      const isAllowed = ALLOW_LIST.some(allowedPrefix => {
-        // Check if targetUrl starts with any allowed prefix
-        // For localhost, allow any port
-        if (allowedPrefix === 'http://localhost') {
-          return targetUrl === 'http://localhost' || 
-                 targetUrl.startsWith('http://localhost:') ||
-                 targetUrl.startsWith('http://localhost/');
+      // 4. Validate targetUrl against ALLOW_LIST (only for web URLs)
+      if (origin === 'web') {
+        const isAllowed = ALLOW_LIST.some(allowedPrefix => {
+          if (allowedPrefix === 'http://localhost') {
+            return targetUrl === 'http://localhost' || 
+                   targetUrl.startsWith('http://localhost:') ||
+                   targetUrl.startsWith('http://localhost/');
+          }
+          return targetUrl.startsWith(allowedPrefix);
+        });
+        
+        if (!isAllowed) {
+          console.error('🚨 SECURITY: Rejected redirect to unauthorized URL:', targetUrl);
+          console.error('  Allowed domains:', ALLOW_LIST.join(', '));
+          res.status(400).send('Bad Request: Unauthorized redirect URL');
+          return;
         }
-        return targetUrl.startsWith(allowedPrefix);
-      });
+        
+        console.log('  ✅ Target URL validated against allowlist');
+      }
       
-      if (!isAllowed) {
-        console.error('🚨 SECURITY: Rejected redirect to unauthorized URL:', targetUrl);
-        console.error('  Allowed domains:', ALLOW_LIST.join(', '));
-        res.status(400).send('Bad Request: Unauthorized redirect URL');
+      // 5. Build and perform redirect based on origin
+      if (origin === 'ios-app') {
+        // iOS app: Use custom URL scheme
+        console.log('  📱 Redirecting to iOS app via custom URL scheme');
+        
+        const iosUrl = new URL('dgupoc://login');
+        iosUrl.searchParams.append('code', code);
+        iosUrl.searchParams.append('state', state);
+        
+        Object.keys(queryParams).forEach(key => {
+          if (key !== 'code' && key !== 'state') {
+            iosUrl.searchParams.append(key, queryParams[key]);
+          }
+        });
+        
+        const iosRedirectUrl = iosUrl.toString();
+        console.log('  📍 iOS Redirect URL:', iosRedirectUrl);
+        res.redirect(302, iosRedirectUrl);
         return;
       }
       
-      console.log('  ✅ Target URL validated against allowlist');
+      // Web: Build redirect URL with OAuth parameters
+      console.log('  🌐 Redirecting to web URL');
       
-      // 5. Build redirect URL with OAuth parameters
       const url = new URL(targetUrl);
       url.searchParams.append('code', code);
       url.searchParams.append('state', state);
       
-      // Forward any additional query parameters (scope, etc.)
       Object.keys(queryParams).forEach(key => {
         if (key !== 'code' && key !== 'state') {
           url.searchParams.append(key, queryParams[key]);
