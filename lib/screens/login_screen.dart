@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:app_links/app_links.dart';
+import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 
@@ -14,35 +17,159 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLoggingIn = false;
   final _unionIdController = TextEditingController();
+  late AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSubscription;
+  String? _lastProcessedCode; // Prevent processing same OAuth code multiple times
+  bool _isProcessingCallback = false; // Prevent concurrent callback processing
+  
+  // TODO(ios-oauth-loop): Deep link listener placement in StatefulWidget causes rebuild loop
+  // These guards reset on every widget rebuild, creating multiple active listeners.
+  // See docs/IOS_OAUTH_LOGIN_LOOP_ISSUE.md for detailed analysis and solution.
+  // Recommended fix: Move listener to AuthProvider or singleton service.
 
   @override
   void initState() {
     super.initState();
-    // Check for OAuth callback on page load
+    
+    // Initialize deep link handler (works on iOS, Android, Web)
+    _appLinks = AppLinks();
+    
+    // Check for OAuth callback on page load (web fallback)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkForCallback();
+      _initDeepLinkListener(); // iOS/Android deep links
     });
   }
 
   @override
   void dispose() {
+    _linkSubscription?.cancel();
     _unionIdController.dispose();
     super.dispose();
   }
 
-  /// Check if URL contains OAuth callback code
+  /// Check if URL contains OAuth callback code (WEB ONLY)
+  /// For iOS/Android, use _initDeepLinkListener() instead
   void _checkForCallback() async {
+    if (!kIsWeb) {
+      debugPrint('📱 Native platform: Skipping Uri.base check (uses deep links)');
+      return; // Native platforms use deep link listener
+    }
+    
+    debugPrint('🌐 Web platform: Checking Uri.base for OAuth params');
     final uri = Uri.base;
     if (uri.queryParameters.containsKey('code')) {
       final code = uri.queryParameters['code']!;
-      final state = uri.queryParameters['state']; // Get state parameter
+      final state = uri.queryParameters['state'];
+      debugPrint('✅ OAuth callback detected via Uri.base');
       final authProvider = context.read<AuthProvider>();
       await authProvider.handleCallback(code, state);
       
-      // Navigate to setup screen on success
       if (authProvider.isAuthenticated && mounted) {
         // The main app will handle navigation via Consumer
       }
+    }
+  }
+
+  /// Initialize deep link listener for iOS/Android
+  /// Web uses Uri.base check as fallback
+  /// 
+  /// WARNING: This creates a NEW listener on every widget rebuild, causing OAuth loop.
+  /// See docs/IOS_OAUTH_LOGIN_LOOP_ISSUE.md for details.
+  /// TODO(ios-oauth-loop): Move to AuthProvider.initDeepLinkListener() called from main()
+  void _initDeepLinkListener() async {
+    if (kIsWeb) {
+      debugPrint('🌐 Web platform: Using Uri.base for OAuth detection');
+      return; // Web doesn't need deep link listener
+    }
+    
+    debugPrint('📱 Native platform: Initializing deep link listener');
+    
+    // Handle initial link if app was opened via deep link
+    try {
+      final initialUri = await _appLinks.getInitialLink();
+      if (initialUri != null) {
+        debugPrint('📱 Initial deep link: $initialUri');
+        await _handleDeepLink(initialUri);
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error getting initial link: $e');
+    }
+    
+    // Listen for deep links while app is running
+    _linkSubscription = _appLinks.uriLinkStream.listen(
+      (Uri uri) {
+        debugPrint('📱 Deep link received: $uri');
+        _handleDeepLink(uri);
+      },
+      onError: (err) {
+        debugPrint('⚠️ Deep link error: $err');
+      },
+    );
+  }
+
+  /// Handle deep link from iOS/Android (dgupoc://login?code=XXX&state=YYY)
+  /// Process deep link from iOS app
+  /// 
+  /// KNOWN ISSUE: Guards (_lastProcessedCode, _isProcessingCallback) reset on widget rebuild.
+  /// This causes the same OAuth code to be processed multiple times, leading to invalid_grant errors.
+  /// See docs/IOS_OAUTH_LOGIN_LOOP_ISSUE.md for timeline analysis and Xcode console output.
+  Future<void> _handleDeepLink(Uri uri) async {
+    debugPrint('📱 Handling deep link: ${uri.toString()}');
+    debugPrint('   Scheme: ${uri.scheme}');
+    debugPrint('   Host: ${uri.host}');
+    debugPrint('   Path: ${uri.path}');
+    debugPrint('   Query params: ${uri.queryParameters}');
+    
+    // Only handle dgupoc:// scheme
+    if (uri.scheme != 'dgupoc') {
+      debugPrint('⚠️ Ignoring non-dgupoc scheme: ${uri.scheme}');
+      return;
+    }
+    
+    // Check if this is OAuth callback (dgupoc://login?code=...)
+    if (uri.host == 'login' && uri.queryParameters.containsKey('code')) {
+      final code = uri.queryParameters['code']!;
+      final state = uri.queryParameters['state'];
+      
+      debugPrint('✅ OAuth callback detected via deep link');
+      debugPrint('   Code: ${code.substring(0, 10)}...');
+      debugPrint('   State: ${state?.substring(0, 20) ?? 'null'}...');
+      
+      // Prevent processing same code multiple times (iOS can fire deep links repeatedly)
+      // NOTE: This guard FAILS on widget rebuild - see docs/IOS_OAUTH_LOGIN_LOOP_ISSUE.md
+      if (_lastProcessedCode == code) {
+        debugPrint('⚠️ Ignoring duplicate OAuth code - already processed');
+        return;
+      }
+      
+      // Prevent concurrent processing
+      // NOTE: This guard FAILS on widget rebuild - see docs/IOS_OAUTH_LOGIN_LOOP_ISSUE.md
+      if (_isProcessingCallback) {
+        debugPrint('⚠️ Callback already in progress - ignoring duplicate');
+        return;
+      }
+      
+      if (!mounted) return;
+      
+      _isProcessingCallback = true;
+      _lastProcessedCode = code;
+      
+      try {
+        final authProvider = context.read<AuthProvider>();
+        await authProvider.handleCallback(code, state);
+        
+        // Navigation handled by main.dart redirect logic
+        if (authProvider.isAuthenticated && mounted) {
+          debugPrint('✅ Authentication successful');
+        } else if (authProvider.needsUnionId && mounted) {
+          debugPrint('✅ OAuth token received, awaiting DGU-nummer');
+        }
+      } finally {
+        _isProcessingCallback = false;
+      }
+    } else {
+      debugPrint('⚠️ Deep link is not OAuth callback: ${uri.toString()}');
     }
   }
 
