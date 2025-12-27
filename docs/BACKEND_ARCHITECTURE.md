@@ -84,6 +84,99 @@ graph TB
 
 ---
 
+## Multi-App Architecture
+
+Dette Firebase projekt (`dgu-scorekort`) supporterer **to separate Flutter apps** der deler backend infrastruktur:
+
+### Apps i Dette Projekt
+
+| App | Hosting URL | Primær Funktion | Status |
+|-----|-------------|-----------------|--------|
+| **DGU POC** | `dgu-app-poc.web.app`<br/>`dgu-scorekort.web.app` | Innovation lab for Mit Golf features | Active |
+| **Short Game** | `dgu-shortgame.web.app` | Trænings-app for kort spil | Active |
+
+### Architecture Diagram
+
+```mermaid
+graph TB
+    subgraph FirebaseProject[Firebase Project: dgu-scorekort]
+        subgraph Hosting[Firebase Hosting]
+            POC[dgu-app-poc.web.app]
+            SG[dgu-shortgame.web.app]
+        end
+        
+        subgraph CloudFunctions[Cloud Functions]
+            OAuth[golfboxCallback]
+            Cache[updateCourseCache]
+            Stats[scanForMilestones]
+            Other[13 other functions]
+        end
+        
+        subgraph Firestore[Firestore Database]
+            POCCollections[POC Collections:<br/>activities, friendships,<br/>chat_groups, scorecards,<br/>course-cache-*]
+            SGCollections[Short Game:<br/>shortgame_rounds]
+        end
+    end
+    
+    subgraph ExternalAPIs[External APIs]
+        GolfboxAPI[Golfbox OAuth & API]
+        StatistikAPI[DGU Statistik API]
+        OtherAPIs[Birdie Bonus, Golf.dk, etc]
+    end
+    
+    POC --> OAuth
+    SG --> OAuth
+    POC --> Cache
+    POC --> Stats
+    POC --> Other
+    POC --> POCCollections
+    SG --> SGCollections
+    
+    OAuth --> GolfboxAPI
+    Cache --> GolfboxAPI
+    Stats --> StatistikAPI
+    Other --> OtherAPIs
+```
+
+### Shared Backend Services
+
+**Begge apps deler:**
+- ✅ Firebase Firestore database (separate collections)
+- ✅ Golfbox OAuth flow via `golfboxCallback` Cloud Function
+- ✅ Firebase Hosting (separate sites)
+- ✅ Firebase Authentication (samme user pool)
+
+**Kun POC App bruger:**
+- Course Cache System (`updateCourseCache`, `forceFullReseed`)
+- DGU API (`/clubs`, `/courses`, `/golfer`)
+- Statistik API (`/GetWHSScores`)
+- Activity Feed (`scanForMilestones`, `activities` collection)
+- Social Features (friendships, chat, notifications)
+- Birdie Bonus & Golf.dk caching
+
+**Kun Short Game bruger:**
+- `shortgame_rounds` Firestore collection
+- (Alle andre features er app-internal, ingen backend services)
+
+### Why Share Firebase Project?
+
+**Fordele ved delt projekt:**
+1. ✅ **Fælles OAuth:** Samme Golfbox integration, ingen duplikeret Cloud Function
+2. ✅ **Reduced Cost:** Én Firebase Blaze plan, delt quota
+3. ✅ **Simplified Management:** Ét projekt at deploye og vedligeholde
+4. ✅ **Shared Auth:** Users kan bruge samme login på tværs af apps
+5. ✅ **Future Integration:** Nem at dele data mellem apps hvis nødvendigt
+
+**Isolation via:**
+- Separate Firestore collections (namespace isolation)
+- Separate hosting sites (deploy uafhængigt)
+- Separate codebase repositories
+- Firestore security rules per collection
+
+**Konklusion:** Dette setup giver god balance mellem resource-deling og app isolation.
+
+---
+
 ## Cloud Functions
 
 Alle Cloud Functions kører i `europe-west1` region.
@@ -927,6 +1020,54 @@ Slet chat messages ældre end 30 dage.
 
 ---
 
+#### `shortgame_rounds/{roundId}`
+**Purpose:** Short Game training rounds (separate app)
+
+**Document ID:** Auto-generated
+
+**Document Structure:**
+```json
+{
+  "userId": "177-2813",
+  "createdAt": "Timestamp",
+  "updatedAt": "Timestamp",
+  "course": "Rungsted Golf - Practice Area",
+  "date": "2025-01-15",
+  "shots": [
+    {
+      "shotNumber": 1,
+      "club": "SW (56°)",
+      "distance": 50,
+      "lie": "fairway",
+      "target": "pin",
+      "result": "green",
+      "distanceToPin": 2.5,
+      "notes": "Good contact"
+    }
+  ],
+  "stats": {
+    "totalShots": 25,
+    "greensHit": 18,
+    "averageDistanceToPin": 3.2
+  }
+}
+```
+
+**Security Rules:**
+- **Write:** Owner only (`request.auth.uid == resource.data.userId`)
+- **Read:** Public (allows leaderboards, social features in future)
+
+**Used By:**
+- Short Game Flutter app (separate codebase)
+- No Cloud Functions currently process this data
+
+**Future Enhancements:**
+- Statistics aggregation Cloud Function
+- Integration med POC app's activity feed
+- Leaderboards og challenges
+
+---
+
 ## External APIs
 
 ### 1. Golfbox OAuth & API
@@ -1168,6 +1309,20 @@ grant_type=authorization_code
 3. Test thoroughly i staging
 4. Deploy to production
 5. Delete/deactivate Gists
+
+### App-Specific API Usage
+
+| API / Service | POC App | Short Game App |
+|---------------|---------|----------------|
+| Golfbox OAuth | ✅ Yes | ✅ Yes |
+| DGU API (`/clubs`, `/courses`, `/golfer`) | ✅ Yes | ❌ No |
+| Statistik API (`/GetWHSScores`) | ✅ Yes | ❌ No |
+| Birdie Bonus API | ✅ Yes | ❌ No |
+| Golf.dk API | ✅ Yes | ❌ No |
+| Notification Service | ✅ Yes | ❌ No |
+
+**POC App:** Full-featured golf app med social features, activity feed, course cache  
+**Short Game App:** Focused trænings-app, kun OAuth for login + egen data storage
 
 ---
 
