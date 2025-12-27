@@ -1100,6 +1100,77 @@ grant_type=authorization_code
 
 ---
 
+## API Credentials Reference
+
+> **SECURITY NOTE:** This section references credential storage locations but does NOT include actual tokens.  
+> All tokens are stored in private GitHub Gists. Never commit actual tokens to this repository.
+
+### Credentials Overview
+
+| API / Service | Endpoints | Auth Type | Gist Identifier | Token Format | Owner |
+|---------------|-----------|-----------|-----------------|--------------|-------|
+| **DGU API** | `/clubs`<br/>`/clubs/{id}/courses`<br/>`/golfer?unionid={id}` | Basic Auth | `a907dd7d60bf...` | `basic [token]` | nhuttel |
+| **Statistik API** | `/GetWHSScores` | Basic Auth | `36871c0145d8...` | `basic [base64]` | nhuttel |
+| **Birdie Bonus API** | `/api/member/rating_list/{page}` | Basic Auth | `10131112fc9e...` | `Basic [credentials]` | nhuttel |
+| **Notification Service** | POST body `token` field | Token | `ad197ae6de63...` | Plain text token | nhuttel |
+| **Golf.dk / Tournaments** | `/rest/taxonomy_lists/*`<br/>`/media/{id}/edit` | Authorization header | `3dce62aa1524...` | Token string | nhuttel |
+| **Golfbox OAuth** | `/connect/authorize`<br/>`/connect/token` | OAuth 2.0 PKCE | N/A (public) | Client ID: `DGU_TEST_DK` | Public |
+
+### API Account Grouping
+
+**DGU API (samme Basic Auth konto):**
+- `/clubs` - Henter alle golf klubber i DGU
+- `/clubs/{clubId}/courses` - Henter baner for specifik klub
+- `/golfer?unionid={unionId}` - Henter spiller info (navn, handicap, homeClubId)
+
+**Statistik API (separat konto):**
+- `/GetWHSScores` - WHS scores fra anden API base URL (`api.danskgolfunion.dk`)
+
+**Birdie Bonus API (separat konto):**
+- `/api/member/rating_list/{page}` - Paginated ranking data
+
+**Golf.dk API (separat konto):**
+- Turnerings- og ranglistedata fra Drupal CMS
+
+### How to Access Credentials
+
+1. **Storage:** All tokens stored in private GitHub Gists owned by `nhuttel`
+2. **Gist ID:** First 16 chars shown in table (e.g., `a907dd7d60bf...`)
+3. **Full URL Pattern:** 
+   ```
+   https://gist.githubusercontent.com/nhuttel/{FULL_GIST_ID}/raw/{REVISION_ID}/{FILENAME}
+   ```
+4. **Finding Full URLs:** Search in [`functions/index.js`](../functions/index.js) for complete Gist URLs
+5. **Token Rotation:** Simply update Gist content (URLs remain same, content changes)
+
+### Security Notes
+
+- ✅ **Gist IDs are safe to share** - Raw content URLs include unique revision IDs
+- ✅ **Easy rotation** - Update Gist content without changing code
+- ⚠️ **Gists are PRIVATE** - Never share raw URLs publicly (contains tokens)
+- ⚠️ **Temporary solution** - GitHub Gists er ikke optimal secret management
+- 🔐 **Future migration** - Plan er at flytte til Firebase Secret Manager eller Google Cloud Secret Manager
+
+### Migration Plan
+
+**Current State:** GitHub Gists (quick setup, temporary)
+
+**Future State:** Firebase/Google Cloud Secret Manager
+- ✅ Better security & access control
+- ✅ Automatic audit logging
+- ✅ Rotation support med versioning
+- ✅ IAM integration for fine-grained permissions
+- ✅ No external dependencies
+
+**Migration Steps:**
+1. Create secrets in Firebase Secret Manager
+2. Update Cloud Functions to use Secret Manager API
+3. Test thoroughly i staging
+4. Deploy to production
+5. Delete/deactivate Gists
+
+---
+
 ## Authentication Flow
 
 ### OAuth 2.0 PKCE Flow Diagram
