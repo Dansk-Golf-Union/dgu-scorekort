@@ -1107,14 +1107,14 @@ grant_type=authorization_code
 
 ### Credentials Overview
 
-| API / Service | Endpoints | Auth Type | Gist Identifier | Token Format | Owner |
-|---------------|-----------|-----------|-----------------|--------------|-------|
-| **DGU API** | `/clubs`<br/>`/clubs/{id}/courses`<br/>`/golfer?unionid={id}` | Basic Auth | `a907dd7d60bf...` | `basic [token]` | nhuttel |
-| **Statistik API** | `/GetWHSScores` | Basic Auth | `36871c0145d8...` | `basic [base64]` | nhuttel |
-| **Birdie Bonus API** | `/api/member/rating_list/{page}` | Basic Auth | `10131112fc9e...` | `Basic [credentials]` | nhuttel |
-| **Notification Service** | POST body `token` field | Token | `ad197ae6de63...` | Plain text token | nhuttel |
-| **Golf.dk / Tournaments** | `/rest/taxonomy_lists/*`<br/>`/media/{id}/edit` | Authorization header | `3dce62aa1524...` | Token string | nhuttel |
-| **Golfbox OAuth** | `/connect/authorize`<br/>`/connect/token` | OAuth 2.0 PKCE | N/A (public) | Client ID: `DGU_TEST_DK` | Public |
+| API / Service | Account/Username | Endpoints | Auth Type | Gist Identifier | Token Format | Owner |
+|---------------|------------------|-----------|-----------|-----------------|--------------|-------|
+| **DGU API** | `DGUScorkortAapp` | `/clubs`<br/>`/clubs/{id}/courses`<br/>`/golfer?unionid={id}` | Basic Auth | `a907dd7d60bf...` | `basic [token]` | nhuttel |
+| **Statistik API** | `Statistik` | `/GetWHSScores` | Basic Auth | `36871c0145d8...` | `basic [base64]` | nhuttel |
+| **Birdie Bonus API** | `member` | `/api/member/rating_list/{page}` | Basic Auth | `10131112fc9e...` | `Basic [credentials]` | nhuttel |
+| **Notification Service** | N/A (Cloud Run) | POST body `token` field | Token | `ad197ae6de63...` | Plain text token | nhuttel |
+| **Golf.dk / Tournaments** | N/A (Drupal) | `/rest/taxonomy_lists/*`<br/>`/media/{id}/edit` | Authorization header | `3dce62aa1524...` | Token string | nhuttel |
+| **Golfbox OAuth** | `DGU_TEST_DK` | `/connect/authorize`<br/>`/connect/token` | OAuth 2.0 PKCE | N/A (public) | Client ID: `DGU_TEST_DK` | Public |
 
 ### API Account Grouping
 
