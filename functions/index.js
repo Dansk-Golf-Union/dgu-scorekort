@@ -476,101 +476,58 @@ exports.golfboxCallback = functions
       console.log('  ✅ Code received (length:', code.length, ')');
       console.log('  ✅ State received (length:', state.length, ')');
       
-      // 3. Decode state to determine target URL and origin
+      // 3. Decode state to determine target URL (with backwards compatibility)
       let targetUrl;
-      let origin = 'web'; // Default to web
       let codeVerifierFromState = null;
       
       try {
-        // Try to decode state as JSON
+        // Try to decode state as JSON (new format from Short Game app)
         const stateDecoded = Buffer.from(state, 'base64').toString('utf8');
         const stateJson = JSON.parse(stateDecoded);
         
-        console.log('  📋 State parsed:', {
-          hasVerifier: !!stateJson.verifier,
-          hasTarget: !!stateJson.target,
-          origin: stateJson.origin || 'web (default)'
-        });
-        
-        // Check origin field
-        if (stateJson.origin === 'ios-app') {
-          origin = 'ios-app';
-          targetUrl = 'dgupoc://login'; // iOS app custom scheme
-          console.log('  📱 iOS app origin detected from state');
-        } else if (stateJson.target) {
-          // Short Game format: has explicit target
-          origin = 'web';
+        if (stateJson.target && stateJson.verifier) {
+          // New format: use target URL from state
           targetUrl = stateJson.target;
-          console.log('  📍 Using target URL from state:', targetUrl);
-        } else {
-          // POC app format: default to POC web URL
-          origin = 'web';
-          targetUrl = 'https://dgu-app-poc.web.app/login';
-          console.log('  📍 Using POC default URL');
-        }
-        
-        // Extract verifier if present
-        if (stateJson.verifier) {
           codeVerifierFromState = stateJson.verifier;
+          console.log('  📍 Using target URL from state (Short Game):', targetUrl);
+        } else {
+          // Fallback: JSON parsed but missing fields
+          targetUrl = 'https://dgu-app-poc.web.app/login';
+          console.log('  📍 JSON parse succeeded but no target, using POC fallback');
         }
-        
       } catch (e) {
-        // Legacy state format (old POC web app): just base64 verifier string
-        origin = 'web';
+        // Old format (POC app): state is just base64-encoded verifier
         targetUrl = 'https://dgu-app-poc.web.app/login';
-        console.log('  📍 Legacy state format - using POC fallback');
-        console.log('  ℹ️  This is normal for web app (sends plain verifier, not JSON)');
+        console.log('  📍 Using POC fallback (old state format)');
       }
       
-      // 4. Validate targetUrl against ALLOW_LIST (only for web URLs)
-      if (origin === 'web') {
-        const isAllowed = ALLOW_LIST.some(allowedPrefix => {
-          if (allowedPrefix === 'http://localhost') {
-            return targetUrl === 'http://localhost' || 
-                   targetUrl.startsWith('http://localhost:') ||
-                   targetUrl.startsWith('http://localhost/');
-          }
-          return targetUrl.startsWith(allowedPrefix);
-        });
-        
-        if (!isAllowed) {
-          console.error('🚨 SECURITY: Rejected redirect to unauthorized URL:', targetUrl);
-          console.error('  Allowed domains:', ALLOW_LIST.join(', '));
-          res.status(400).send('Bad Request: Unauthorized redirect URL');
-          return;
+      // 4. Validate targetUrl against ALLOW_LIST
+      const isAllowed = ALLOW_LIST.some(allowedPrefix => {
+        // Check if targetUrl starts with any allowed prefix
+        // For localhost, allow any port
+        if (allowedPrefix === 'http://localhost') {
+          return targetUrl === 'http://localhost' || 
+                 targetUrl.startsWith('http://localhost:') ||
+                 targetUrl.startsWith('http://localhost/');
         }
-        
-        console.log('  ✅ Target URL validated against allowlist');
-      }
+        return targetUrl.startsWith(allowedPrefix);
+      });
       
-      // 5. Build and perform redirect based on origin
-      if (origin === 'ios-app') {
-        // iOS app: Use custom URL scheme
-        console.log('  📱 Redirecting to iOS app via custom URL scheme');
-        
-        const iosUrl = new URL('dgupoc://login');
-        iosUrl.searchParams.append('code', code);
-        iosUrl.searchParams.append('state', state);
-        
-        Object.keys(queryParams).forEach(key => {
-          if (key !== 'code' && key !== 'state') {
-            iosUrl.searchParams.append(key, queryParams[key]);
-          }
-        });
-        
-        const iosRedirectUrl = iosUrl.toString();
-        console.log('  📍 iOS Redirect URL:', iosRedirectUrl);
-        res.redirect(302, iosRedirectUrl);
+      if (!isAllowed) {
+        console.error('🚨 SECURITY: Rejected redirect to unauthorized URL:', targetUrl);
+        console.error('  Allowed domains:', ALLOW_LIST.join(', '));
+        res.status(400).send('Bad Request: Unauthorized redirect URL');
         return;
       }
       
-      // Web: Build redirect URL with OAuth parameters
-      console.log('  🌐 Redirecting to web URL');
+      console.log('  ✅ Target URL validated against allowlist');
       
+      // 5. Build redirect URL with OAuth parameters
       const url = new URL(targetUrl);
       url.searchParams.append('code', code);
       url.searchParams.append('state', state);
       
+      // Forward any additional query parameters (scope, etc.)
       Object.keys(queryParams).forEach(key => {
         if (key !== 'code' && key !== 'state') {
           url.searchParams.append(key, queryParams[key]);
@@ -2511,6 +2468,127 @@ exports.cleanupOldChatMessages = functions
     } catch (error) {
       console.error('❌ Cleanup failed:', error);
       throw error;
+    }
+  });
+
+/**
+ * Short Game: Get Player Info by OAuth Token
+ * 
+ * Fetches golfer information from DGU UnionApp API using OAuth access token.
+ * This Cloud Function acts as a CORS proxy and handles UnionApp authentication.
+ * 
+ * Usage from Flutter:
+ * ```dart
+ * final callable = FirebaseFunctions.instance.httpsCallable('shortgameGetPlayerInfoByToken');
+ * final result = await callable.call({'accessToken': 'oauth_token_here'});
+ * final playerInfo = result.data;
+ * ```
+ */
+exports.shortgameGetPlayerInfoByToken = functions
+  .region('europe-west1')
+  .runWith({
+    timeoutSeconds: 30,
+    memory: '256MB'
+  })
+  .https.onCall(async (data, context) => {
+    console.log('🔐 shortgameGetPlayerInfoByToken called');
+    
+    // Validate input
+    const accessToken = data.accessToken;
+    if (!accessToken) {
+      console.error('  ❌ Missing accessToken');
+      throw new functions.https.HttpsError('invalid-argument', 'accessToken is required');
+    }
+    
+    try {
+      // 1. Fetch UnionApp token from GitHub Gist
+      console.log('  📡 Fetching UnionApp token...');
+      const UNIONAPP_TOKEN_URL = 'https://gist.githubusercontent.com/nhuttel/a548b667213fe5d1e902d190a3694c3e/raw/4daea99cd7ee8b928f6c4fb39efbb7e229100e56/gistfile1.txt';
+      
+      const unionAppToken = await new Promise((resolve, reject) => {
+        https.get(UNIONAPP_TOKEN_URL, (res) => {
+          let data = '';
+          res.on('data', chunk => data += chunk);
+          res.on('end', () => resolve(data.trim()));
+          res.on('error', reject);
+        }).on('error', reject);
+      });
+      
+      console.log('  ✅ UnionApp token fetched');
+      
+      // 2. Call DGU UnionApp API with CORRECT headers
+      console.log('  📡 Calling DGU UnionApp API...');
+      const apiUrl = 'https://dgubasen.api.union.golfbox.io/UnionApp/clubs/Golfer_ByAccessToken';
+      
+      const axios = require('axios');
+      const response = await axios.get(apiUrl, {
+        headers: {
+          'token': accessToken,  // OAuth token as 'token' header (NOT Bearer!)
+          'Authorization': unionAppToken,  // UnionApp Basic auth
+          'Accept': 'application/json'
+        },
+        timeout: 25000,
+        validateStatus: (status) => status < 500
+      });
+      
+      console.log(`  📥 Response Status: ${response.status}`);
+      
+      if (response.status === 200) {
+        console.log('  ✅ Player info received');
+        const golferData = response.data;
+        
+        // Extract unionId from home club membership
+        const homeClubMembership = golferData.Memberships?.find(m => m.IsHomeClub === true);
+        const unionId = homeClubMembership?.UnionID || null;
+        
+        if (!unionId) {
+          throw new functions.https.HttpsError(
+            'not-found',
+            'No home club membership found for player'
+          );
+        }
+        
+        // Build response
+        const playerInfo = {
+          unionId: unionId,
+          playerName: `${golferData.FirstName || ''} ${golferData.LastName || ''}`.trim(),
+          firstName: golferData.FirstName || '',
+          lastName: golferData.LastName || '',
+          email: golferData.Email || null,
+          homeClubId: homeClubMembership.HomeClub?.ID || null,
+          homeClubName: homeClubMembership.HomeClub?.Name || null,
+          handicap: golferData.Handicap || null,
+        };
+        
+        console.log(`  📦 Returning player: ${playerInfo.unionId} - ${playerInfo.playerName}`);
+        
+        return {
+          success: true,
+          playerInfo: playerInfo
+        };
+      } else {
+        console.error(`  ❌ API error: HTTP ${response.status}`);
+        console.error('  📦 Response:', JSON.stringify(response.data));
+        throw new functions.https.HttpsError(
+          'internal',
+          `Failed to fetch player info: ${response.status}`
+        );
+      }
+      
+    } catch (error) {
+      console.error('  ❌ Error:', error.message);
+      
+      if (error.response) {
+        console.error('  📥 Error Response:', error.response.status, error.response.data);
+        throw new functions.https.HttpsError(
+          'internal',
+          `API call failed: ${error.response.status}`
+        );
+      } else if (error.message.includes('timeout')) {
+        throw new functions.https.HttpsError('deadline-exceeded', 'Request timeout');
+      } else {
+        throw new functions.https.HttpsError('internal', `Failed to fetch player info: ${error.message}`);
+      }
     }
   });
 
