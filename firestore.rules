@@ -41,9 +41,8 @@ service cloud.firestore {
     match /shortgame_rounds/{roundId} {
       
       // Players can create their own rounds
-      allow create: if isAuthenticated() 
-                    && request.resource.data.playerId == request.auth.token.unionId
-                    && request.resource.data.status == 'pending';
+      // TEMP: No auth validation (Short Game uses OAuth in SharedPreferences, not Firebase Auth)
+      allow create: if request.resource.data.status == 'pending';
       
       // PUBLIC READ for marker approval via URL (marker may not be logged in)
       // CRITICAL: Markers access approval URL without authentication
